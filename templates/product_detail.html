@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load format_money %}
+
+{% block title %}{{ title|default:product.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+	<div class="lg:col-span-2 bg-white rounded-lg p-6 shadow">
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<div>
+				{% if images %}
+				<img id="mainImage" src="{{ images.0.image.url }}" class="w-full max-w-full max-h-130 object-contain rounded relative z-10" alt="{{ product.name }}">
+				{% else %}
+				<img id="mainImage" src="{% static 'images/no-image.jpg' %}" class="w-full max-w-full max-h-130 object-contain rounded relative z-10" alt="{{ product.name }}">
+				{% endif %}
+
+				<div class="mt-4 flex flex-wrap gap-3 w-full">
+					{% for img in images %}
+					<img src="{{ img.image.url }}" class="w-20 h-20 object-cover rounded cursor-pointer border hover:ring-2 box-border flex-none" onclick="document.getElementById('mainImage').src='{{ img.image.url }}'" alt="thumb">
+					{% endfor %}
+				</div>
+			</div>
+
+			<div class="p-4 flex flex-col">
+				<h1 class="text-2xl font-bold mb-2">{{ product.name }}</h1>
+				<p class="text-gray-600 mb-4">{{ product.brand.name }} • {{ product.category.name }}</p>
+
+				<div class="mb-4">
+					{% if product.discount_price %}
+					<div><span class="line-through text-gray-500">{{ product.price|vnd }}</span></div>
+					<div class="text-red-600 text-2xl font-bold">{{ product.final_price|vnd }}</div>
+					{% else %}
+					<div class="text-2xl font-bold">{{ product.price|vnd }}</div>
+					{% endif %}
+				</div>
+
+				{% if variants %}
+				<div class="mb-4">
+					<label class="block font-medium mb-2">Chọn biến thể</label>
+					<select id="variantSelect" class="w-full border px-3 py-2 rounded">
+						{% for v in variants %}
+						<option value="{{ v.id }}">{{ v.name }} - {{ v.price|vnd }}</option>
+						{% endfor %}
+					</select>
+				</div>
+				{% endif %}
+
+				<div class="mt-8">
+					<button class="w-full bg-red-600 text-white py-3 rounded font-medium hover:bg-red-700 transition">Thêm vào giỏ</button>
+				</div>
+			</div>
+		</div>
+
+		<div class="mt-6">
+			<h3 class="text-lg font-semibold mb-2">Mô tả</h3>
+			<div class="prose max-w-none text-gray-700">{{ product.description|linebreaks }}</div>
+		</div>
+	</div>
+
+	<aside class="lg:col-span-1">
+		<div class="bg-white rounded-lg p-6 shadow sticky" style="top: 100px;">
+			<h5 class="font-semibold mb-3">Sản phẩm liên quan</h5>
+			<div class="space-y-4">
+				{% for rp in related_products %}
+				<a href="{% url 'products:product_detail' rp.slug %}" class="flex items-center gap-3">
+					{% if rp.images.first %}
+					<img src="{{ rp.images.first.image.url }}" class="w-16 h-16 object-cover rounded" alt="{{ rp.name }}">
+					{% else %}
+					<img src="{% static 'images/no-image.jpg' %}" class="w-16 h-16 object-cover rounded" alt="{{ rp.name }}">
+					{% endif %}
+
+					<div>
+						<div class="text-sm font-medium">{{ rp.name }}</div>
+						<div class="text-sm text-red-600 font-bold">
+							{% if rp.discount_price %}{{ rp.final_price|vnd }}{% else %}{{ rp.price|vnd }}{% endif %}
+						</div>
+					</div>
+				</a>
+				{% endfor %}
+			</div>
+		</div>
+	</aside>
+</div>
+
+{% endblock %}
+

@@ -1,0 +1,17 @@
+@import "output.css";
+
+/* ====================== GENERAL ====================== */
+body {
+	font-family: "Segoe UI", system-ui, sans-serif;
+	line-height: 1.6;
+}
+
+main {
+	min-height: 80vh;
+}
+
+/* ====================== UTILITIES ====================== */
+.loading {
+	opacity: 0.6;
+	pointer-events: none;
+}

@@ -81,7 +81,7 @@ def category_detail(request, slug):
     return render(request, 'product_list.html', context)
 
 
-def product_detail(request, slug):
+def product_detail(request: HttpRequest, slug: str):
     """Chi tiết sản phẩm"""
     product = get_object_or_404(Product, slug=slug, is_active=True)
 

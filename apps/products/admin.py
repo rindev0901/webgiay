@@ -1,7 +1,7 @@
 from django.contrib import admin
 from import_export.admin import ImportExportModelAdmin
 from .models import (
-    Category, Brand, Color, Product, 
+    Category, Brand, Color, Product,
     ProductVariant, ProductImage
 )
 from .resources import *   # Import tất cả Resource
@@ -51,14 +51,14 @@ class ProductVariantInline(admin.TabularInline):
 @admin.register(Product)
 class ProductAdmin(ImportExportModelAdmin):
     resource_class = ProductResource
-    
-    list_display = ('name', 'brand', 'category', 'final_price_display', 
+
+    list_display = ('name', 'brand', 'category', 'final_price_display',
                    'stock_status', 'featured', 'is_active')
     list_filter = ('category', 'brand', 'is_active', 'featured')
     search_fields = ('name', 'description', 'brand__name', 'category__name')
     prepopulated_fields = {'slug': ('name',)}
     inlines = [ProductVariantInline, ProductImageInline]
-    
+
     fieldsets = (
         ('Thông tin cơ bản', {
             'fields': ('category', 'brand', 'name', 'slug', 'description')

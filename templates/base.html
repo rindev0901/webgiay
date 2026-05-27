@@ -7,14 +7,13 @@
 			{% block title %}WEBGIÀY - Cửa Hàng Giày Chất Lượng{% endblock %}
 		</title>
 
-		<script src="https://cdn.tailwindcss.com"></script>
 		<link
 			rel="stylesheet"
 			href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
 		/>
 
 		{% load static %}
-		<link rel="stylesheet" href="{% static 'css/style.css' %}" />
+		<link rel="stylesheet" href="{% static 'css/main.css' %}" />
 
 		{% block extra_css %}{% endblock %}
 	</head>
@@ -53,12 +52,15 @@
 							<li class="relative group">
 								<button
 									class="hover:text-red-500 transition flex items-center gap-1"
+									id="desktopDropdownToggle"
+									type="button"
 								>
 									Danh mục
 									<i class="fas fa-chevron-down text-sm"></i>
 								</button>
 								<ul
-									class="absolute left-0 hidden group-hover:block bg-gray-800 rounded-md shadow-lg mt-2 min-w-48"
+									class="absolute left-0 hidden bg-gray-800 rounded-md shadow-lg mt-2 min-w-48"
+									id="desktopDropdownMenu"
 								>
 									{% for category in categories %}
 									<li>
@@ -187,14 +189,33 @@
 			const navbarMobileMenu = document.getElementById("navbarMobileMenu");
 			const mobileDropdown = document.getElementById("mobileDropdown");
 			const mobileDropdownMenu = document.getElementById("mobileDropdownMenu");
+			const desktopDropdownToggle = document.getElementById("desktopDropdownToggle");
+			const desktopDropdownMenu = document.getElementById("desktopDropdownMenu");
 
-			navbarToggle.addEventListener("click", () => {
-				navbarMobileMenu.classList.toggle("hidden");
-			});
+			if (navbarToggle && navbarMobileMenu) {
+				navbarToggle.addEventListener("click", () => {
+					navbarMobileMenu.classList.toggle("hidden");
+				});
+			}
 
-			mobileDropdown.addEventListener("click", () => {
-				mobileDropdownMenu.classList.toggle("hidden");
-			});
+			if (mobileDropdown && mobileDropdownMenu) {
+				mobileDropdown.addEventListener("click", () => {
+					mobileDropdownMenu.classList.toggle("hidden");
+				});
+			}
+
+			if (desktopDropdownToggle && desktopDropdownMenu) {
+				desktopDropdownToggle.addEventListener("click", (event) => {
+					event.stopPropagation();
+					desktopDropdownMenu.classList.toggle("hidden");
+				});
+
+				document.addEventListener("click", (event) => {
+					if (!desktopDropdownMenu.contains(event.target) && !desktopDropdownToggle.contains(event.target)) {
+						desktopDropdownMenu.classList.add("hidden");
+					}
+				});
+			}
 		</script>
 
 		{% block extra_js %}{% endblock %}
