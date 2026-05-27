@@ -2,12 +2,4 @@
 	"workbench.browser.openLocalhostLinks": true,
 	"python.analysis.typeCheckingMode": "standard",
 	"biome.enabled": false,
-	"tailwindCSS.includeLanguages": {
-		"plaintext": "html",
-		"javascript": "javascript",
-		"css": "css"
-	},
-	"editor.quickSuggestions": {
-		"strings": true
-	}
 }

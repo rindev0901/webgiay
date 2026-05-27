@@ -105,7 +105,8 @@
 								<i class="fas fa-chevron-down text-sm"></i>
 							</button>
 							<ul
-								class="hidden mt-2 pl-4 border-l-2 border-gray-700 gap-2 flex flex-col"
+								class="mt-2 pl-4 border-l-2 border-gray-700 gap-2 flex-col"
+								style="display: none"
 								id="mobileDropdownMenu"
 							>
 								{% for category in categories %}
@@ -200,7 +201,9 @@
 
 			if (mobileDropdown && mobileDropdownMenu) {
 				mobileDropdown.addEventListener("click", () => {
-					mobileDropdownMenu.classList.toggle("hidden");
+					const isOpen = mobileDropdownMenu.style.display === "flex";
+					mobileDropdownMenu.style.display = isOpen ? "none" : "flex";
+					mobileDropdownMenu.classList.toggle("hidden", isOpen);
 				});
 			}
 

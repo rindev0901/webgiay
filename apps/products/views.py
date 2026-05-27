@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Prefetch
+from django.core.paginator import Paginator
 from .models import (
     Product,
     Category,
@@ -39,17 +40,29 @@ def product_list(request: HttpRequest):
     else:
         products = products.order_by(sort)
 
+    paginator = Paginator(products, 9)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
+    query_string = query_params.urlencode()
+
     categories = Category.objects.filter(is_active=True)
     brands = Brand.objects.filter(is_active=True)
 
     context = {
-        'products': products,
+        'products': page_obj.object_list,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'is_paginated': page_obj.has_other_pages(),
         'categories': categories,
         'brands': brands,
         'title': 'Tất cả sản phẩm - WebGiày',
         'current_category': category_slug,
         'current_brand': brand_slug,
         'current_sort': sort,
+        'query_string': query_string,
     }
     return render(request, 'product_list.html', context)
 
@@ -64,6 +77,14 @@ def category_detail(request, slug):
         is_active=True
     ).select_related('brand', 'category').prefetch_related('variants', 'images')
 
+    paginator = Paginator(products, 9)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
+    query_string = query_params.urlencode()
+
     # Lấy THƯƠNG HIỆU chỉ có trong danh mục này
     brands_in_category = Brand.objects.filter(
         products__category=category,
@@ -72,11 +93,16 @@ def category_detail(request, slug):
 
     context = {
         'category': category,
-        'products': products,
+        'products': page_obj.object_list,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'is_paginated': page_obj.has_other_pages(),
         'categories': Category.objects.filter(is_active=True),
         'brands': brands_in_category,           # ← Quan trọng nhất
         'current_category': category.slug,
         'title': f'{category.name} - WebGiày'
+        ,
+        'query_string': query_string,
     }
     return render(request, 'product_list.html', context)
 
