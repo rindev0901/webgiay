@@ -1,17 +1,18 @@
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Prefetch
 from .models import (
-    Product, 
-    Category, 
-    Brand, 
-    ProductVariant, 
+    Product,
+    Category,
+    Brand,
+    ProductVariant,
     ProductImage
 )
+from django.http import HttpRequest
 
 
-def product_list(request):
+def product_list(request: HttpRequest):
     """Trang danh sách sản phẩm"""
-    
+
     category_slug = request.GET.get('category')
     brand_slug = request.GET.get('brand')
     sort = request.GET.get('sort', '-created_at')
@@ -19,9 +20,11 @@ def product_list(request):
     products = Product.objects.filter(is_active=True)\
         .select_related('brand', 'category')\
         .prefetch_related(
-            Prefetch('variants', queryset=ProductVariant.objects.filter(is_active=True)),
-            Prefetch('images', queryset=ProductImage.objects.filter(is_primary=True))
-        )
+            Prefetch('variants', queryset=ProductVariant.objects.filter(
+                is_active=True)),
+            Prefetch('images', queryset=ProductImage.objects.filter(
+                is_primary=True))
+    )
 
     if category_slug:
         products = products.filter(category__slug=category_slug)
@@ -54,16 +57,16 @@ def product_list(request):
 def category_detail(request, slug):
     """Xem theo danh mục + chỉ hiển thị thương hiệu có trong danh mục đó"""
     category = get_object_or_404(Category, slug=slug, is_active=True)
-    
+
     # Lấy sản phẩm thuộc danh mục
     products = Product.objects.filter(
-        category=category, 
+        category=category,
         is_active=True
     ).select_related('brand', 'category').prefetch_related('variants', 'images')
 
     # Lấy THƯƠNG HIỆU chỉ có trong danh mục này
     brands_in_category = Brand.objects.filter(
-        products__category=category, 
+        products__category=category,
         is_active=True
     ).distinct()
 
@@ -77,17 +80,18 @@ def category_detail(request, slug):
     }
     return render(request, 'product_list.html', context)
 
+
 def product_detail(request, slug):
     """Chi tiết sản phẩm"""
     product = get_object_or_404(Product, slug=slug, is_active=True)
-    
+
     variants = product.variants.filter(is_active=True).select_related('color')
     images = product.images.all().order_by('-is_primary')
 
     related_products = Product.objects.filter(
         category=product.category,
         is_active=True
-    ).exclude(id=product.id)[:4]
+    ).exclude(id=product.pk)[:4]
 
     context = {
         'product': product,

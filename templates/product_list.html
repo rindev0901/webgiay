@@ -1,141 +1,143 @@
-{% extends 'base.html' %} {% load static %} {% block title %}{{
-title|default:'Tất cả Sản phẩm' }}{% endblock %} {% block content %}
-<div class="container mt-4">
-  <h1 class="fw-bold mb-4">
-    {% if category %}{{ category.name }}{% else %}Tất cả Giày{% endif %}
-  </h1>
+{% extends 'base.html' %} {% load static %} {% block title %} {{
+title|default:'Tất cả Sản phẩm' }} {% endblock %} {% block content %}
+<div class="max-w-7xl mx-auto mt-4">
+	<h1 class="text-3xl font-bold mb-4">
+		{% if category %}{{ category.name }}{% else %}Tất cả Giày{% endif %}
+	</h1>
 
-  <div class="row">
-    <!-- Bộ lọc -->
-    <div class="col-lg-3">
-      <div class="card sticky-top" style="top: 90px">
-        <div class="card-header bg-white fw-bold">
-          <i class="fas fa-filter"></i> Bộ lọc
-        </div>
-        <div class="card-body">
-          <h6 class="mb-3">Danh mục</h6>
-          <div class="list-group list-group-flush mb-4">
-            <a
-              href="{% url 'products:product_list' %}"
-              class="list-group-item list-group-item-action {% if not current_category %}active{% endif %}"
-            >
-              Tất cả sản phẩm
-            </a>
-            {% for cat in categories %}
-            <a
-              href="{% url 'products:category_detail' cat.slug %}"
-              class="list-group-item list-group-item-action {% if current_category == cat.slug %}active{% endif %}"
-            >
-              {{ cat.name }}
-            </a>
-            {% endfor %}
-          </div>
+	<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+		<!-- Bộ lọc -->
+		<div class="lg:col-span-1">
+			<div class="bg-white rounded-lg shadow-md sticky" style="top: 90px">
+				<div
+					class="bg-white border-b border-gray-200 p-4 font-bold rounded-t-lg"
+				>
+					<i class="fas fa-filter"></i> Bộ lọc
+				</div>
+				<div class="p-4">
+					<h6 class="mb-3 font-semibold">Danh mục</h6>
+					<div class="space-y-0 mb-4 border rounded">
+						<a
+							href="{% url 'products:product_list' %}"
+							class="block px-4 py-2 hover:bg-gray-100 transition {% if not current_category %}bg-gray-100 text-red-600 font-medium{% endif %}"
+						>
+							Tất cả sản phẩm
+						</a>
+						{% for cat in categories %}
+						<a
+							href="{% url 'products:category_detail' cat.slug %}"
+							class="block px-4 py-2 border-t hover:bg-gray-100 transition {% if current_category == cat.slug %}bg-gray-100 text-red-600 font-medium{% endif %}"
+						>
+							{{ cat.name }}
+						</a>
+						{% endfor %}
+					</div>
 
-          <h6 class="mb-3">Thương hiệu</h6>
-          <div class="list-group list-group-flush">
-            {% for brand in brands %}
-            <a
-              href="{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}&{% endif %}brand={{ brand.slug }}"
-              class="list-group-item list-group-item-action"
-            >
-              {{ brand.name }}
-            </a>
-            {% endfor %}
-          </div>
-          <a
-            href="{% url 'products:product_list' %}"
-            class="btn btn-outline-secondary w-100 mt-4"
-          >
-            Xóa tất cả bộ lọc
-          </a>
-        </div>
-      </div>
-    </div>
+					<h6 class="mb-3 font-semibold">Thương hiệu</h6>
+					<div class="space-y-0 border rounded">
+						{% for brand in brands %}
+						<a
+							href="{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}&{% endif %}brand={{ brand.slug }}"
+							class="block px-4 py-2 border-t first:border-t-0 hover:bg-gray-100 transition"
+						>
+							{{ brand.name }}
+						</a>
+						{% endfor %}
+					</div>
+					<a
+						href="{% url 'products:product_list' %}"
+						class="block w-full mt-4 px-4 py-2 border border-gray-400 text-gray-700 rounded hover:bg-gray-50 transition text-center font-medium"
+					>
+						Xóa tất cả bộ lọc
+					</a>
+				</div>
+			</div>
+		</div>
 
-    <!-- Danh sách sản phẩm -->
-    <div class="col-lg-9">
-      <div class="d-flex justify-content-between mb-4">
-        <h5>{{ products|length }} sản phẩm</h5>
-        <select
-          class="form-select w-auto"
-          onchange="window.location = this.value"
-        >
-          <option
-            value="{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}{% endif %}"
-          >
-            Mới nhất
-          </option>
-          <option
-            value="{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}&{% endif %}sort=price_low"
-          >
-            Giá thấp → cao
-          </option>
-          <option
-            value="{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}&{% endif %}sort=price_high"
-          >
-            Giá cao → thấp
-          </option>
-        </select>
-      </div>
+		<!-- Danh sách sản phẩm -->
+		<div class="lg:col-span-3">
+			<div class="flex justify-between items-center mb-4">
+				<h5 class="font-semibold text-lg">{{ products|length }} sản phẩm</h5>
+				<select
+					class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600"
+					onchange="window.location = this.value"
+				>
+					<option
+						value="{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}{% endif %}"
+					>
+						Mới nhất
+					</option>
+					<option
+						value="{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}&{% endif %}sort=price_low"
+					>
+						Giá thấp → cao
+					</option>
+					<option
+						value="{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}&{% endif %}sort=price_high"
+					>
+						Giá cao → thấp
+					</option>
+				</select>
+			</div>
 
-      <div class="row row-cols-1 row-cols-md-3 g-4">
-        {% for product in products %}
-        <div class="col">
-          <div class="card h-100 shadow-sm product-card">
-            {% if product.images.first %}
-            <img
-              src="{{ product.images.first.image.url }}"
-              class="card-img-top"
-              style="height: 240px; object-fit: cover"
-              alt="{{ product.name }}"
-            />
-            {% else %}
-            <img
-              src="{% static 'images/no-image.jpg' %}"
-              class="card-img-top"
-              style="height: 240px; object-fit: cover"
-            />
-            {% endif %}
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+				{% for product in products %}
+				<div
+					class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all hover:-translate-y-2"
+				>
+					{% if product.images.first %}
+					<img
+						src="{{ product.images.first.image.url }}"
+						class="w-full h-60 object-cover transition-transform duration-300 hover:scale-110"
+						alt="{{ product.name }}"
+					/>
+					{% else %}
+					<img
+						src="{% static 'images/no-image.jpg' %}"
+						class="w-full h-60 object-cover"
+					/>
+					{% endif %}
 
-            <div class="card-body d-flex flex-column">
-              <h6 class="card-title">{{ product.name }}</h6>
-              <p class="text-muted small">
-                {{ product.brand.name }} • {{ product.category.name }}
-              </p>
+					<div class="p-5 flex flex-col h-full">
+						<h6 class="text-lg line-clamp-2 mb-2">{{ product.name }}</h6>
+						<p class="text-gray-600 text-sm mb-4">
+							{{ product.brand.name }} • {{ product.category.name }}
+						</p>
 
-              <div class="mt-auto">
-                {% if product.discount_price %}
-                <span class="text-decoration-line-through text-muted"
-                  >{{ product.price|floatformat:0 }}đ</span
-                ><br />
-                <span class="fw-bold text-danger fs-5"
-                  >{{ product.final_price|floatformat:0 }}đ</span
-                >
-                {% else %}
-                <span class="fw-bold fs-5"
-                  >{{ product.price|floatformat:0 }}đ</span
-                >
-                {% endif %}
-              </div>
-            </div>
+						<div class="mt-auto">
+							{% if product.discount_price %}
+							<span class="line-through text-gray-500"
+								>{{ product.price|floatformat:0 }}đ</span
+							><br />
+							<span class="font-bold text-red-600 text-lg"
+								>{{ product.final_price|floatformat:0 }}đ</span
+							>
+							{% else %}
+							<span class="font-bold text-lg"
+								>{{ product.price|floatformat:0 }}đ</span
+							>
+							{% endif %}
+						</div>
+					</div>
 
-            <div class="card-footer bg-white">
-              <a
-                href="{% url 'products:product_detail' product.slug %}"
-                class="btn btn-primary w-100"
-              >
-                Xem chi tiết
-              </a>
-            </div>
-          </div>
-        </div>
-        {% empty %}
-        <div class="col-12 text-center py-5">
-          <h4>Không tìm thấy sản phẩm</h4>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-  </div>
+					<div class="bg-white px-5 py-4 border-t border-gray-100">
+						<a
+							href="{% url 'products:product_detail' product.slug %}"
+							class="block w-full py-2 bg-red-600 text-white rounded-md font-medium hover:bg-red-700 transition text-center"
+						>
+							Xem chi tiết
+						</a>
+					</div>
+				</div>
+				{% empty %}
+				<div class="col-span-full text-center py-20">
+					<h4 class="text-2xl font-semibold text-gray-600">
+						Không tìm thấy sản phẩm
+					</h4>
+				</div>
+				{% endfor %}
+			</div>
+		</div>
+	</div>
 </div>
 {% endblock %}
