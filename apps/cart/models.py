@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.db import models
-
+from typing import TYPE_CHECKING
 
 class Cart(models.Model):
     user = models.OneToOneField(
@@ -13,6 +13,9 @@ class Cart(models.Model):
 
     def __str__(self):
         return f'Cart of {self.user}'
+
+    if TYPE_CHECKING:
+      items: models.Manager['CartItem']
 
 
 class CartItem(models.Model):

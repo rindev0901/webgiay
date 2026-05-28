@@ -8,11 +8,9 @@ from .services import (
     add_product_to_user_cart,
     clear_session_cart,
     clear_user_cart,
-    get_or_create_user_cart,
     get_session_cart,
     get_user_cart_items,
     remove_product_from_user_cart,
-    set_session_cart,
     set_user_cart_item_quantity,
 )
 
