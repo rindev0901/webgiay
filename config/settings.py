@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 import sys
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -103,6 +104,15 @@ STATICFILES_DIRS = [
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# ====================== MOMO PAYMENT ======================
+MOMO_PARTNER_CODE = os.getenv('MOMO_PARTNER_CODE', 'MOMO')
+MOMO_ACCESS_KEY = os.getenv('MOMO_ACCESS_KEY', 'F8BBA842ECF85')
+MOMO_SECRET_KEY = os.getenv('MOMO_SECRET_KEY', 'K951B6PE1waDMi640xX08PD3vg6EkVlz')
+MOMO_ENDPOINT = os.getenv('MOMO_ENDPOINT', 'https://test-payment.momo.vn/v2/gateway/api/create')
+MOMO_RETURN_URL = os.getenv('MOMO_RETURN_URL', 'http://127.0.0.1:8000/cart/momo/return/')
+MOMO_IPN_URL = os.getenv('MOMO_IPN_URL', 'http://127.0.0.1:8000/cart/momo/ipn/')
+MOMO_REQUEST_TYPE = os.getenv('MOMO_REQUEST_TYPE', 'captureWallet')
 
 # ====================== REST FRAMEWORK CONFIG ======================
 REST_FRAMEWORK = {

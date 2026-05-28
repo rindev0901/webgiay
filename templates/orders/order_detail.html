@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load format_money %}
+
+{% block title %}Đơn hàng {{ order.code }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white p-6 rounded shadow">
+  <h2 class="text-2xl font-semibold mb-4">Đơn hàng {{ order.code }}</h2>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <h3 class="font-semibold">Thông tin</h3>
+      <p>Người nhận: {{ order.full_name }}</p>
+      <p>SĐT: {{ order.phone }}</p>
+      <p>Email: {{ order.email }}</p>
+      <p>Địa chỉ: {{ order.address }}</p>
+      <p>Ghi chú: {{ order.note }}</p>
+    </div>
+    <div>
+      <h3 class="font-semibold">Trạng thái</h3>
+      <p class="mb-4">{{ order.get_status_display }}</p>
+      {% if order.momo_pay_url %}
+        <a href="{{ order.momo_pay_url }}" class="px-4 py-2 bg-green-600 text-white rounded">Tiến tới MoMo</a>
+      {% endif %}
+      {% if order.status == 'pending' or order.status == 'failed' %}
+        <form action="{% url 'cart:order_retry' order.code %}" method="post" class="inline-block">
+          {% csrf_token %}
+          <button class="px-4 py-2 bg-blue-600 text-white rounded mt-2">Thanh toán lại</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <hr class="my-4" />
+
+  <h3 class="font-semibold mb-2">Sản phẩm</h3>
+  <div class="space-y-3">
+    {% for item in order.items.all %}
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="font-medium">{{ item.product_name }}</div>
+        <div class="text-sm text-gray-600">Số lượng: {{ item.quantity }}</div>
+      </div>
+      <div class="text-right">
+        <div>{{ item.price|vnd }}</div>
+        <div class="text-sm text-gray-600">Tạm tính: {{ item.subtotal|vnd }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="mt-4 text-right font-semibold">Tổng: {{ order.total_amount|vnd }}</div>
+</div>
+{% endblock %}

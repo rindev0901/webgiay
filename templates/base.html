@@ -49,6 +49,11 @@
 									Sản phẩm
 								</a>
 							</li>
+							{% if user.is_authenticated %}
+							<li>
+								<a href="{% url 'cart:orders_list' %}" class="hover:text-red-500 transition">Đơn hàng</a>
+							</li>
+							{% endif %}
 							<li class="relative group">
 								<button
 									class="hover:text-red-500 transition flex items-center gap-1"
@@ -82,12 +87,14 @@
 							class="relative inline-flex items-center px-3 py-2 text-white hover:text-red-500 transition"
 							aria-label="Giỏ hàng"
 						>
-							<i class="fas fa-shopping-cart text-lg"></i>
-							{% if cart_count|default:0 > 0 %}
-							<span class="ml-2 inline-flex items-center justify-center w-6 h-6 text-xs font-medium text-white bg-red-600 rounded-full">
-								{{ cart_count }}
-							</span>
-							{% endif %}
+							<div class="relative">
+								<i class="fas fa-shopping-cart text-lg"></i>
+								{% if cart_count|default:0 > 0 %}
+								<span class="absolute -top-2 -right-2 inline-flex items-center justify-center w-5 h-5 text-xs font-medium text-white bg-red-600 rounded-full">
+									{{ cart_count }}
+								</span>
+								{% endif %}
+							</div>
 						</a>
 
 						{% if user.is_authenticated %}
@@ -132,6 +139,11 @@
 								Sản phẩm
 							</a>
 						</li>
+						{% if user.is_authenticated %}
+						<li>
+							<a href="{% url 'cart:orders_list' %}" class="block hover:text-red-500 transition">Đơn hàng</a>
+						</li>
+						{% endif %}
 						<li>
 							<button
 								class="w-full text-left hover:text-red-500 transition flex items-center justify-between"
@@ -164,13 +176,15 @@
 								href="{% url 'cart:cart_detail' %}"
 								class="flex items-center gap-3 py-2 hover:text-red-500 transition"
 							>
-								<i class="fas fa-shopping-cart"></i>
-								Giỏ hàng
-								{% if cart_count|default:0 > 0 %}
-								<span class="ml-auto inline-flex items-center justify-center w-6 h-6 text-xs font-medium text-white bg-red-600 rounded-full">
-									{{ cart_count }}
-								</span>
-								{% endif %}
+								<div class="relative">
+									<i class="fas fa-shopping-cart"></i>
+									{% if cart_count|default:0 > 0 %}
+									<span class="absolute -top-2 right-0 inline-flex items-center justify-center w-5 h-5 text-xs font-medium text-white bg-red-600 rounded-full">
+										{{ cart_count }}
+									</span>
+									{% endif %}
+								</div>
+								<span class="ml-2">Giỏ hàng</span>
 							</a>
 						</li>
 
@@ -199,6 +213,15 @@
 
 		<!-- Main Content -->
 		<main class="min-h-screen container mx-auto px-4 mt-4">
+			{% if messages %}
+			<div class="mb-4 space-y-2">
+				{% for message in messages %}
+				<div class="px-4 py-3 rounded border {% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-700{% elif message.tags == 'error' %}bg-red-50 border-red-200 text-red-700{% else %}bg-gray-50 border-gray-200 text-gray-700{% endif %}">
+					{{ message }}
+				</div>
+				{% endfor %}
+			</div>
+			{% endif %}
 			{% block content %}{% endblock %}
 		</main>
 

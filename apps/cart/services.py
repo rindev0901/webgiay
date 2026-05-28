@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.apps import apps
 from django.db import transaction
 
-from .models import Cart, CartItem
+from .models import Cart, CartItem, Order, OrderItem
 
 SESSION_KEY = 'cart'
 Product = apps.get_model('products', 'Product')
@@ -126,3 +126,60 @@ def merge_session_cart_into_user_cart(user, session):
         clear_session_cart(session)
 
     return merged_quantity
+
+
+def create_order_from_cart(user, session):
+    cart_items = []
+
+    if user and user.is_authenticated:
+        cart_items = list(get_user_cart_items(user))
+    else:
+        session_cart = get_session_cart(session)
+        if not session_cart:
+            return None
+
+        product_ids = [int(product_id) for product_id in session_cart.keys()]
+        products = Product.objects.filter(id__in=product_ids).select_related('brand', 'category')
+        product_map = {str(product.pk): product for product in products}
+
+        for product_id, payload in session_cart.items():
+            product = product_map.get(str(product_id))
+            if not product:
+                continue
+
+            quantity = int(payload.get('quantity', 0))
+            if quantity <= 0:
+                continue
+
+            cart_items.append({
+                'product': product,
+                'quantity': quantity,
+                'price': getattr(product, 'discount_price', None) or product.final_price,
+            })
+
+    if not cart_items:
+        return None
+
+    with transaction.atomic():
+        order = Order.objects.create(user=user if user and user.is_authenticated else None)
+        total_amount = Decimal('0')
+        order_items = []
+
+        for item in cart_items:
+            product = item.product if hasattr(item, 'product') else item['product']
+            quantity = item.quantity if hasattr(item, 'quantity') else item['quantity']
+            price = item.price if hasattr(item, 'price') else item['price']
+            total_amount += price * quantity
+            order_items.append(OrderItem(
+                order=order,
+                product=product,
+                product_name=product.name,
+                price=price,
+                quantity=quantity,
+            ))
+
+        order.total_amount = total_amount
+        order.save(update_fields=['total_amount', 'updated_at'])
+        OrderItem.objects.bulk_create(order_items)
+
+    return order
