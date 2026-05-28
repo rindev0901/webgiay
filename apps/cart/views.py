@@ -21,6 +21,7 @@ from .services import (
     remove_product_from_user_cart,
     set_user_cart_item_quantity,
 )
+from .forms import CheckoutForm
 from .models import Order
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -66,6 +67,101 @@ def cart_detail(request):
             total += subtotal
 
     return render(request, 'cart_detail.html', {'cart_items': items, 'total': total})
+
+
+def checkout(request):
+    items = []
+    total = Decimal('0')
+
+    if request.user.is_authenticated:
+        for item in get_user_cart_items(request.user):
+            price = item.price or item.product.final_price
+            subtotal = price * item.quantity
+            items.append({
+                'product': item.product,
+                'quantity': item.quantity,
+                'price': price,
+                'subtotal': subtotal,
+                'cart_item': item,
+            })
+            total += subtotal
+    else:
+        cart = get_session_cart(request.session)
+        product_ids = [int(pid) for pid in cart.keys()] if cart else []
+        products = Product.objects.filter(id__in=product_ids)
+        for p in products:
+            pid = str(p.pk)
+            qty = int(cart.get(pid, {}).get('quantity', 0))
+            price = getattr(p, 'discount_price', None) or getattr(p, 'price', 0)
+            subtotal = price * qty
+            items.append({
+                'product': p,
+                'quantity': qty,
+                'price': price,
+                'subtotal': subtotal,
+            })
+            total += subtotal
+
+    if not items:
+        messages.error(request, 'Giỏ hàng trống, chưa thể thanh toán.')
+        return redirect('cart:cart_detail')
+
+    initial = {}
+    if request.user.is_authenticated:
+        initial['email'] = getattr(request.user, 'email', '') or ''
+        if getattr(request.user, 'first_name', '') or getattr(request.user, 'last_name', ''):
+            initial['full_name'] = f"{request.user.first_name} {request.user.last_name}".strip()
+
+    if request.method == 'POST':
+        form = CheckoutForm(request.POST)
+        if form.is_valid():
+            order = create_order_from_cart(request.user if request.user.is_authenticated else None, request.session, form.cleaned_data)
+            if not order:
+                messages.error(request, 'Không thể tạo đơn hàng từ giỏ hàng hiện tại.')
+                return redirect('cart:cart_detail')
+
+            redirect_url = request.build_absolute_uri(reverse('cart:momo_return'))
+            ipn_url = request.build_absolute_uri(reverse('cart:momo_ipn'))
+
+            try:
+                request_payload, response_payload = create_momo_payment(order, redirect_url, ipn_url)
+            except RuntimeError as exc:
+                order.status = order.Status.FAILED
+                order.momo_message = str(exc)
+                order.save(update_fields=['status', 'momo_message', 'updated_at'])
+                messages.error(request, str(exc))
+                return redirect('cart:order_detail', code=order.code)
+
+            order.momo_request_id = request_payload['requestId']
+            order.momo_order_id = request_payload['orderId']
+            order.momo_pay_url = response_payload.get('payUrl', '')
+            order.momo_result_code = response_payload.get('resultCode')
+            order.momo_message = response_payload.get('message', '')
+            order.momo_response_payload = str(response_payload)
+            order.save(update_fields=[
+                'momo_request_id',
+                'momo_order_id',
+                'momo_pay_url',
+                'momo_result_code',
+                'momo_message',
+                'momo_response_payload',
+                'updated_at',
+            ])
+
+            pay_url = response_payload.get('payUrl')
+            if not pay_url:
+                messages.error(request, 'MoMo chưa trả về đường dẫn thanh toán.')
+                return redirect('cart:order_detail', code=order.code)
+
+            return redirect(pay_url)
+    else:
+        form = CheckoutForm(initial=initial)
+
+    return render(request, 'checkout.html', {
+        'form': form,
+        'cart_items': items,
+        'total': total,
+    })
 
 
 @require_POST
@@ -128,45 +224,7 @@ def clear_cart(request):
 
 @require_POST
 def momo_checkout(request):
-    order = create_order_from_cart(request.user if request.user.is_authenticated else None, request.session)
-    if not order:
-        messages.error(request, 'Giỏ hàng trống, không thể thanh toán.')
-        return redirect('cart:cart_detail')
-
-    redirect_url = request.build_absolute_uri(reverse('cart:momo_return'))
-    ipn_url = request.build_absolute_uri(reverse('cart:momo_ipn'))
-
-    try:
-        request_payload, response_payload = create_momo_payment(order, redirect_url, ipn_url)
-    except RuntimeError as exc:
-        order.status = order.Status.FAILED
-        order.momo_message = str(exc)
-        order.save(update_fields=['status', 'momo_message', 'updated_at'])
-        messages.error(request, str(exc))
-        return redirect('cart:cart_detail')
-
-    order.momo_request_id = request_payload['requestId']
-    order.momo_order_id = request_payload['orderId']
-    order.momo_pay_url = response_payload.get('payUrl', '')
-    order.momo_result_code = response_payload.get('resultCode')
-    order.momo_message = response_payload.get('message', '')
-    order.momo_response_payload = str(response_payload)
-    order.save(update_fields=[
-        'momo_request_id',
-        'momo_order_id',
-        'momo_pay_url',
-        'momo_result_code',
-        'momo_message',
-        'momo_response_payload',
-        'updated_at',
-    ])
-
-    pay_url = response_payload.get('payUrl')
-    if not pay_url:
-        messages.error(request, 'MoMo chưa trả về đường dẫn thanh toán.')
-        return redirect('cart:cart_detail')
-
-    return redirect(pay_url)
+    return redirect('cart:checkout')
 
 
 def _momo_payload(request):

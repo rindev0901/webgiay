@@ -128,7 +128,7 @@ def merge_session_cart_into_user_cart(user, session):
     return merged_quantity
 
 
-def create_order_from_cart(user, session):
+def create_order_from_cart(user, session, customer_info=None):
     cart_items = []
 
     if user and user.is_authenticated:
@@ -161,7 +161,14 @@ def create_order_from_cart(user, session):
         return None
 
     with transaction.atomic():
-        order = Order.objects.create(user=user if user and user.is_authenticated else None)
+        order = Order.objects.create(
+            user=user if user and user.is_authenticated else None,
+            full_name=(customer_info or {}).get('full_name', ''),
+            phone=(customer_info or {}).get('phone', ''),
+            email=(customer_info or {}).get('email', ''),
+            address=(customer_info or {}).get('address', ''),
+            note=(customer_info or {}).get('note', ''),
+        )
         total_amount = Decimal('0')
         order_items = []
 

@@ -35,10 +35,7 @@
     <div class="text-lg font-semibold">Tổng: {{ total|vnd }}</div>
     <div class="flex gap-2">
       <a href="{% url 'products:product_list' %}" class="px-4 py-2 border rounded">Tiếp tục mua</a>
-      <form action="{% url 'cart:momo_checkout' %}" method="post" class="inline-block">
-        {% csrf_token %}
-        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Thanh toán MoMo</button>
-      </form>
+      <a href="{% url 'cart:checkout' %}" class="px-4 py-2 bg-green-600 text-white rounded">Thanh toán</a>
       <a href="{% url 'cart:clear_cart' %}" class="px-4 py-2 border rounded text-red-600">Xóa giỏ hàng</a>
     </div>
   </div>
