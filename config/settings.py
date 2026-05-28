@@ -29,6 +29,8 @@ INSTALLED_APPS = [
 
     # App của bạn
     'apps.products.apps.ProductsConfig',
+    'apps.cart.apps.CartConfig',
+    'apps.accounts.apps.AccountsConfig',
 ]
 
 # ====================== MIDDLEWARE ======================
@@ -54,10 +56,17 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+
+                # custom cart
+                'apps.cart.context_processors.cart_count',
             ],
         },
     },
 ]
+
+LOGIN_REDIRECT_URL = 'products:product_list'
+LOGOUT_REDIRECT_URL = 'products:product_list'
+LOGIN_URL = 'accounts:login'
 
 WSGI_APPLICATION = 'config.wsgi.application'
 

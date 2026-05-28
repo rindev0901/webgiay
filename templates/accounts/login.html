@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Đăng nhập{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow mt-10">
+  <h1 class="text-2xl font-bold mb-6">Đăng nhập</h1>
+
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <div>
+      <label class="block mb-1 font-medium" for="id_username">Tên đăng nhập</label>
+      {{ form.username }}
+      {{ form.username.errors }}
+    </div>
+
+    <div>
+      <label class="block mb-1 font-medium" for="id_password">Mật khẩu</label>
+      {{ form.password }}
+      {{ form.password.errors }}
+    </div>
+
+    <button type="submit" class="w-full py-2 bg-red-600 text-white rounded hover:bg-red-700">
+      Đăng nhập
+    </button>
+  </form>
+
+  <p class="mt-4 text-sm text-gray-600">
+    Chưa có tài khoản?
+    <a href="{% url 'accounts:register' %}" class="text-red-600">Đăng ký</a>
+  </p>
+</div>
+{% endblock %}

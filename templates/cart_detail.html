@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load format_money %}
+{% block title %}Giỏ hàng - WebGiày{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white p-6 rounded shadow">
+  <h2 class="text-2xl font-semibold mb-4">Giỏ hàng của bạn</h2>
+  {% if cart_items %}
+  <div class="space-y-4">
+    {% for it in cart_items %}
+    <div class="flex items-center gap-4">
+      {% if it.product.images.first %}
+      <img src="{{ it.product.images.first.image.url }}" class="w-20 h-20 object-cover rounded" alt="{{ it.product.name }}">
+      {% else %}
+      <img src="{% static 'images/no-image.jpg' %}" class="w-20 h-20 object-cover rounded" alt="{{ it.product.name }}">
+      {% endif %}
+      <div class="flex-1">
+        <div class="font-medium">{{ it.product.name }}</div>
+        <div class="text-sm text-gray-600">{{ it.product.brand.name }}</div>
+      </div>
+      <div class="text-right">
+        <div class="font-semibold">{{ it.price|vnd }}</div>
+        <form action="{% url 'cart:update_cart' it.product.id %}" method="post" class="mt-2">
+          {% csrf_token %}
+          <input type="number" name="quantity" value="{{ it.quantity }}" min="0" class="w-20 px-2 py-1 border rounded" />
+          <button class="ml-2 px-3 py-1 bg-red-600 text-white rounded">Cập nhật</button>
+        </form>
+        <a href="{% url 'cart:remove_from_cart' it.product.id %}" class="text-sm text-red-500 mt-2 inline-block">Xóa</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="mt-6 flex justify-between items-center">
+    <div class="text-lg font-semibold">Tổng: {{ total|vnd }}</div>
+    <div class="flex gap-2">
+      <a href="{% url 'products:product_list' %}" class="px-4 py-2 border rounded">Tiếp tục mua</a>
+      <a href="#" class="px-4 py-2 bg-green-600 text-white rounded">Thanh toán</a>
+      <a href="{% url 'cart:clear_cart' %}" class="px-4 py-2 border rounded text-red-600">Xóa giỏ hàng</a>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-gray-600">Giỏ hàng trống.</p>
+  {% endif %}
+</div>
+{% endblock %}
