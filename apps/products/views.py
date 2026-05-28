@@ -67,6 +67,24 @@ def product_list(request: HttpRequest):
     return render(request, 'product_list.html', context)
 
 
+def landing(request: HttpRequest):
+    """Landing page with featured products"""
+    featured = Product.objects.filter(is_active=True, featured=True)
+    # Prefetch primary images for featured display
+    featured = featured.select_related('brand', 'category').prefetch_related(
+        Prefetch('images', queryset=ProductImage.objects.filter(is_primary=True))
+    )[:8]
+
+    categories = Category.objects.filter(is_active=True)
+
+    context = {
+        'featured': featured,
+        'categories': categories,
+        'title': 'WebGiày - Trang chủ'
+    }
+    return render(request, 'index.html', context)
+
+
 def category_detail(request, slug):
     """Xem theo danh mục + chỉ hiển thị thương hiệu có trong danh mục đó"""
     category = get_object_or_404(Category, slug=slug, is_active=True)
