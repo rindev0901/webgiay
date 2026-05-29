@@ -9,6 +9,8 @@ from .models import (
     ProductImage
 )
 from django.http import HttpRequest
+from django.db.models import Q
+from decimal import Decimal, InvalidOperation
 
 
 def product_list(request: HttpRequest):
@@ -31,6 +33,22 @@ def product_list(request: HttpRequest):
         products = products.filter(category__slug=category_slug)
     if brand_slug:
         products = products.filter(brand__slug=brand_slug)
+
+    # Price range filter (min_price, max_price)
+    min_price = request.GET.get('min_price')
+    max_price = request.GET.get('max_price')
+    if min_price:
+        try:
+            min_val = Decimal(min_price)
+            products = products.filter(Q(discount_price__gte=min_val) | Q(discount_price__isnull=True, price__gte=min_val))
+        except InvalidOperation:
+            pass
+    if max_price:
+        try:
+            max_val = Decimal(max_price)
+            products = products.filter(Q(discount_price__lte=max_val) | Q(discount_price__isnull=True, price__lte=max_val))
+        except InvalidOperation:
+            pass
 
     # Sắp xếp
     if sort == 'price_low':
@@ -63,6 +81,8 @@ def product_list(request: HttpRequest):
         'current_brand': brand_slug,
         'current_sort': sort,
         'query_string': query_string,
+        'min_price': min_price,
+        'max_price': max_price,
     }
     return render(request, 'product_list.html', context)
 
