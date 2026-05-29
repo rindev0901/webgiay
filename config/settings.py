@@ -12,7 +12,11 @@ SECRET_KEY = 'django-insecure-=mmz4)=)554^3v%*-+6@thv$--e1e23wounpwrt1f*h=)$mr0f
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'webgiay-gsyh.onrender.com',
+    'localhost',
+    '127.0.0.1',
+]
 
 # ====================== APPLICATIONS ======================
 INSTALLED_APPS = [
