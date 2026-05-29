@@ -63,7 +63,7 @@ class Order(models.Model):
     email = models.EmailField(blank=True)
     address = models.CharField(max_length=255, blank=True)
     note = models.TextField(blank=True)
-    total_amount = models.DecimalField(max_digits=12, decimal_places=0, default=0)
+    total_amount = models.DecimalField(max_digits=12, decimal_places=0)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     payment_method = models.CharField(max_length=20, choices=PaymentMethod.choices, default=PaymentMethod.MOMO)
     momo_order_id = models.CharField(max_length=100, blank=True, unique=True, null=True)

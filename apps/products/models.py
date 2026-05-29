@@ -97,9 +97,11 @@ class Color(models.Model):
     name = models.CharField(max_length=50, unique=True)
     hex_code = models.CharField(
         max_length=7, blank=True, help_text="Ví dụ: #FF0000")
-
     def __str__(self):
         return self.name
+    class Meta:
+        verbose_name = "Màu sắc"
+        verbose_name_plural = "Màu sắc"
 
 
 class ProductVariant(models.Model):
