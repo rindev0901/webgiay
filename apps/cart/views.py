@@ -69,6 +69,7 @@ def cart_detail(request):
     return render(request, 'cart_detail.html', {'cart_items': items, 'total': total})
 
 
+@login_required
 def checkout(request):
     items = []
     total = Decimal('0')
