@@ -95,11 +95,8 @@ def landing(request: HttpRequest):
         Prefetch('images', queryset=ProductImage.objects.filter(is_primary=True))
     )[:8]
 
-    categories = Category.objects.filter(is_active=True)
-
     context = {
         'featured': featured,
-        'categories': categories,
         'title': 'WebGiày - Trang chủ'
     }
     return render(request, 'index.html', context)

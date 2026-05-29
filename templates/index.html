@@ -13,7 +13,6 @@
                 <p class="text-lg mb-6">Khám phá bộ sưu tập mới nhất, ưu đãi hấp dẫn và giao hàng nhanh chóng.</p>
                 <div class="flex gap-3">
                     <a href="{% url 'products:product_list' %}" class="bg-white text-red-600 px-5 py-3 rounded-md font-semibold shadow">Mua sắm ngay</a>
-                    <a href="{% url 'products:product_list' %}" class="border border-white px-5 py-3 rounded-md">Xem tất cả sản phẩm</a>
                 </div>
             </div>
             <div class="flex-1" data-aos="fade-left">
@@ -43,15 +42,6 @@
             </div>
             {% empty %}
             <p>Chưa có sản phẩm nổi bật.</p>
-            {% endfor %}
-        </div>
-    </section>
-
-    <section>
-        <h2 class="text-2xl font-semibold mb-4">Danh mục</h2>
-        <div class="flex flex-wrap gap-3">
-            {% for c in categories %}
-                <a href="{% url 'products:category_detail' c.slug %}" class="px-4 py-2 border rounded">{{ c.name }}</a>
             {% endfor %}
         </div>
     </section>
