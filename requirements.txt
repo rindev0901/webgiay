@@ -3,3 +3,4 @@ django-import-export==4.4.1
 djangorestframework
 django-filter
 Pillow
+gunicorn
