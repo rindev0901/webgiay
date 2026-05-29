@@ -15,6 +15,18 @@
 		{% load static %}
 		<link rel="stylesheet" href="{% static 'css/main.css' %}" />
 
+		<!-- AOS animation library -->
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" integrity="sha512-GY7o7m+1f1QZr0Xg2cV6bGqk8o6Kq1Y1qYkqvX7v1m1q1Y1q1Y1q1Y1q1Y1q1Y1q" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+		<style>
+		:root{--primary:#dc2626;--primary-dark:#b91c1c;--muted:#6b7280}
+		.input, input.input, textarea.input, select.input{width:100%;padding:.5rem .75rem;border:1px solid #e5e7eb;border-radius:.375rem;background:#fff;color:#111}
+		.input:focus{outline:none;box-shadow:0 0 0 3px rgba(220,38,38,0.12);border-color:var(--primary)}
+		.btn-primary{background:var(--primary);color:#fff;padding:.5rem .75rem;border-radius:.375rem;font-weight:600;display:inline-flex;align-items:center;justify-content:center;border:none}
+		.btn-primary:hover{background:var(--primary-dark)}
+		.btn-secondary{background:transparent;border:1px solid #d1d5db;color:#111;padding:.45rem .7rem;border-radius:.375rem;font-weight:600}
+		.badge{position:absolute;top:-0.5rem;right:-0.5rem;width:1.25rem;height:1.25rem;font-size:.75rem;background:var(--primary);color:#fff;border-radius:9999px;display:flex;align-items:center;justify-content:center}
+		</style>
 		{% block extra_css %}{% endblock %}
 	</head>
 	<body class="font-segoe bg-gray-50">
@@ -310,5 +322,11 @@
 		</script>
 
 		{% block extra_js %}{% endblock %}
+
+		<!-- AOS init -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js" integrity="sha512-1V6Ykq1Y1q1Y1q1Y1q1Y1q1Y1q1Y1q1Y1q1Y1q1Y1q1Y1q1Y1q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+		<script>
+		  if (window.AOS) { AOS.init({duration: 600, once: true}); }
+		</script>
 	</body>
 </html>

@@ -6,9 +6,9 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto mt-8">
-    <section class="bg-linear-to-r from-red-600 to-pink-500 rounded-lg text-white p-12 mb-8">
+    <section class="bg-linear-to-r from-red-600 to-pink-500 rounded-lg text-white p-12 mb-8" data-aos="fade-up">
         <div class="flex flex-col lg:flex-row items-center gap-8">
-            <div class="flex-1">
+            <div class="flex-1" data-aos="fade-right">
                 <h1 class="text-4xl font-extrabold mb-4">WebGiày — Giày đẹp cho mọi phong cách</h1>
                 <p class="text-lg mb-6">Khám phá bộ sưu tập mới nhất, ưu đãi hấp dẫn và giao hàng nhanh chóng.</p>
                 <div class="flex gap-3">
@@ -16,7 +16,7 @@
                     <a href="{% url 'products:product_list' %}" class="border border-white px-5 py-3 rounded-md">Xem tất cả sản phẩm</a>
                 </div>
             </div>
-            <div class="flex-1">
+            <div class="flex-1" data-aos="fade-left">
                 <img src="{% static 'images/hero-shoes.png' %}" alt="Hero" class="mx-auto max-h-56 object-contain" />
             </div>
         </div>

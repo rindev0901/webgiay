@@ -41,6 +41,21 @@
         {% if form.address.errors %}<p class="text-sm text-red-600 mt-1">{{ form.address.errors|striptags }}</p>{% endif %}
       </div>
 
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label class="block mb-1 font-medium">{{ form.province.label }}</label>
+          {{ form.province }}
+        </div>
+        <div>
+          <label class="block mb-1 font-medium">{{ form.district.label }}</label>
+          {{ form.district }}
+        </div>
+        <div>
+          <label class="block mb-1 font-medium">{{ form.ward.label }}</label>
+          {{ form.ward }}
+        </div>
+      </div>
+
       <div>
         <label class="block mb-1 font-medium" for="{{ form.note.id_for_label }}">{{ form.note.label }}</label>
         {{ form.note }}
@@ -75,4 +90,50 @@
     <p class="text-sm text-gray-500 mt-3">Thông tin giao hàng sẽ được lưu vào đơn hàng trước khi chuyển sang MoMo.</p>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Load Vietnam provinces/districts/wards using provinces.open-api.vn
+async function fetchJSON(url){
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('Network error');
+  return res.json();
+}
+
+document.addEventListener('DOMContentLoaded', async function(){
+  const provSelect = document.getElementById('province_select');
+  const distSelect = document.getElementById('district_select');
+  const wardSelect = document.getElementById('ward_select');
+
+  try{
+    const provinces = await fetchJSON('https://provinces.open-api.vn/api/?depth=1');
+    // populate provinces
+    provinces.forEach(p => {
+      const opt = document.createElement('option'); opt.value = p.code; opt.text = p.name; provSelect.appendChild(opt);
+    });
+
+    provSelect.addEventListener('change', async function(){
+      const code = this.value; distSelect.innerHTML = '<option value="">Chọn Quận/Huyện</option>'; wardSelect.innerHTML = '<option value="">Chọn Phường/Xã</option>';
+      if(!code) return;
+      const districts = await fetchJSON('https://provinces.open-api.vn/api/p/' + code + '?depth=2');
+      if(districts && districts.districts){
+        districts.districts.forEach(d => { const o = document.createElement('option'); o.value = d.code; o.text = d.name; distSelect.appendChild(o); });
+      }
+    });
+
+    distSelect.addEventListener('change', async function(){
+      const dcode = this.value; wardSelect.innerHTML = '<option value="">Chọn Phường/Xã</option>';
+      if(!dcode) return;
+      const wards = await fetchJSON('https://provinces.open-api.vn/api/d/' + dcode + '?depth=2');
+      if(wards && wards.wards){
+        wards.wards.forEach(w => { const o = document.createElement('option'); o.value = w.code; o.text = w.name; wardSelect.appendChild(o); });
+      }
+    });
+
+  }catch(err){
+    console.warn('Address API failed', err);
+  }
+});
+</script>
 {% endblock %}
