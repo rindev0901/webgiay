@@ -152,8 +152,8 @@ class Voucher(models.Model):
     is_active  = models.BooleanField(default=True, verbose_name='Kích hoạt')
 
     class Meta:
-        verbose_name = 'Voucher'
-        verbose_name_plural = 'Voucher'
+        verbose_name = 'Phiếu giảm giá'
+        verbose_name_plural = 'Phiếu giảm giá'
         ordering = ['-valid_to']
 
     def __str__(self):

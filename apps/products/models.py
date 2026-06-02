@@ -217,3 +217,40 @@ class ProductImage(models.Model):
     def __str__(self):
         color_str = f" [{self.color.name}]" if self.color else ""
         return f"Ảnh {self.product.name}{color_str}"
+
+
+# ====================== 5. Lịch sử tồn kho ======================
+class StockMovement(models.Model):
+    class MovementType(models.TextChoices):
+        IN      = 'in',      'Nhập kho'
+        OUT     = 'out',     'Xuất kho (bán)'
+        ADJUST  = 'adjust',  'Điều chỉnh'
+        RETURN  = 'return',  'Trả hàng'
+        CANCEL  = 'cancel',  'Huỷ đặt giữ'
+
+    variant = models.ForeignKey(
+        ProductVariant, on_delete=models.CASCADE,
+        related_name='movements', verbose_name='Biến thể'
+    )
+    movement_type = models.CharField(
+        max_length=10, choices=MovementType.choices, verbose_name='Loại'
+    )
+    quantity = models.IntegerField(
+        verbose_name='Số lượng',
+        help_text='Số dương = nhập vào, số âm = xuất ra'
+    )
+    stock_before = models.PositiveIntegerField(verbose_name='Tồn trước')
+    stock_after  = models.PositiveIntegerField(verbose_name='Tồn sau')
+    order_code   = models.CharField(max_length=32, blank=True, verbose_name='Mã đơn hàng')
+    note         = models.CharField(max_length=255, blank=True, verbose_name='Ghi chú')
+    created_by   = models.CharField(max_length=100, blank=True, verbose_name='Thực hiện bởi')
+    created_at   = models.DateTimeField(auto_now_add=True, verbose_name='Thời gian')
+
+    class Meta:
+        verbose_name = 'Lịch sử tồn kho'
+        verbose_name_plural = 'Lịch sử tồn kho'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        qty = int(self.quantity) if self.quantity is not None else 0
+        return f"{self.get_movement_type_display()} | {self.variant} | {qty:+d}"

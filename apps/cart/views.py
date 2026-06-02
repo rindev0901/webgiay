@@ -21,6 +21,7 @@ from .services import (
     remove_product_from_user_cart,
     set_user_cart_item_quantity,
 )
+from apps.products.inventory import check_stock, deduct_stock, restore_stock
 from .forms import CheckoutForm
 from .models import Order, Voucher
 from django.contrib.auth.decorators import login_required
@@ -117,6 +118,16 @@ def checkout(request):
 
     if not items:
         messages.error(request, 'Giỏ hàng trống, chưa thể thanh toán.')
+        return redirect('cart:cart_detail')
+
+    # Kiểm tra tồn kho trước khi cho phép checkout
+    stock_errors = check_stock(items)
+    if stock_errors:
+        for err in stock_errors:
+            messages.error(
+                request,
+                f'"{err["product"]}" chỉ còn {err["available"]} sản phẩm, bạn đặt {err["requested"]}.'
+            )
         return redirect('cart:cart_detail')
 
     # Đọc voucher từ session
@@ -342,6 +353,8 @@ def momo_return(request):
         order.momo_result_code = get_payment_result_code(payload)
         order.momo_message = payload.get('message', '')
         order.save(update_fields=['status', 'momo_trans_id', 'momo_result_code', 'momo_message', 'updated_at'])
+        # Trừ tồn kho
+        deduct_stock(order, actor='momo_return')
         clear_session_cart(request.session)
         if request.user.is_authenticated:
             clear_user_cart(request.user)
@@ -374,6 +387,7 @@ def momo_ipn(request):
         order.momo_result_code = get_payment_result_code(payload)
         order.momo_message = payload.get('message', '')
         order.save(update_fields=['status', 'momo_trans_id', 'momo_result_code', 'momo_message', 'updated_at'])
+        deduct_stock(order, actor='momo_ipn')
         clear_session_cart(request.session)
         if request.user.is_authenticated:
             clear_user_cart(request.user)
