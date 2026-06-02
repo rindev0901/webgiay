@@ -1,51 +1,390 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load format_money %}
-{% block title %}Giỏ hàng - WebGiày{% endblock %}
-{% block content %}
-<div class="max-w-4xl mx-auto bg-white p-6 rounded shadow">
-  <h2 class="text-2xl font-semibold mb-4">Giỏ hàng của bạn</h2>
-  {% if cart_items %}
-  <div class="space-y-4">
-    {% for it in cart_items %}
-    <div class="flex items-center gap-4">
-      {% if it.product.images.first %}
-      <img src="{{ it.product.images.first.image.url }}" class="w-20 h-20 object-cover rounded" alt="{{ it.product.name }}">
-      {% else %}
-      <img src="{% static 'images/no-image.jpg' %}" class="w-20 h-20 object-cover rounded" alt="{{ it.product.name }}">
-      {% endif %}
-      <div class="flex-1">
-        <div class="font-medium">{{ it.product.name }}</div>
-        <div class="text-sm text-gray-600">{{ it.product.brand.name }}</div>
-      </div>
-      <div class="text-right">
-        <div class="font-semibold">{{ it.price|vnd }}</div>
-        <form action="{% url 'cart:update_cart' it.product.id %}" method="post" class="mt-2">
-          {% csrf_token %}
-          <input type="number" name="quantity" value="{{ it.quantity }}" min="0" class="w-20 px-2 py-1 border rounded" />
-          <button class="ml-2 px-3 py-1 bg-red-600 text-white rounded">Cập nhật</button>
-        </form>
-        <a href="{% url 'cart:remove_from_cart' it.product.id %}" class="text-sm text-red-500 mt-2 inline-block">Xóa</a>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
 
-  <div class="mt-6 flex justify-between items-center">
-    <div class="text-lg font-semibold">Tổng: {{ total|vnd }}</div>
-    <div class="flex gap-2">
-      <a href="{% url 'products:product_list' %}" class="px-4 py-2 border rounded">Tiếp tục mua</a>
-        {% url 'cart:checkout' as checkout_url %}
-        {% if user.is_authenticated %}
-          <a href="{{ checkout_url }}" class="px-4 py-2 bg-green-600 text-white rounded">Thanh toán</a>
-        {% else %}
-          <a href="{% url 'accounts:login' %}?next={{ checkout_url }}" class="px-4 py-2 bg-green-600 text-white rounded">Đăng nhập để thanh toán</a>
-        {% endif %}
-      <a href="{% url 'cart:clear_cart' %}" class="px-4 py-2 border rounded text-red-600">Xóa giỏ hàng</a>
+{% block title %}Giỏ hàng - Dee Store{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ===== PAGE ===== */
+.cart-page { background:#f3f4f6; padding-bottom:40px; min-height:80vh; }
+.cart-container { max-width:1200px; margin:0 auto; padding:0 16px; }
+
+/* Breadcrumb */
+.cart-bc { font-size:12px; color:#999; padding:10px 0 16px; display:flex; align-items:center; gap:5px; }
+.cart-bc a { color:#999; text-decoration:none; }
+.cart-bc a:hover { color:var(--dee-red); }
+.cart-bc i { font-size:8px; color:#ccc; }
+
+/* 2-col layout */
+.cart-layout { display:grid; grid-template-columns:1fr 320px; gap:16px; align-items:start; }
+@media(max-width:900px){ .cart-layout { grid-template-columns:1fr; } }
+
+/* ── LEFT PANEL ── */
+.cart-left { display:flex; flex-direction:column; gap:12px; }
+
+/* Cart card */
+.cart-card {
+  background:white; border:1px solid #e5e7eb;
+  padding:14px 16px;
+}
+.cart-card-title {
+  font-size:14px; font-weight:700; color:#111;
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:12px;
+}
+.cart-card-title .item-count {
+  font-size:12px; font-weight:500; color:#888;
+  border:1px solid #e5e7eb; padding:2px 10px; border-radius:20px;
+}
+
+/* Cart item row */
+.cart-item {
+  display:grid;
+  grid-template-columns:68px 1fr auto auto;
+  gap:12px; align-items:center;
+  padding:12px 0;
+  border-bottom:1px solid #f3f4f6;
+}
+.cart-item:last-child { border-bottom:none; }
+
+.cart-item-img {
+  width:68px; height:68px; object-fit:contain;
+  background:#f8f8f8; border:1px solid #eee; padding:3px;
+}
+.cart-item-name {
+  font-size:13px; font-weight:600; color:#111;
+  line-height:1.4; margin-bottom:3px;
+}
+.cart-item-meta { font-size:12px; color:#888; }
+.cart-item-price-sale { font-size:13px; font-weight:700; color:var(--dee-red); }
+.cart-item-price-orig { font-size:11px; color:#bbb; text-decoration:line-through; margin-left:4px; }
+
+/* Qty box inside cart item */
+.ci-qty-wrap {
+  display:flex; align-items:center;
+  border:1.5px solid #ddd; height:32px; overflow:hidden; border-radius:2px;
+}
+.ci-qty-btn {
+  width:30px; height:100%; background:white; border:none;
+  font-size:14px; color:#555; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:background .12s;
+}
+.ci-qty-btn:hover { background:#f5f5f5; }
+.ci-qty-num {
+  width:36px; height:100%; border:none;
+  border-left:1.5px solid #ddd; border-right:1.5px solid #ddd;
+  text-align:center; font-size:13px; font-weight:600;
+  outline:none;
+  -moz-appearance:textfield; appearance:textfield;
+}
+.ci-qty-num::-webkit-inner-spin-button,
+.ci-qty-num::-webkit-outer-spin-button { -webkit-appearance:none; }
+
+.cart-item-subtotal {
+  font-size:13px; font-weight:700; color:var(--dee-red);
+  text-align:right; min-width:80px;
+}
+.btn-remove-item {
+  display:block; margin-top:4px; text-align:center;
+  font-size:11px; color:#aaa; text-decoration:underline; cursor:pointer;
+  background:none; border:none; padding:0;
+}
+.btn-remove-item:hover { color:var(--dee-red); }
+
+/* Coupon section */
+.coupon-card-cart {
+  display:flex; align-items:stretch;
+  border:1px solid #e5e7eb; background:white; width:fit-content; max-width:280px;
+}
+.coupon-card-cart .ca { background:var(--dee-red); color:white; font-size:18px; font-weight:800; padding:12px 14px; display:flex; align-items:center; flex-shrink:0; }
+.coupon-card-cart .cb { padding:8px 12px; flex:1; }
+.coupon-card-cart .cb .cn { font-size:12px; font-weight:700; color:#111; }
+.coupon-card-cart .cb .cm { font-size:11px; color:#666; }
+.coupon-card-cart .cb .cc { font-size:10px; color:#999; }
+.coupon-card-cart .cb .cc span { color:var(--dee-red); font-weight:600; }
+.btn-copy-coupon {
+  background:#333; color:white; border:none;
+  padding:0 12px; font-size:11px; font-weight:700;
+  cursor:pointer; white-space:nowrap;
+  display:flex; align-items:center; transition:background .2s;
+}
+.btn-copy-coupon:hover { background:var(--dee-red); }
+
+/* Recently viewed */
+.rv-grid {
+  display:grid; grid-template-columns:repeat(4,1fr); gap:10px;
+}
+@media(max-width:640px){ .rv-grid { grid-template-columns:repeat(2,1fr); } }
+
+/* ── RIGHT: ORDER SUMMARY ── */
+.order-summary {
+  background:white; border:1px solid #e5e7eb;
+  padding:16px; position:sticky; top:80px;
+}
+.summary-title {
+  font-size:14px; font-weight:700; color:#111;
+  padding-bottom:12px; margin-bottom:12px;
+  border-bottom:1px solid #f0f0f0;
+}
+.summary-row {
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:13px; color:#555; margin-bottom:8px;
+}
+.summary-row.total {
+  font-size:14px; font-weight:700; color:#111;
+  border-top:1px solid #f0f0f0; padding-top:10px; margin-top:4px;
+}
+.summary-row.total span:last-child { color:var(--dee-red); font-size:16px; }
+
+.summary-note {
+  width:100%; border:1px solid #e5e7eb; padding:8px 10px;
+  font-size:12px; color:#444; resize:vertical; min-height:68px;
+  border-radius:2px; outline:none; margin-bottom:10px;
+  font-family:inherit;
+}
+.summary-note:focus { border-color:#bbb; }
+
+.summary-coupon-input {
+  width:100%; border:1px solid #e5e7eb; padding:8px 10px;
+  font-size:12px; color:#444; border-radius:2px; outline:none;
+  margin-bottom:12px;
+}
+.summary-coupon-input:focus { border-color:#bbb; }
+
+.btn-checkout {
+  display:block; width:100%; padding:13px;
+  background:var(--dee-red); color:white;
+  font-size:14px; font-weight:700; letter-spacing:.5px;
+  text-align:center; text-decoration:none; border:none; cursor:pointer;
+  transition:background .2s; margin-bottom:8px;
+}
+.btn-checkout:hover { background:var(--dee-red-dark); color:white; }
+
+.btn-continue {
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  width:100%; padding:9px;
+  background:white; color:#555; font-size:12px;
+  border:none; cursor:pointer; text-decoration:none;
+  transition:color .15s;
+}
+.btn-continue:hover { color:var(--dee-red); }
+
+/* Empty cart */
+.empty-cart {
+  text-align:center; padding:60px 20px;
+  background:white; border:1px solid #e5e7eb;
+}
+.empty-cart i { font-size:52px; color:#ddd; margin-bottom:16px; }
+.empty-cart p { font-size:14px; color:#888; margin-bottom:20px; }
+.empty-cart a {
+  display:inline-block; padding:10px 28px;
+  background:var(--dee-red); color:white;
+  font-size:13px; font-weight:600; text-decoration:none;
+  transition:background .2s;
+}
+.empty-cart a:hover { background:var(--dee-red-dark); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cart-page">
+<div class="cart-container">
+
+  <!-- Breadcrumb -->
+  <nav class="cart-bc">
+    <a href="{% url 'landing' %}">Trang chủ</a>
+    <i class="fas fa-chevron-right"></i>
+    <span style="color:#555;">Giỏ hàng</span>
+  </nav>
+
+  {% if cart_items %}
+  <div class="cart-layout">
+
+    <!-- ════ LEFT ════ -->
+    <div class="cart-left">
+
+      <!-- Giỏ hàng card -->
+      <div class="cart-card">
+        <div class="cart-card-title">
+          <span>Giỏ hàng:</span>
+          <span class="item-count">{{ cart_items|length }} Sản phẩm</span>
+        </div>
+
+        {% for it in cart_items %}
+        <div class="cart-item">
+          <!-- Thumbnail -->
+          <a href="{% url 'products:product_detail' it.product.slug %}">
+            {% if it.product.images.first %}
+            <img class="cart-item-img" src="{{ it.product.images.first.image.url }}" alt="{{ it.product.name }}">
+            {% else %}
+            <img class="cart-item-img" src="{% static 'images/no-image.jpg' %}" alt="{{ it.product.name }}">
+            {% endif %}
+          </a>
+
+          <!-- Info -->
+          <div>
+            <a href="{% url 'products:product_detail' it.product.slug %}" style="text-decoration:none;">
+              <div class="cart-item-name">{{ it.product.name }}</div>
+            </a>
+            <div class="cart-item-meta">
+              {% if it.product.discount_price %}
+              <span class="cart-item-price-sale">{{ it.price|vnd }}</span>
+              <span class="cart-item-price-orig">{{ it.product.price|vnd }}</span>
+              {% else %}
+              <span class="cart-item-price-sale">{{ it.price|vnd }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Qty -->
+          <form action="{% url 'cart:update_cart' it.product.id %}" method="post" class="qty-update-form" data-product="{{ it.product.id }}">
+            {% csrf_token %}
+            <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+              <div class="ci-qty-wrap">
+                <button type="button" class="ci-qty-btn" onclick="ciQty(this,-1)">−</button>
+                <input type="number" name="quantity" class="ci-qty-num" value="{{ it.quantity }}" min="1">
+                <button type="button" class="ci-qty-btn" onclick="ciQty(this,1)">+</button>
+              </div>
+              <button type="submit" class="btn-remove-item" onclick="this.form.querySelector('[name=quantity]').value=0">Xóa</button>
+            </div>
+          </form>
+
+          <!-- Subtotal -->
+          <div class="cart-item-subtotal">{{ it.subtotal|vnd }}</div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Mã giảm giá -->
+      <div class="cart-card">
+        <div class="cart-card-title" style="margin-bottom:10px;">MÃ GIẢM GIÁ</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <div class="coupon-card-cart">
+            <div class="ca">35k</div>
+            <div class="cb">
+              <div class="cn">Miễn Phí Vận Chuyển</div>
+              <div class="cm">Đơn hàng từ 500k</div>
+              <div class="cc">Ms: <span>FS2026</span><br>HSD: 31/12/2026</div>
+            </div>
+            <button class="btn-copy-coupon" onclick="cpCart('FS2026',this)">Sao chép mã</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sản phẩm đã xem -->
+      {% if recently_viewed %}
+      <div class="cart-card">
+        <div class="cart-card-title" style="font-size:16px; border-left:4px solid var(--dee-red); padding-left:10px; margin-left:-16px; padding-right:0;">
+          SẢN PHẨM ĐÃ XEM
+        </div>
+        <div class="rv-grid">
+          {% for rp in recently_viewed %}
+          <div class="product-card">
+            {% if rp.discount_price %}
+            <span class="badge-discount">-{{ rp.discount_percent }}%</span>
+            {% endif %}
+            <div class="card-img-wrap">
+              {% if rp.images.first %}
+              <img src="{{ rp.images.first.image.url }}" alt="{{ rp.name }}" loading="lazy">
+              {% else %}
+              <img src="{% static 'images/no-image.jpg' %}" alt="{{ rp.name }}" loading="lazy">
+              {% endif %}
+              <a href="{% url 'products:product_detail' rp.slug %}" class="btn-add-cart" title="Xem sản phẩm">
+                <i class="fas fa-shopping-cart"></i>
+              </a>
+            </div>
+            <div class="card-body">
+              <a href="{% url 'products:product_detail' rp.slug %}" style="text-decoration:none;">
+                <p class="card-name">{{ rp.name }}</p>
+              </a>
+              <span class="card-price-sale">{{ rp.final_price|vnd }}</span>
+              {% if rp.discount_price %}
+              <span class="card-price-original">{{ rp.price|vnd }}</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div><!-- /cart-left -->
+
+    <!-- ════ RIGHT: ORDER SUMMARY ════ -->
+    <div class="order-summary">
+      <div class="summary-title">Thông tin đơn hàng</div>
+
+      {% for it in cart_items %}
+      <div class="summary-row">
+        <span style="max-width:170px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+          {{ it.product.name }}
+        </span>
+        <span>{{ it.subtotal|vnd }}</span>
+      </div>
+      {% endfor %}
+
+      <div class="summary-row total">
+        <span>Tổng tiền:</span>
+        <span>{{ total|vnd }}</span>
+      </div>
+
+      <!-- Ghi chú -->
+      <label style="font-size:12px; font-weight:600; color:#555; display:block; margin:12px 0 5px;">Ghi chú đơn hàng</label>
+      <textarea class="summary-note" placeholder="Ghi chú"></textarea>
+
+      <!-- Mã khuyến mãi -->
+      <input type="text" class="summary-coupon-input" placeholder="Nhập mã khuyến mãi (nếu có)">
+
+      <!-- Checkout button -->
+      {% url 'cart:checkout' as checkout_url %}
+      {% if user.is_authenticated %}
+      <a href="{{ checkout_url }}" class="btn-checkout">THANH TOÁN NGAY</a>
+      {% else %}
+      <a href="{% url 'accounts:login' %}?next={{ checkout_url }}" class="btn-checkout">ĐĂNG NHẬP ĐỂ THANH TOÁN</a>
+      {% endif %}
+
+      <a href="{% url 'products:product_list' %}" class="btn-continue">
+        <i class="fas fa-arrow-left" style="font-size:11px;"></i> Tiếp tục mua hàng
+      </a>
     </div>
-  </div>
+
+  </div><!-- /cart-layout -->
+
   {% else %}
-  <p class="text-gray-600">Giỏ hàng trống.</p>
+  <!-- Giỏ hàng trống -->
+  <div class="empty-cart">
+    <div><i class="fas fa-shopping-cart"></i></div>
+    <p>Giỏ hàng của bạn đang trống.</p>
+    <a href="{% url 'products:product_list' %}">Mua sắm ngay</a>
+  </div>
   {% endif %}
-</div>
+
+</div><!-- /container -->
+</div><!-- /cart-page -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* Qty +/- trong cart item */
+function ciQty(btn, delta) {
+  const input = btn.closest('.ci-qty-wrap').querySelector('.ci-qty-num');
+  const val = Math.max(1, (parseInt(input.value) || 1) + delta);
+  input.value = val;
+}
+
+/* Auto-submit qty khi blur */
+document.querySelectorAll('.ci-qty-num').forEach(input => {
+  input.addEventListener('change', () => input.closest('form').submit());
+});
+
+/* Copy coupon */
+function cpCart(code, btn) {
+  navigator.clipboard && navigator.clipboard.writeText(code).then(() => {
+    const o = btn.textContent; btn.textContent = '✓ Đã sao chép!';
+    setTimeout(() => btn.textContent = o, 2000);
+  });
+}
+</script>
 {% endblock %}

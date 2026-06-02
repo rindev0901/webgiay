@@ -64,6 +64,12 @@ class Order(models.Model):
     address = models.CharField(max_length=255, blank=True)
     note = models.TextField(blank=True)
     total_amount = models.DecimalField(max_digits=12, decimal_places=0)
+    discount_amount = models.DecimalField(max_digits=12, decimal_places=0, default=0, verbose_name='Số tiền giảm')
+    voucher = models.ForeignKey(
+        'Voucher', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='orders', verbose_name='Voucher'
+    )
+    voucher_code = models.CharField(max_length=50, blank=True, verbose_name='Mã voucher (lưu lại)')
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     payment_method = models.CharField(max_length=20, choices=PaymentMethod.choices, default=PaymentMethod.MOMO)
     momo_order_id = models.CharField(max_length=100, blank=True, unique=True, null=True)
@@ -107,3 +113,76 @@ class OrderItem(models.Model):
     @property
     def subtotal(self):
         return self.price * self.quantity
+
+
+# ====================== VOUCHER ======================
+class Voucher(models.Model):
+    class DiscountType(models.TextChoices):
+        PERCENT = 'percent', 'Phần trăm (%)'
+        FIXED   = 'fixed',   'Số tiền cố định (₫)'
+
+    code = models.CharField(max_length=50, unique=True, verbose_name='Mã voucher')
+    description = models.CharField(max_length=200, blank=True, verbose_name='Mô tả')
+
+    discount_type = models.CharField(
+        max_length=10, choices=DiscountType.choices,
+        default=DiscountType.FIXED, verbose_name='Loại giảm'
+    )
+    discount_value = models.DecimalField(
+        max_digits=12, decimal_places=0,
+        verbose_name='Giá trị giảm',
+        help_text='VD: 35000 (cố định) hoặc 10 (10%)'
+    )
+    min_order_amount = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0,
+        verbose_name='Đơn tối thiểu (₫)'
+    )
+    max_discount_amount = models.DecimalField(
+        max_digits=12, decimal_places=0, null=True, blank=True,
+        verbose_name='Giảm tối đa (₫)',
+        help_text='Chỉ áp dụng cho loại phần trăm. Để trống = không giới hạn.'
+    )
+    usage_limit = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name='Giới hạn lượt dùng',
+        help_text='Để trống = không giới hạn'
+    )
+    used_count = models.PositiveIntegerField(default=0, verbose_name='Đã dùng')
+    valid_from = models.DateTimeField(verbose_name='Hiệu lực từ')
+    valid_to   = models.DateTimeField(verbose_name='Hết hạn')
+    is_active  = models.BooleanField(default=True, verbose_name='Kích hoạt')
+
+    class Meta:
+        verbose_name = 'Voucher'
+        verbose_name_plural = 'Voucher'
+        ordering = ['-valid_to']
+
+    def __str__(self):
+        return self.code
+
+    def calc_discount(self, order_total: 'Decimal') -> 'Decimal':
+        """Tính số tiền thực tế được giảm cho order_total."""
+        from decimal import Decimal
+        if self.discount_type == self.DiscountType.PERCENT:
+            amount = order_total * self.discount_value / Decimal('100')
+            if self.max_discount_amount:
+                amount = min(amount, self.max_discount_amount)
+        else:
+            amount = self.discount_value
+        return min(amount, order_total)   # không giảm quá tổng đơn
+
+    def is_valid(self, order_total: 'Decimal') -> tuple:
+        """Kiểm tra hợp lệ, trả về (True/False, error_message)."""
+        from django.utils import timezone
+        from decimal import Decimal
+        now = timezone.now()
+        if not self.is_active:
+            return False, 'Voucher không còn hoạt động.'
+        if now < self.valid_from:
+            return False, 'Voucher chưa đến thời gian sử dụng.'
+        if now > self.valid_to:
+            return False, 'Voucher đã hết hạn.'
+        if self.usage_limit is not None and self.used_count >= self.usage_limit:
+            return False, 'Voucher đã hết lượt sử dụng.'
+        if order_total < self.min_order_amount:
+            return False, f'Đơn hàng tối thiểu {int(self.min_order_amount):,}₫ để dùng voucher này.'
+        return True, ''

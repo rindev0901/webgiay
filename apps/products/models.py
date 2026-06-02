@@ -87,6 +87,20 @@ class Product(models.Model):
     def final_price(self):
         return self.discount_price if self.discount_price else self.price
 
+    @property
+    def discount_percent(self):
+        """Tính phần trăm giảm giá (dùng trong template)"""
+        if self.discount_price and self.price and self.price > 0:
+            return int((1 - self.discount_price / self.price) * 100)
+        return 0
+
+    @property
+    def is_new(self):
+        """Kiểm tra sản phẩm mới (trong vòng 30 ngày)"""
+        from django.utils import timezone
+        delta = timezone.now() - self.created_at
+        return delta.days <= 30
+
     if TYPE_CHECKING:
         variants: models.Manager['ProductVariant']
         images: models.Manager['ProductImage']
@@ -97,43 +111,77 @@ class Color(models.Model):
     name = models.CharField(max_length=50, unique=True)
     hex_code = models.CharField(
         max_length=7, blank=True, help_text="Ví dụ: #FF0000")
+
     def __str__(self):
         return self.name
+
     class Meta:
         verbose_name = "Màu sắc"
         verbose_name_plural = "Màu sắc"
+        ordering = ['name']
+
+
+class Size(models.Model):
+    """Size giày: 35, 35.5, 36, 37, 37.5, 38, 38.5, 39, 40, 41, 42, 43, 44..."""
+    name = models.CharField(max_length=10, unique=True, verbose_name="Size")
+    order = models.PositiveSmallIntegerField(
+        default=0, verbose_name="Thứ tự hiển thị",
+        help_text="Số nhỏ hơn hiển thị trước (35 → 0, 35.5 → 1, 36 → 2...)"
+    )
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Kích thước"
+        verbose_name_plural = "Kích thước"
+        ordering = ['order', 'name']
 
 
 class ProductVariant(models.Model):
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name='variants')
 
-    # 36, 37, 38, 39, 40, 41, 42...
-    size = models.CharField(max_length=20, verbose_name="Size")
+    size = models.ForeignKey(
+        Size, on_delete=models.CASCADE, verbose_name="Size",
+        related_name='variants'
+    )
     color = models.ForeignKey(
-        Color, on_delete=models.SET_NULL, null=True, blank=True)
+        Color, on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name="Màu sắc"
+    )
 
     sku = models.CharField(max_length=50, unique=True,
                            blank=True, verbose_name="Mã SKU")
     stock = models.PositiveIntegerField(default=0, verbose_name="Tồn kho")
     price = models.DecimalField(
-        max_digits=12, decimal_places=0, blank=True, null=True)
+        max_digits=12, decimal_places=0, blank=True, null=True,
+        verbose_name="Giá (để trống = theo sản phẩm)")
 
     image = models.ImageField(
-        upload_to='products/variants/', blank=True, null=True)
+        upload_to='products/variants/', blank=True, null=True,
+        verbose_name="Ảnh riêng")
     is_active = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = "Biến thể"
         verbose_name_plural = "Biến thể"
         unique_together = ('product', 'size', 'color')
+        ordering = ['size__order', 'size__name']
 
     def __str__(self):
-        return f"{self.product.name} - Size {self.size} - {self.color}"
+        color_str = self.color.name if self.color else 'Mặc định'
+        return f"{self.product.name} - Size {self.size.name} - {color_str}"
+
+    @property
+    def size_name(self):
+        return self.size.name if self.size else ''
 
     def save(self, *args, **kwargs):
         if not self.sku:
-            self.sku = f"{self.product.slug}-{self.size}-{self.color.name if self.color else 'N/A'}"
+            size_part = self.size.name if self.size else 'NA'
+            color_part = self.color.name if self.color else 'N/A'
+            self.sku = f"{self.product.slug}-{size_part}-{color_part}"
         if not self.price:
             self.price = self.product.final_price
         super().save(*args, **kwargs)
@@ -145,12 +193,27 @@ class ProductImage(models.Model):
         Product, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='products/images/')
     alt_text = models.CharField(max_length=200, blank=True)
-    is_primary = models.BooleanField(default=False)
+    is_primary = models.BooleanField(
+        default=False,
+        verbose_name="Ảnh đại diện",
+        help_text="Ảnh hiển thị khi không chọn màu cụ thể"
+    )
+    color = models.ForeignKey(
+        Color, on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name="Màu sắc",
+        help_text="Gắn ảnh với màu cụ thể. Để trống = ảnh chung cho tất cả màu.",
+        related_name='images'
+    )
+    order = models.PositiveSmallIntegerField(
+        default=0, verbose_name="Thứ tự",
+        help_text="Số nhỏ hiển thị trước"
+    )
 
     class Meta:
         verbose_name = "Hình ảnh sản phẩm"
         verbose_name_plural = "Hình ảnh sản phẩm"
-        ordering = ['-is_primary']
+        ordering = ['-is_primary', 'color', 'order']
 
     def __str__(self):
-        return f"Image of {self.product.name}"
+        color_str = f" [{self.color.name}]" if self.color else ""
+        return f"Ảnh {self.product.name}{color_str}"

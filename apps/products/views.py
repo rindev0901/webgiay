@@ -89,15 +89,40 @@ def product_list(request: HttpRequest):
 
 def landing(request: HttpRequest):
     """Landing page with featured products"""
-    featured = Product.objects.filter(is_active=True, featured=True)
-    # Prefetch primary images for featured display
-    featured = featured.select_related('brand', 'category').prefetch_related(
-        Prefetch('images', queryset=ProductImage.objects.filter(is_primary=True))
-    )[:8]
+    # Sản phẩm nổi bật (dùng cho section Siêu Khuyến Mãi)
+    featured = Product.objects.filter(is_active=True, featured=True)\
+        .select_related('brand', 'category')\
+        .prefetch_related(
+            Prefetch('images', queryset=ProductImage.objects.filter(is_primary=True))
+        )[:10]
+
+    # Sản phẩm đang giảm giá (có discount_price)
+    sale_products = Product.objects.filter(is_active=True, discount_price__isnull=False)\
+        .select_related('brand', 'category')\
+        .prefetch_related(
+            Prefetch('images', queryset=ProductImage.objects.filter(is_primary=True))
+        )[:10]
+
+    # Danh mục cho thanh điều hướng
+    categories = Category.objects.filter(is_active=True)
+
+    # Tất cả thương hiệu cho tab Giày Sneaker
+    brands = Brand.objects.filter(is_active=True)
+
+    # Sản phẩm Giày Sneaker (tất cả, dùng filter JS phía client)
+    sneaker_products = Product.objects.filter(is_active=True)\
+        .select_related('brand', 'category')\
+        .prefetch_related(
+            Prefetch('images', queryset=ProductImage.objects.filter(is_primary=True))
+        ).order_by('-created_at')[:10]
 
     context = {
         'featured': featured,
-        'title': 'WebGiày - Trang chủ'
+        'sale_products': sale_products,
+        'sneaker_products': sneaker_products,
+        'brands': brands,
+        'categories': categories,
+        'title': 'Dee Store - Giày Chính Hãng',
     }
     return render(request, 'index.html', context)
 
@@ -144,21 +169,107 @@ def category_detail(request, slug):
 
 def product_detail(request: HttpRequest, slug: str):
     """Chi tiết sản phẩm"""
+    import json
     product = get_object_or_404(Product, slug=slug, is_active=True)
 
-    variants = product.variants.filter(is_active=True).select_related('color')
-    images = product.images.all().order_by('-is_primary')
+    variants = product.variants.filter(is_active=True).select_related('color', 'size').order_by('size__order', 'size__name')
+    images = product.images.all().select_related('color').order_by('-is_primary', 'color', 'order')
+
+    # Group ảnh theo color_id để JS đổi gallery khi chọn màu
+    # color_id=0 → ảnh chung (không gắn màu cụ thể)
+    images_by_color: dict = {}   # {color_id_or_0: [{url, alt}]}
+    all_images_list = []         # flat list cho gallery fallback
+    for img in images:
+        cid = img.color_id or 0
+        if cid not in images_by_color:
+            images_by_color[cid] = []
+        entry = {'url': img.image.url, 'alt': img.alt_text or product.name}
+        images_by_color[cid].append(entry)
+        all_images_list.append(entry)
+
+    # Group variants by color
+    colors_map = {}
+    for v in variants:
+        color_id = v.color_id or 0
+        color_name = v.color.name if v.color else 'Mặc định'
+        color_hex = v.color.hex_code if v.color else ''
+        if color_id not in colors_map:
+            colors_map[color_id] = {
+                'id': color_id,
+                'name': color_name,
+                'hex': color_hex,
+                'sizes': [],
+                # Ảnh của màu này: ưu tiên ảnh gắn màu, fallback ảnh chung
+                'images': images_by_color.get(color_id)
+                          or images_by_color.get(0)
+                          or all_images_list,
+            }
+        colors_map[color_id]['sizes'].append({
+            'id': v.id,
+            'size': v.size.name,
+            'size_id': v.size_id,
+            'stock': v.stock,
+            'sku': v.sku,
+            'price': str(v.price or product.final_price),
+        })
+
+    colors_list = list(colors_map.values())
+
+    # Đọc state từ URL params
+    try:
+        url_color_id = int(request.GET.get('color', 0))
+    except (ValueError, TypeError):
+        url_color_id = 0
+    try:
+        url_size_id = int(request.GET.get('size', 0))
+    except (ValueError, TypeError):
+        url_size_id = 0
+
+    valid_color_ids = set(colors_map.keys())
+    if url_color_id not in valid_color_ids:
+        url_color_id = colors_list[0]['id'] if colors_list else 0
+
+    selected_color_data = colors_map.get(url_color_id, {})
+    valid_size_ids = {s['size_id'] for s in selected_color_data.get('sizes', [])}
+    if url_size_id not in valid_size_ids:
+        for s in selected_color_data.get('sizes', []):
+            if s['stock'] > 0:
+                url_size_id = s['size_id']
+                break
+        else:
+            url_size_id = 0
 
     related_products = Product.objects.filter(
-        category=product.category,
-        is_active=True
-    ).exclude(id=product.pk)[:4]
+        category=product.category, is_active=True
+    ).exclude(id=product.pk).prefetch_related(
+        Prefetch('images', queryset=ProductImage.objects.filter(is_primary=True))
+    )[:6]
+
+    # Ảnh hiển thị ban đầu (theo màu được chọn từ URL)
+    initial_images = (
+        images_by_color.get(url_color_id)
+        or images_by_color.get(0)
+        or all_images_list
+    )
 
     context = {
         'product': product,
         'variants': variants,
-        'images': images,
+        'colors_list': colors_list,
+        'variants_json': json.dumps(colors_list),
+        'images_by_color_json': json.dumps(images_by_color),
+        'initial_images': initial_images,
+        'initial_color_id': url_color_id,
+        'initial_size_id': url_size_id,
         'related_products': related_products,
-        'title': f'{product.name} - WebGiày'
+        'title': f'{product.name} - Dee Store',
     }
+
+    # Track recently viewed (lưu session, tối đa 8 sản phẩm)
+    rv = request.session.get('recently_viewed', [])
+    if product.id in rv:
+        rv.remove(product.id)
+    rv.insert(0, product.id)
+    request.session['recently_viewed'] = rv[:8]
+
     return render(request, 'product_detail.html', context)

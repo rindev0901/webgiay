@@ -1,332 +1,1118 @@
 <!doctype html>
 <html lang="vi">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>
-			{% block title %}WEBGIÀY - Cửa Hàng Giày Chất Lượng{% endblock %}
-		</title>
 
-		<link
-			rel="stylesheet"
-			href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
-		/>
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>{% block title %}Dee Store - Giày Chính Hãng{% endblock %}</title>
+	<meta name="description"
+		content="Dee Store - Chuyên cung cấp giày authentic chính hãng: Nike, Adidas, Puma, MLB, New Balance và nhiều thương hiệu khác." />
 
-		{% load static %}
-		<link rel="stylesheet" href="{% static 'css/main.css' %}" />
+	<!-- Font Awesome icons -->
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
 
-		<!-- AOS animation library -->
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" integrity="sha512-GY7o7m+1f1QZr0Xg2cV6bGqk8o6Kq1Y1qYkqvX7v1m1q1Y1q1Y1q1Y1q1Y1q1Y1q" crossorigin="anonymous" referrerpolicy="no-referrer" />
+	{% load static %}
+	<!-- Tailwind CSS đã compile -->
+	<link rel="stylesheet" href="{% static 'css/main.css' %}" />
 
-		<style>
-		:root{--primary:#dc2626;--primary-dark:#b91c1c;--muted:#6b7280}
-		.input, input.input, textarea.input, select.input{width:100%;padding:.5rem .75rem;border:1px solid #e5e7eb;border-radius:.375rem;background:#fff;color:#111}
-		.input:focus{outline:none;box-shadow:0 0 0 3px rgba(220,38,38,0.12);border-color:var(--primary)}
-		.btn-primary{background:var(--primary);color:#fff;padding:.5rem .75rem;border-radius:.375rem;font-weight:600;display:inline-flex;align-items:center;justify-content:center;border:none}
-		.btn-primary:hover{background:var(--primary-dark)}
-		.btn-secondary{background:transparent;border:1px solid #d1d5db;color:#111;padding:.45rem .7rem;border-radius:.375rem;font-weight:600}
-		.badge{position:absolute;top:-0.5rem;right:-0.5rem;width:1.25rem;height:1.25rem;font-size:.75rem;background:var(--primary);color:#fff;border-radius:9999px;display:flex;align-items:center;justify-content:center}
-		</style>
-		{% block extra_css %}{% endblock %}
-	</head>
-	<body class="font-segoe bg-gray-50">
-		<!-- Navbar -->
-		<nav class="bg-gray-900 text-white shadow-md sticky top-0 z-50">
-			<div class="container mx-auto px-4">
-				<div class="flex justify-between items-center py-4">
-					<!-- Logo -->
-					<a
-						class="text-2xl font-bold flex items-center gap-2"
-						href="{% url 'landing' %}"
-					>
-						<i class="fas fa-shoe-prints"></i> WEBGIÀY
-					</a>
+	<style>
+		/* ===== BIẾN MÀU CHÍNH ===== */
+		:root {
+			--dee-red: #9b1c1c;
+			--dee-red-dark: #7f1d1d;
+			--dee-red-nav: #c0392b;
+			--dee-footer-dark: #8b0000;
+			--dee-footer-bg: #1c1c1c;
+			--dee-footer-bottom: #111111;
+		}
 
-					<!-- Mobile toggle button -->
-					<button
-						class="lg:hidden text-white focus:outline-none"
-						id="navbarToggle"
-					>
-						<i class="fas fa-bars text-2xl"></i>
-					</button>
+		/* ===== RESET & BASE ===== */
+		* {
+			box-sizing: border-box;
+		}
 
-					<!-- Navigation menu -->
-					<div class="hidden lg:flex items-center gap-8" id="navbarMenu">
-						<ul class="flex gap-6">
-							<li>
-								<a
-									href="{% url 'products:product_list' %}"
-									class="hover:text-red-500 transition"
-								>
-									Sản phẩm
-								</a>
-							</li>
-							{% if user.is_authenticated %}
-							<li>
-								<a href="{% url 'cart:orders_list' %}" class="hover:text-red-500 transition">Đơn hàng</a>
-							</li>
-							{% endif %}
-							<li class="relative group">
-								<button
-									class="hover:text-red-500 transition flex items-center gap-1"
-									id="desktopDropdownToggle"
-									type="button"
-								>
-									Danh mục
-									<i class="fas fa-chevron-down text-sm"></i>
-								</button>
-								<ul
-									class="absolute left-0 hidden bg-gray-800 rounded-md shadow-lg mt-2 min-w-48"
-									id="desktopDropdownMenu"
-								>
-									{% for category in categories %}
-									<li>
-										<a
-											href="{% url 'products:category_detail' category.slug %}"
-											class="block px-4 py-3 hover:bg-red-600 hover:text-white transition first:rounded-t-md last:rounded-b-md"
-										>
-											{{ category.name }}
-										</a>
-									</li>
-									{% endfor %}
-								</ul>
-							</li>
-						</ul>
+		body {
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			background: #f3f4f6;
+			margin: 0;
+		}
 
-						<!-- Cart link -->
-						<a
-							href="{% url 'cart:cart_detail' %}"
-							class="relative inline-flex items-center px-3 py-2 text-white hover:text-red-500 transition"
-							aria-label="Giỏ hàng"
-						>
-							<div class="relative">
-								<i class="fas fa-shopping-cart text-lg"></i>
-								{% if cart_count|default:0 > 0 %}
-								<span class="absolute -top-2 -right-2 inline-flex items-center justify-center w-5 h-5 text-xs font-medium text-white bg-red-600 rounded-full">
-									{{ cart_count }}
-								</span>
-								{% endif %}
-							</div>
-						</a>
+		/* ===== HEADER ===== */
+		.site-header {
+			background: #111111;
+			position: sticky;
+			top: 0;
+			z-index: 100;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+		}
 
-						{% if user.is_authenticated %}
-							<a
-								href="{% url 'accounts:logout' %}"
-								class="px-4 py-2 border-2 border-white text-white rounded-md hover:bg-white hover:text-gray-900 transition font-medium"
-							>
-								Đăng xuất
-							</a>
-						{% else %}
-							<a
-								href="{% url 'accounts:login' %}"
-								class="px-4 py-2 text-white hover:text-red-500 transition font-medium"
-							>
-								Đăng nhập
-							</a>
-							<a
-								href="{% url 'accounts:register' %}"
-								class="px-4 py-2 border-2 border-white text-white rounded-md hover:bg-white hover:text-gray-900 transition font-medium"
-							>
-								Đăng ký
-							</a>
+		/* Logo box kiểu Dee Store */
+		.logo-box {
+			border: 2px solid #aaa;
+			padding: 6px 10px;
+			text-align: center;
+			line-height: 1.2;
+			min-width: 82px;
+			flex-shrink: 0;
+			text-decoration: none;
+			color: white;
+			display: block;
+		}
+
+		.logo-box .logo-icon {
+			font-size: 18px;
+			margin: 3px 0;
+			display: block;
+		}
+
+		/* Thanh tìm kiếm */
+		.search-bar {
+			display: flex;
+			flex: 1;
+			max-width: 520px;
+			height: 38px;
+		}
+
+		.search-bar input {
+			flex: 1;
+			padding: 0 14px;
+			border: none;
+			outline: none;
+			font-size: 13px;
+			color: #333;
+			background: white;
+		}
+
+		.search-bar button {
+			background: #444;
+			color: white;
+			border: none;
+			padding: 0 16px;
+			cursor: pointer;
+			font-size: 14px;
+			transition: background 0.2s;
+		}
+
+		.search-bar button:hover {
+			background: var(--dee-red);
+		}
+
+		/* Utility links bên phải header */
+		.header-util {
+			display: flex;
+			align-items: center;
+			gap: 20px;
+			flex-shrink: 0;
+		}
+
+		.util-link {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			color: white;
+			text-decoration: none;
+			font-size: 11px;
+			line-height: 1.3;
+			transition: color 0.2s;
+		}
+
+		.util-link i {
+			font-size: 17px;
+			margin-bottom: 2px;
+		}
+
+		.util-link:hover {
+			color: #f87171;
+		}
+
+		.cart-link {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			color: white;
+			text-decoration: none;
+			font-size: 13px;
+			transition: color 0.2s;
+		}
+
+		.cart-link:hover {
+			color: #f87171;
+		}
+
+		.cart-link .cart-icon {
+			position: relative;
+		}
+
+		.cart-link .cart-icon i {
+			font-size: 20px;
+		}
+
+		.cart-badge {
+			position: absolute;
+			top: -8px;
+			right: -8px;
+			background: var(--dee-red);
+			color: white;
+			font-size: 10px;
+			width: 18px;
+			height: 18px;
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-weight: 700;
+		}
+
+		/* ===== NAVIGATION BAR ===== */
+		.site-nav {
+			background: white;
+			border-bottom: 1px solid #e5e7eb;
+		}
+
+		.nav-list {
+			display: flex;
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			align-items: center;
+		}
+
+		.nav-list>li {
+			position: relative;
+		}
+
+		.nav-list>li>a {
+			display: flex;
+			align-items: center;
+			gap: 4px;
+			padding: 10px 14px;
+			font-size: 13px;
+			font-weight: 500;
+			color: #222;
+			text-decoration: none;
+			white-space: nowrap;
+			transition: color 0.15s;
+			border-bottom: 2px solid transparent;
+		}
+
+		.nav-list>li>a:hover {
+			color: var(--dee-red);
+		}
+
+		.nav-list>li.active>a {
+			color: var(--dee-red);
+			border-bottom-color: var(--dee-red);
+		}
+
+		/* Dropdown */
+		.nav-list>li .nav-dropdown {
+			display: none;
+			position: absolute;
+			top: 100%;
+			left: 0;
+			background: white;
+			min-width: 200px;
+			box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+			border-top: 2px solid var(--dee-red);
+			z-index: 200;
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+
+		.nav-list>li:hover .nav-dropdown {
+			display: block;
+		}
+
+		.nav-dropdown li a {
+			display: block;
+			padding: 9px 16px;
+			font-size: 13px;
+			color: #333;
+			text-decoration: none;
+			transition: background 0.15s, color 0.15s;
+		}
+
+		.nav-dropdown li a:hover {
+			background: #fff5f5;
+			color: var(--dee-red);
+		}
+
+		/* ===== MAIN CONTENT ===== */
+		main {
+			min-height: 80vh;
+		}
+
+		/* ===== FOOTER ===== */
+		/* Thanh newsletter (đỏ đậm) */
+		.footer-newsletter {
+			background: var(--dee-footer-dark);
+			padding: 14px 0;
+		}
+
+		.newsletter-inner {
+			display: flex;
+			align-items: center;
+			flex-wrap: wrap;
+			gap: 16px;
+			max-width: 1200px;
+			margin: 0 auto;
+			padding: 0 16px;
+		}
+
+		.newsletter-title {
+			color: white;
+			font-weight: 700;
+			font-size: 13px;
+			letter-spacing: 1px;
+			white-space: nowrap;
+		}
+
+		.newsletter-form {
+			display: flex;
+			flex: 1;
+			max-width: 380px;
+			height: 36px;
+		}
+
+		.newsletter-form .email-wrap {
+			flex: 1;
+			display: flex;
+			align-items: center;
+			background: white;
+			padding: 0 12px;
+		}
+
+		.newsletter-form .email-wrap i {
+			color: #aaa;
+			font-size: 12px;
+			margin-right: 8px;
+		}
+
+		.newsletter-form input {
+			border: none;
+			outline: none;
+			font-size: 13px;
+			color: #333;
+			width: 100%;
+		}
+
+		.newsletter-form button {
+			background: #333;
+			color: white;
+			border: none;
+			padding: 0 16px;
+			font-size: 12px;
+			font-weight: 700;
+			letter-spacing: 1px;
+			cursor: pointer;
+			transition: background 0.2s;
+			white-space: nowrap;
+		}
+
+		.newsletter-form button:hover {
+			background: #555;
+		}
+
+		/* Social icons */
+		.social-icons {
+			display: flex;
+			gap: 8px;
+		}
+
+		.social-icon {
+			width: 34px;
+			height: 34px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			border-radius: 4px;
+			color: white;
+			font-size: 14px;
+			text-decoration: none;
+			transition: opacity 0.2s;
+		}
+
+		.social-icon:hover {
+			opacity: 0.8;
+		}
+
+		.social-twitter {
+			background: #1da1f2;
+		}
+
+		.social-tiktok {
+			background: #000;
+			border: 1px solid #333;
+		}
+
+		.social-ig {
+			background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+		}
+
+		.social-fb {
+			background: #1877f2;
+		}
+
+		/* Main footer area */
+		.footer-main {
+			background: var(--dee-footer-bg);
+			padding: 36px 0;
+		}
+
+		.footer-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 32px;
+			max-width: 1200px;
+			margin: 0 auto;
+			padding: 0 16px;
+		}
+
+		@media (max-width: 1024px) {
+			.footer-grid {
+				grid-template-columns: repeat(2, 1fr);
+			}
+		}
+
+		@media (max-width: 640px) {
+			.footer-grid {
+				grid-template-columns: 1fr;
+			}
+		}
+
+		.footer-col-title {
+			color: white;
+			font-weight: 700;
+			font-size: 13px;
+			letter-spacing: 0.5px;
+			margin-bottom: 16px;
+		}
+
+		.footer-col p,
+		.footer-col address {
+			color: #999;
+			font-size: 12px;
+			line-height: 1.7;
+			font-style: normal;
+		}
+
+		.footer-col-links {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+
+		.footer-col-links li {
+			margin-bottom: 8px;
+		}
+
+		.footer-col-links a {
+			color: #999;
+			font-size: 12px;
+			text-decoration: none;
+			display: flex;
+			align-items: center;
+			gap: 6px;
+			transition: color 0.2s;
+		}
+
+		.footer-col-links a i {
+			color: var(--dee-red);
+			font-size: 9px;
+		}
+
+		.footer-col-links a:hover {
+			color: white;
+		}
+
+		/* BCT badge */
+		.bct-badge {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			border: 1px solid #1d4ed8;
+			border-radius: 4px;
+			padding: 8px 10px;
+			margin-top: 12px;
+		}
+
+		.bct-icon {
+			width: 36px;
+			height: 36px;
+			background: #1d4ed8;
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
+		}
+
+		.bct-icon i {
+			color: white;
+			font-size: 16px;
+		}
+
+		.bct-text {
+			font-size: 10px;
+			color: #aaa;
+			line-height: 1.4;
+		}
+
+		.bct-text strong {
+			color: white;
+			display: block;
+		}
+
+		/* Fanpage widget */
+		.fanpage-widget {
+			background: white;
+			border-radius: 6px;
+			overflow: hidden;
+			max-width: 210px;
+		}
+
+		.fanpage-cover {
+			height: 52px;
+			background: linear-gradient(135deg, #1877f2, #0d5cbf);
+			position: relative;
+		}
+
+		.fanpage-avatar {
+			position: absolute;
+			bottom: -16px;
+			left: 12px;
+			width: 36px;
+			height: 36px;
+			border-radius: 50%;
+			background: var(--dee-red);
+			border: 2px solid white;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.fanpage-avatar i {
+			color: white;
+			font-size: 14px;
+		}
+
+		.fanpage-info {
+			padding: 20px 12px 8px;
+		}
+
+		.fanpage-name {
+			font-size: 12px;
+			font-weight: 700;
+			color: #222;
+			margin-bottom: 2px;
+		}
+
+		.fanpage-followers {
+			font-size: 11px;
+			color: #666;
+		}
+
+		.fanpage-actions {
+			padding: 8px 12px 12px;
+			display: flex;
+			gap: 6px;
+		}
+
+		.btn-follow {
+			flex: 1;
+			background: #1877f2;
+			color: white;
+			border: none;
+			border-radius: 4px;
+			font-size: 11px;
+			padding: 6px 8px;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 4px;
+		}
+
+		.btn-share {
+			background: white;
+			color: #444;
+			border: 1px solid #ddd;
+			border-radius: 4px;
+			font-size: 11px;
+			padding: 6px 8px;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			gap: 4px;
+		}
+
+		/* Copyright bar */
+		.footer-copyright {
+			background: var(--dee-footer-bottom);
+			text-align: center;
+			padding: 12px;
+		}
+
+		.footer-copyright p {
+			color: #555;
+			font-size: 12px;
+			margin: 0;
+		}
+
+		/* ===== NÚT CHAT NỔI ===== */
+		.float-chat {
+			position: fixed;
+			bottom: 24px;
+			right: 24px;
+			z-index: 999;
+		}
+
+		.float-chat button {
+			width: 48px;
+			height: 48px;
+			border-radius: 50%;
+			border: none;
+			background: linear-gradient(135deg, #00b0ff, #1565c0);
+			color: white;
+			font-size: 20px;
+			cursor: pointer;
+			box-shadow: 0 4px 14px rgba(21, 101, 192, 0.5);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			transition: transform 0.2s, box-shadow 0.2s;
+		}
+
+		.float-chat button:hover {
+			transform: scale(1.1);
+			box-shadow: 0 6px 20px rgba(21, 101, 192, 0.6);
+		}
+
+		/* ===== MOBILE ===== */
+		.mobile-toggle {
+			display: none;
+		}
+
+		@media (max-width: 1024px) {
+			.mobile-toggle {
+				display: block;
+			}
+
+			.header-center {
+				flex: 1;
+			}
+
+			.header-util .util-link span {
+				display: none;
+			}
+
+			.header-util .util-link i {
+				font-size: 20px;
+			}
+
+			.nav-list {
+				display: none;
+			}
+
+			.nav-list.mobile-open {
+				display: flex;
+				flex-direction: column;
+				align-items: stretch;
+			}
+
+			.nav-list.mobile-open>li>a {
+				border-bottom: 1px solid #f3f4f6;
+				padding: 12px 16px;
+			}
+
+			.nav-list.mobile-open .nav-dropdown {
+				position: static;
+				box-shadow: none;
+				border-top: none;
+				border-left: 3px solid var(--dee-red);
+				margin-left: 16px;
+			}
+		}
+
+		/* ===== CARD SẢN PHẨM DÙNG CHUNG ===== */
+		.product-card {
+			background: white;
+			border-radius: 0;
+			overflow: hidden;
+			position: relative;
+			transition: box-shadow 0.2s;
+			cursor: pointer;
+		}
+
+		.product-card:hover {
+			box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+		}
+
+		.product-card .card-img-wrap {
+			position: relative;
+			aspect-ratio: 1 / 1;
+			overflow: hidden;
+			background: #f8f8f8;
+		}
+
+		.product-card .card-img-wrap img {
+			width: 100%;
+			height: 100%;
+			object-fit: contain;
+			padding: 8px;
+			transition: transform 0.3s;
+		}
+
+		.product-card:hover .card-img-wrap img {
+			transform: scale(1.04);
+		}
+
+		/* Badge giảm giá góc trên trái */
+		.badge-discount {
+			position: absolute;
+			top: 0;
+			left: 0;
+			background: var(--dee-red);
+			color: white;
+			font-size: 11px;
+			font-weight: 700;
+			padding: 4px 7px;
+			z-index: 2;
+		}
+
+		/* Badge NEW */
+		.badge-new {
+			position: absolute;
+			top: 0;
+			left: 0;
+			background: #111;
+			color: white;
+			font-size: 10px;
+			font-weight: 700;
+			padding: 4px 8px;
+			z-index: 2;
+			letter-spacing: 1px;
+		}
+
+		/* Nút thêm vào giỏ hàng nhỏ góc dưới phải ảnh */
+		.btn-add-cart {
+			position: absolute;
+			bottom: 8px;
+			right: 8px;
+			width: 32px;
+			height: 32px;
+			background: rgba(50, 50, 50, 0.75);
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: white;
+			font-size: 13px;
+			text-decoration: none;
+			transition: background 0.2s;
+			z-index: 2;
+		}
+
+		.btn-add-cart:hover {
+			background: var(--dee-red);
+		}
+
+		.card-body {
+			padding: 10px 12px 14px;
+		}
+
+		.card-name {
+			font-size: 12.5px;
+			color: #222;
+			line-height: 1.4;
+			margin-bottom: 6px;
+			display: -webkit-box;
+			-webkit-line-clamp: 2;
+			-webkit-box-orient: vertical;
+			overflow: hidden;
+		}
+
+		.card-price-sale {
+			color: var(--dee-red);
+			font-weight: 700;
+			font-size: 13px;
+		}
+
+		.card-price-original {
+			color: #999;
+			font-size: 12px;
+			text-decoration: line-through;
+			margin-left: 4px;
+		}
+
+		.badge-het-hang {
+			display: inline-block;
+			background: var(--dee-red);
+			color: white;
+			font-size: 10px;
+			padding: 2px 8px;
+			border-radius: 2px;
+			margin-left: 6px;
+			font-weight: 600;
+		}
+
+		.badge-khuyen-mai {
+			display: inline-block;
+			background: #f59e0b;
+			color: white;
+			font-size: 10px;
+			padding: 2px 8px;
+			border-radius: 2px;
+			margin-top: 4px;
+			font-weight: 600;
+		}
+	</style>
+
+	{% block extra_css %}{% endblock %}
+</head>
+
+<body>
+	<!-- ============================================================
+		     HEADER - Logo, Tìm kiếm, Utility links
+		     ============================================================ -->
+	<header class="site-header">
+		<div style="max-width:1200px; margin:0 auto; padding:10px 16px; display:flex; align-items:center; gap:16px;">
+
+			<!-- Logo Dee Store dạng box viền -->
+			<a href="{% url 'landing' %}" class="logo-box">
+				<span class="logo-icon"><i class="fas fa-shoe-prints"></i></span>
+			</a>
+
+			<!-- Thanh tìm kiếm trung tâm -->
+			<div class="header-center" style="flex:1; display:flex; justify-content:center;">
+				<form class="search-bar" method="get" action="{% url 'products:product_list' %}">
+					<input type="text" name="q" placeholder="Nước Hoa" value="{{ request.GET.q }}"
+						aria-label="Tìm kiếm sản phẩm" />
+					<button type="submit" aria-label="Tìm kiếm"><i class="fas fa-search"></i></button>
+				</form>
+			</div>
+
+			<!-- Utility links bên phải -->
+			<div class="header-util">
+				<!-- Hệ thống cửa hàng -->
+				<a href="#" class="util-link">
+					<i class="fas fa-store"></i>
+					<span>Hệ thống</span>
+					<span>cửa hàng</span>
+				</a>
+
+				<!-- Đăng nhập / Đăng ký -->
+				{% if user.is_authenticated %}
+				<a href="{% url 'accounts:logout' %}" class="util-link">
+					<i class="fas fa-user-circle"></i>
+					<span>{{ user.username|truncatechars:10 }}</span>
+					<span>Đăng xuất</span>
+				</a>
+				{% else %}
+				<a href="{% url 'accounts:login' %}" class="util-link">
+					<i class="fas fa-user"></i>
+					<span>Đăng nhập</span>
+					<span>Đăng ký</span>
+				</a>
+				{% endif %}
+
+				<!-- Giỏ hàng -->
+				<a href="{% url 'cart:cart_detail' %}" class="cart-link">
+					<div class="cart-icon">
+						<i class="fas fa-shopping-cart"></i>
+						{% if cart_count > 0 %}
+						<span class="cart-badge">{{ cart_count }}</span>
 						{% endif %}
+					</div>
+					<span>{{ cart_count|default:0 }} Giỏ hàng</span>
+				</a>
+			</div>
 
-						<a
-							href="{% url 'admin:index' %}"
-							class="px-4 py-2 border-2 border-white text-white rounded-md hover:bg-white hover:text-gray-900 transition font-medium"
-						>
+			<!-- Nút toggle mobile -->
+			<button class="mobile-toggle" id="mobileToggleBtn"
+				style="background:none; border:none; color:white; font-size:22px; cursor:pointer;" aria-label="Menu">
+				<i class="fas fa-bars"></i>
+			</button>
+		</div>
+
+		<!-- ============================================================
+			     NAVIGATION BAR - Menu điều hướng chính
+			     ============================================================ -->
+		<nav class="site-nav">
+			<div style="max-width:1200px; margin:0 auto; padding:0 16px;">
+				<ul class="nav-list" id="mainNavList">
+
+					<!-- Trang chủ -->
+					<li class="active">
+						<a href="{% url 'landing' %}">Trang chủ</a>
+					</li>
+
+					<!-- Giày Nike (dropdown) -->
+					<li>
+						<a href="{% url 'products:product_list' %}">
+							Giày Nike <i class="fas fa-chevron-down" style="font-size:9px;"></i>
+						</a>
+						<ul class="nav-dropdown">
+							{% for category in categories %}
+							<li>
+								<a href="{% url 'products:category_detail' category.slug %}">{{ category.name }}</a>
+							</li>
+							{% empty %}
+							<li><a href="{% url 'products:product_list' %}">Tất cả sản phẩm</a></li>
+							{% endfor %}
+						</ul>
+					</li>
+
+					<!-- Giày Puma -->
+					<li><a href="{% url 'products:product_list' %}">Giày Puma</a></li>
+
+					<!-- Giày New Balance -->
+					<li><a href="{% url 'products:product_list' %}">Giày New Balance</a></li>
+
+					<!-- Giày Jeep -->
+					<li><a href="{% url 'products:product_list' %}">Giày Jeep</a></li>
+
+					<!-- Giày Khác (dropdown) -->
+					<li>
+						<a href="{% url 'products:product_list' %}">
+							Giày Khác <i class="fas fa-chevron-down" style="font-size:9px;"></i>
+						</a>
+						<ul class="nav-dropdown">
+							<li><a href="{% url 'products:product_list' %}">Converse</a></li>
+							<li><a href="{% url 'products:product_list' %}">Vans</a></li>
+							<li><a href="{% url 'products:product_list' %}">Fila</a></li>
+						</ul>
+					</li>
+
+					<!-- Quần Áo / Phụ Kiện (dropdown) -->
+					<li>
+						<a href="#">
+							Quần Áo/ Phụ Kiện <i class="fas fa-chevron-down" style="font-size:9px;"></i>
+						</a>
+						<ul class="nav-dropdown">
+							<li><a href="#">Quần Áo</a></li>
+							<li><a href="#">Phụ Kiện</a></li>
+							<li><a href="#">Mũ</a></li>
+						</ul>
+					</li>
+
+					<!-- Nước Hoa (dropdown) -->
+					<li>
+						<a href="#">
+							Nước Hoa <i class="fas fa-chevron-down" style="font-size:9px;"></i>
+						</a>
+						<ul class="nav-dropdown">
+							<li><a href="#">Nước Hoa Nam</a></li>
+							<li><a href="#">Nước Hoa Nữ</a></li>
+							<li><a href="#">Nước Hoa Unisex</a></li>
+						</ul>
+					</li>
+
+					<!-- Hàng Order -->
+					<li><a href="#">Hàng Order</a></li>
+
+					<!-- Blog -->
+					<li><a href="#">Blog</a></li>
+
+					{% if user.is_authenticated %}
+					<!-- Đơn hàng (chỉ hiện khi đã đăng nhập) -->
+					<li><a href="{% url 'cart:orders_list' %}">Đơn hàng</a></li>
+					{% endif %}
+
+					{% if user.is_staff %}
+					<!-- Admin (chỉ hiện cho staff) -->
+					<li>
+						<a href="{% url 'admin:index' %}" style="color: var(--dee-red);">
 							<i class="fas fa-cog"></i> Admin
 						</a>
+					</li>
+					{% endif %}
+				</ul>
+			</div>
+		</nav>
+	</header>
+
+	<!-- ============================================================
+		     MAIN CONTENT - Nội dung trang
+		     ============================================================ -->
+	<main>
+		<!-- Hiển thị thông báo flash messages -->
+		{% if messages %}
+		<div style="max-width:1200px; margin:12px auto 0; padding:0 16px;">
+			{% for message in messages %}
+			<div style="padding:10px 16px; border-radius:4px; margin-bottom:8px; font-size:13px;
+					{% if message.tags == 'success' %}background:#f0fdf4; border:1px solid #bbf7d0; color:#166534;
+					{% elif message.tags == 'error' %}background:#fef2f2; border:1px solid #fecaca; color:#991b1b;
+					{% else %}background:#f8fafc; border:1px solid #e2e8f0; color:#334155;{% endif %}">
+				{{ message }}
+			</div>
+			{% endfor %}
+		</div>
+		{% endif %}
+
+		{% block content %}{% endblock %}
+	</main>
+
+	<!-- ============================================================
+		     FOOTER - Newsletter + 4 cột + Copyright
+		     ============================================================ -->
+	<footer>
+		<!-- Thanh đăng ký nhận tin (đỏ đậm) -->
+		<div class="footer-newsletter">
+			<div class="newsletter-inner">
+				<span class="newsletter-title">ĐĂNG KÍ NHẬN TIN</span>
+
+				<!-- Form email -->
+				<form class="newsletter-form">
+					<div class="email-wrap">
+						<i class="fas fa-envelope"></i>
+						<input type="email" placeholder="Email" aria-label="Email đăng ký nhận tin" />
 					</div>
-				</div>
+					<button type="submit">✦ ĐĂNG KÝ</button>
+				</form>
 
-				<!-- Mobile menu -->
-				<div class="hidden lg:hidden pb-4" id="navbarMobileMenu">
-					<ul class="flex flex-col gap-4">
-						<li>
-							<a
-								href="{% url 'products:product_list' %}"
-								class="block hover:text-red-500 transition"
-							>
-								Sản phẩm
-							</a>
-						</li>
-						{% if user.is_authenticated %}
-						<li>
-							<a href="{% url 'cart:orders_list' %}" class="block hover:text-red-500 transition">Đơn hàng</a>
-						</li>
-						{% endif %}
-						<li>
-							<button
-								class="w-full text-left hover:text-red-500 transition flex items-center justify-between"
-								id="mobileDropdown"
-							>
-								Danh mục
-								<i class="fas fa-chevron-down text-sm"></i>
-							</button>
-							<ul
-								class="mt-2 pl-4 border-l-2 border-gray-700 gap-2 flex-col"
-								style="display: none"
-								id="mobileDropdownMenu"
-							>
-								{% for category in categories %}
-								<li>
-									<a
-										href="{% url 'products:category_detail' category.slug %}"
-										class="block py-2 hover:text-red-500 transition"
-									>
-										{{ category.name }}
-									</a>
-								</li>
-								{% endfor %}
-							</ul>
-						</li>
-
-						<!-- Mobile cart link -->
-						<li>
-							<a
-								href="{% url 'cart:cart_detail' %}"
-								class="flex items-center gap-3 py-2 hover:text-red-500 transition"
-							>
-								<div class="relative">
-									<i class="fas fa-shopping-cart"></i>
-									{% if cart_count|default:0 > 0 %}
-									<span class="absolute -top-2 right-0 inline-flex items-center justify-center w-5 h-5 text-xs font-medium text-white bg-red-600 rounded-full">
-										{{ cart_count }}
-									</span>
-									{% endif %}
-								</div>
-								<span class="ml-2">Giỏ hàng</span>
-							</a>
-						</li>
-
-						{% if user.is_authenticated %}
-						<li>
-							<a href="{% url 'accounts:logout' %}" class="block py-2 hover:text-red-500 transition">Đăng xuất</a>
-						</li>
-						{% else %}
-						<li>
-							<a href="{% url 'accounts:login' %}" class="block py-2 hover:text-red-500 transition">Đăng nhập</a>
-						</li>
-						<li>
-							<a href="{% url 'accounts:register' %}" class="block py-2 hover:text-red-500 transition">Đăng ký</a>
-						</li>
-						{% endif %}
-					</ul>
-					<a
-						href="{% url 'admin:index' %}"
-						class="block mt-4 px-4 py-2 border-2 border-white text-white rounded-md hover:bg-white hover:text-gray-900 transition font-medium text-center"
-					>
-						<i class="fas fa-cog"></i> Admin
+				<!-- Icon mạng xã hội -->
+				<div class="social-icons">
+					<a href="#" class="social-icon social-twitter" aria-label="Twitter">
+						<i class="fab fa-twitter"></i>
+					</a>
+					<a href="#" class="social-icon social-tiktok" aria-label="TikTok">
+						<i class="fab fa-tiktok"></i>
+					</a>
+					<a href="#" class="social-icon social-ig" aria-label="Instagram">
+						<i class="fab fa-instagram"></i>
+					</a>
+					<a href="#" class="social-icon social-fb" aria-label="Facebook">
+						<i class="fab fa-facebook-f"></i>
 					</a>
 				</div>
 			</div>
-		</nav>
+		</div>
 
-		<!-- Main Content -->
-		<main class="min-h-screen container mx-auto px-4 mt-4">
-			{% if messages %}
-			<div class="mb-4 space-y-2">
-				{% for message in messages %}
-				<div class="px-4 py-3 rounded border {% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-700{% elif message.tags == 'error' %}bg-red-50 border-red-200 text-red-700{% else %}bg-gray-50 border-gray-200 text-gray-700{% endif %}">
-					{{ message }}
-				</div>
-				{% endfor %}
-			</div>
-			{% endif %}
-			{% block content %}{% endblock %}
-		</main>
+		<!-- Phần footer chính - 4 cột -->
+		<div class="footer-main">
+			<div class="footer-grid">
 
-		<!-- Footer -->
-		<footer class="bg-gray-900 text-white py-12 mt-16">
-			<div class="container mx-auto px-4">
-				<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-					<div>
-						<h5 class="text-lg font-bold mb-3 flex items-center gap-2">
-							<i class="fas fa-shoe-prints"></i> WEBGIÀY
-						</h5>
-						<p class="text-gray-400">
-							Cửa hàng giày thể thao, giày da, sandals cao cấp.
-						</p>
-					</div>
-					<div>
-						<h5 class="text-lg font-bold mb-3">Liên hệ</h5>
-						<p class="text-gray-400 mb-2">
-							<i class="fas fa-phone mr-2"></i> 0123 456 789
-						</p>
-						<p class="text-gray-400">
-							<i class="fas fa-envelope mr-2"></i> contact@webgiay.com
-						</p>
-					</div>
-					<div>
-						<h5 class="text-lg font-bold mb-3">Theo dõi</h5>
-						<div class="flex gap-4">
-							<a
-								href="#"
-								class="text-2xl text-white hover:text-red-500 transition"
-							>
-								<i class="fab fa-facebook"></i>
-							</a>
-							<a
-								href="#"
-								class="text-2xl text-white hover:text-red-500 transition"
-							>
-								<i class="fab fa-instagram"></i>
-							</a>
+				<!-- Cột 1: Giới thiệu -->
+				<div class="footer-col">
+					<h5 class="footer-col-title">GIỚI THIỆU</h5>
+					<p>Dee Store chuyên cung cấp, order các loại giày authentic từ các hãng Nike, Adidas, Puma, MLB...
+					</p>
+					<address>
+						<div style="display:flex; gap:8px; margin-top:10px;">
+							<i class="fas fa-map-marker-alt" style="color:#9ca3af; margin-top:2px; flex-shrink:0;"></i>
+							<span>Tầng 4 - Số nhà 3, ngách 69, ngõ 117 Thái Hà, Đống Đa, Hà Nội</span>
+						</div>
+						<div style="display:flex; gap:8px; margin-top:8px;">
+							<i class="fas fa-phone" style="color:#9ca3af; flex-shrink:0;"></i>
+							<span>0848506666</span>
+						</div>
+						<div style="display:flex; gap:8px; margin-top:6px;">
+							<i class="fas fa-envelope" style="color:#9ca3af; flex-shrink:0;"></i>
+							<span>bydeestore@gmail.com</span>
+						</div>
+					</address>
+					<!-- Badge Đã thông báo Bộ Công Thương -->
+					<div class="bct-badge">
+						<div class="bct-icon"><i class="fas fa-shield-alt"></i></div>
+						<div class="bct-text">
+							<strong>ĐÃ THÔNG BÁO</strong>
+							BỘ CÔNG THƯƠNG
 						</div>
 					</div>
 				</div>
-				<hr class="border-gray-700" />
-				<div class="text-center text-gray-500 text-sm mt-6">
-					© 2026 WebGiày. All Rights Reserved.
+
+				<!-- Cột 2: Chính sách -->
+				<div class="footer-col">
+					<h5 class="footer-col-title">CHÍNH SÁCH</h5>
+					<ul class="footer-col-links">
+						<li><a href="#"><i class="fas fa-chevron-right"></i>Chính sách bảo mật thông tin</a></li>
+						<li><a href="#"><i class="fas fa-chevron-right"></i>Chính sách thanh toán</a></li>
+						<li><a href="#"><i class="fas fa-chevron-right"></i>Chính sách vận chuyển và giao nhận</a></li>
+						<li><a href="#"><i class="fas fa-chevron-right"></i>Chính sách kiểm hàng</a></li>
+						<li><a href="#"><i class="fas fa-chevron-right"></i>Chính sách đổi trả</a></li>
+						<li><a href="#"><i class="fas fa-chevron-right"></i>Chính sách xử lý khiếu nại</a></li>
+						<li><a href="#"><i class="fas fa-chevron-right"></i>Chính sách bảo hành</a></li>
+					</ul>
+				</div>
+
+				<!-- Cột 3: Hướng dẫn -->
+				<div class="footer-col">
+					<h5 class="footer-col-title">HƯỚNG DẪN</h5>
+					<ul class="footer-col-links">
+						<li><a href="#"><i class="fas fa-chevron-right"></i>Hướng dẫn order</a></li>
+						<li><a href="#"><i class="fas fa-chevron-right"></i>Hướng dẫn mua hàng</a></li>
+						<li><a href="#"><i class="fas fa-chevron-right"></i>Điều khoản dịch vụ</a></li>
+						<li><a href="{% url 'products:product_list' %}"><i class="fas fa-chevron-right"></i>Tất cả sản
+								phẩm</a></li>
+						<li><a href="#"><i class="fas fa-chevron-right"></i>Liên Hệ</a></li>
+					</ul>
+				</div>
+
+				<!-- Cột 4: Fanpage -->
+				<div class="footer-col">
+					<h5 class="footer-col-title">FANPAGE CHÚNG TÔI</h5>
+					<!-- Widget giả lập trang Facebook -->
+					<div class="fanpage-widget">
+						<div class="fanpage-cover">
+							<div class="fanpage-avatar">
+								<i class="fas fa-shoe-prints"></i>
+							</div>
+						</div>
+						<div class="fanpage-info">
+							<div class="fanpage-name">Deestore.vn - Giày Ch...</div>
+							<div class="fanpage-followers">5.306 người theo dõi</div>
+						</div>
+						<div class="fanpage-actions">
+							<button class="btn-follow">
+								<i class="fas fa-thumbs-up" style="font-size:10px;"></i> Theo dõi Trang
+							</button>
+							<button class="btn-share">
+								<i class="fas fa-share" style="font-size:10px;"></i> Chia sẻ
+							</button>
+						</div>
+					</div>
 				</div>
 			</div>
-		</footer>
+		</div>
 
-		<script>
-			// Mobile menu toggle
-			const navbarToggle = document.getElementById("navbarToggle");
-			const navbarMenu = document.getElementById("navbarMenu");
-			const navbarMobileMenu = document.getElementById("navbarMobileMenu");
-			const mobileDropdown = document.getElementById("mobileDropdown");
-			const mobileDropdownMenu = document.getElementById("mobileDropdownMenu");
-			const desktopDropdownToggle = document.getElementById("desktopDropdownToggle");
-			const desktopDropdownMenu = document.getElementById("desktopDropdownMenu");
+		<!-- Copyright bar -->
+		<div class="footer-copyright">
+			<p>© Copyright 2026 By Deestore.vn. Powered by Haravan</p>
+		</div>
+	</footer>
 
-			if (navbarToggle && navbarMobileMenu) {
-				navbarToggle.addEventListener("click", () => {
-					navbarMobileMenu.classList.toggle("hidden");
-				});
+	<!-- Nút chat messenger nổi góc phải -->
+	<div class="float-chat">
+		<button aria-label="Chat với chúng tôi" title="Chat ngay">
+			<i class="fas fa-comment-dots"></i>
+		</button>
+	</div>
+
+	<!-- ============================================================
+		     JAVASCRIPT - Mobile menu toggle
+		     ============================================================ -->
+	<script>
+		// Toggle mobile navigation
+		const mobileToggleBtn = document.getElementById('mobileToggleBtn');
+		const mainNavList = document.getElementById('mainNavList');
+
+		if (mobileToggleBtn && mainNavList) {
+			mobileToggleBtn.addEventListener('click', () => {
+				mainNavList.classList.toggle('mobile-open');
+			});
+		}
+
+		// Đóng nav khi click ra ngoài (mobile)
+		document.addEventListener('click', (e) => {
+			if (!e.target.closest('header')) {
+				mainNavList && mainNavList.classList.remove('mobile-open');
 			}
+		});
+	</script>
 
-			if (mobileDropdown && mobileDropdownMenu) {
-				mobileDropdown.addEventListener("click", () => {
-					const isOpen = mobileDropdownMenu.style.display === "flex";
-					mobileDropdownMenu.style.display = isOpen ? "none" : "flex";
-					mobileDropdownMenu.classList.toggle("hidden", isOpen);
-				});
-			}
+	{% block extra_js %}{% endblock %}
+</body>
 
-			if (desktopDropdownToggle && desktopDropdownMenu) {
-				desktopDropdownToggle.addEventListener("click", (event) => {
-					event.stopPropagation();
-					desktopDropdownMenu.classList.toggle("hidden");
-				});
-
-				document.addEventListener("click", (event) => {
-					if (!desktopDropdownMenu.contains(event.target) && !desktopDropdownToggle.contains(event.target)) {
-						desktopDropdownMenu.classList.add("hidden");
-					}
-				});
-			}
-		</script>
-
-		{% block extra_js %}{% endblock %}
-
-		<!-- AOS init -->
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js" integrity="sha512-1V6Ykq1Y1q1Y1q1Y1q1Y1q1Y1q1Y1q1Y1q1Y1q1Y1q1Y1q1Y1q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-		<script>
-		  if (window.AOS) { AOS.init({duration: 600, once: true}); }
-		</script>
-	</body>
 </html>

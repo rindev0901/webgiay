@@ -13,6 +13,7 @@ urlpatterns = [
     path('momo/checkout/', views.momo_checkout, name='momo_checkout'),
     path('momo/return/', views.momo_return, name='momo_return'),
     path('momo/ipn/', views.momo_ipn, name='momo_ipn'),
+    path('voucher/apply/', views.apply_voucher, name='apply_voucher'),
     path('orders/', views.orders_list, name='orders_list'),
     path('orders/<str:code>/', views.order_detail, name='order_detail'),
     path('orders/<str:code>/retry/', views.order_retry, name='order_retry'),

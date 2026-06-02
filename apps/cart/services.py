@@ -128,7 +128,7 @@ def merge_session_cart_into_user_cart(user, session):
     return merged_quantity
 
 
-def create_order_from_cart(user, session, customer_info=None):
+def create_order_from_cart(user, session, customer_info=None, voucher=None):
     cart_items = []
 
     if user and user.is_authenticated:
@@ -161,6 +161,25 @@ def create_order_from_cart(user, session, customer_info=None):
         return None
 
     with transaction.atomic():
+        # Tính tổng trước khi giảm
+        subtotal = Decimal('0')
+        order_items = []
+        for item in cart_items:
+            product = item.product if hasattr(item, 'product') else item['product']
+            quantity = item.quantity if hasattr(item, 'quantity') else item['quantity']
+            price = item.price if hasattr(item, 'price') else item['price']
+            subtotal += price * quantity
+            order_items.append((product, quantity, price))
+
+        # Tính discount
+        discount_amount = Decimal('0')
+        if voucher:
+            ok, _ = voucher.is_valid(subtotal)
+            if ok:
+                discount_amount = voucher.calc_discount(subtotal)
+
+        total_amount = subtotal - discount_amount
+
         order = Order.objects.create(
             user=user if user and user.is_authenticated else None,
             full_name=(customer_info or {}).get('full_name', ''),
@@ -168,25 +187,26 @@ def create_order_from_cart(user, session, customer_info=None):
             email=(customer_info or {}).get('email', ''),
             address=(customer_info or {}).get('address', ''),
             note=(customer_info or {}).get('note', ''),
+            total_amount=total_amount,
+            discount_amount=discount_amount,
+            voucher=voucher,
+            voucher_code=voucher.code if voucher else '',
         )
-        total_amount = Decimal('0')
-        order_items = []
 
-        for item in cart_items:
-            product = item.product if hasattr(item, 'product') else item['product']
-            quantity = item.quantity if hasattr(item, 'quantity') else item['quantity']
-            price = item.price if hasattr(item, 'price') else item['price']
-            total_amount += price * quantity
-            order_items.append(OrderItem(
+        OrderItem.objects.bulk_create([
+            OrderItem(
                 order=order,
                 product=product,
                 product_name=product.name,
                 price=price,
                 quantity=quantity,
-            ))
+            )
+            for product, quantity, price in order_items
+        ])
 
-        order.total_amount = total_amount
-        order.save(update_fields=['total_amount', 'updated_at'])
-        OrderItem.objects.bulk_create(order_items)
+        # Tăng used_count sau khi order được tạo thành công
+        if voucher and discount_amount > 0:
+            Voucher = voucher.__class__
+            Voucher.objects.filter(pk=voucher.pk).update(used_count=voucher.used_count + 1)
 
     return order

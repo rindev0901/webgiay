@@ -1,139 +1,407 @@
 {% extends 'base.html' %}
+{% load static %}
 {% load format_money %}
 
-{% block title %}Thanh toán - WebGiày{% endblock %}
+{% block title %}Thanh toán - Dee Store{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ===== PAGE ===== */
+.co-page { background:#f3f4f6; padding-bottom:48px; }
+.co-container { max-width:1100px; margin:0 auto; padding:0 16px; }
+
+/* Breadcrumb steps */
+.co-steps {
+  display:flex; align-items:center; gap:6px;
+  font-size:12px; padding:14px 0 20px; flex-wrap:wrap;
+}
+.co-steps a { color:var(--dee-red); text-decoration:none; }
+.co-steps a:hover { text-decoration:underline; }
+.co-steps span { color:#888; }
+.co-steps i { font-size:9px; color:#ccc; }
+
+/* 2-col grid */
+.co-layout {
+  display:grid;
+  grid-template-columns:1fr 380px;
+  gap:24px;
+  align-items:start;
+}
+@media(max-width:860px){ .co-layout { grid-template-columns:1fr; } }
+
+/* ─── LEFT: FORM ─── */
+.co-section {
+  background:white;
+  border:1px solid #e5e7eb;
+  padding:24px;
+  margin-bottom:16px;
+}
+.co-section-title {
+  font-size:16px; font-weight:700; color:#111;
+  margin-bottom:16px;
+}
+.co-login-hint {
+  font-size:12px; color:#666; margin-bottom:16px;
+}
+.co-login-hint a { color:var(--dee-red); text-decoration:none; font-weight:600; }
+.co-login-hint a:hover { text-decoration:underline; }
+
+/* Form fields */
+.co-field { margin-bottom:12px; }
+.co-field label {
+  display:none; /* placeholder plays role of label */
+}
+.co-input {
+  width:100%; padding:11px 14px;
+  border:1px solid #ddd; border-radius:2px;
+  font-size:13px; color:#333; outline:none;
+  transition:border-color .15s; font-family:inherit;
+  background:white;
+}
+.co-input:focus { border-color:#999; }
+.co-input::placeholder { color:#aaa; }
+.co-input.error { border-color:#dc2626; }
+.co-field-error { font-size:11px; color:#dc2626; margin-top:3px; }
+
+.co-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.co-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+@media(max-width:540px){
+  .co-row, .co-row-3 { grid-template-columns:1fr; }
+}
+
+/* Select custom arrow */
+select.co-input {
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 12px center;
+  padding-right:32px;
+}
+
+/* Action buttons */
+.co-actions {
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  margin-top:4px;
+}
+.btn-submit-co {
+  padding:12px 28px;
+  background:#1d6fb5; color:white;
+  border:none; font-size:13px; font-weight:700;
+  cursor:pointer; border-radius:2px; transition:background .2s;
+  letter-spacing:.3px;
+}
+.btn-submit-co:hover { background:#155d99; }
+.btn-back-co {
+  font-size:12px; color:var(--dee-red); text-decoration:none;
+  display:flex; align-items:center; gap:4px;
+}
+.btn-back-co:hover { text-decoration:underline; }
+
+/* ─── RIGHT: ORDER SUMMARY ─── */
+.co-summary {
+  background:white; border:1px solid #e5e7eb;
+  position:sticky; top:80px;
+}
+.co-summary-items { padding:16px; border-bottom:1px solid #f0f0f0; }
+
+/* Item row */
+.co-item-row {
+  display:flex; align-items:center; gap:12px;
+  margin-bottom:14px;
+}
+.co-item-row:last-child { margin-bottom:0; }
+.co-item-img-wrap {
+  position:relative; flex-shrink:0;
+}
+.co-item-img {
+  width:56px; height:56px; object-fit:contain;
+  background:#f8f8f8; border:1px solid #eee; padding:3px;
+}
+.co-item-badge {
+  position:absolute; top:-6px; right:-6px;
+  background:#888; color:white;
+  font-size:10px; font-weight:700;
+  width:18px; height:18px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+}
+.co-item-name {
+  flex:1; font-size:12px; color:#333; line-height:1.4;
+}
+.co-item-name span { display:block; color:#888; font-size:11px; }
+.co-item-price { font-size:13px; font-weight:600; color:#333; white-space:nowrap; }
+
+/* Coupon */
+.co-coupon { padding:14px 16px; border-bottom:1px solid #f0f0f0; }
+.co-coupon-row {
+  display:flex; gap:8px; margin-bottom:8px;
+}
+.co-coupon-input {
+  flex:1; padding:9px 12px;
+  border:1px solid #ddd; border-radius:2px;
+  font-size:12px; outline:none;
+}
+.co-coupon-input:focus { border-color:#999; }
+.btn-apply-coupon {
+  padding:9px 16px;
+  background:#888; color:white; border:none;
+  font-size:12px; font-weight:600; cursor:pointer;
+  border-radius:2px; transition:background .2s;
+  white-space:nowrap;
+}
+.btn-apply-coupon:hover { background:#555; }
+.co-coupon-link {
+  font-size:12px; color:#555; text-decoration:none;
+  display:flex; align-items:center; gap:4px;
+}
+.co-coupon-link:hover { color:var(--dee-red); }
+.co-discount-badge {
+  display:inline-flex; align-items:center; gap:5px;
+  border:1px dashed var(--dee-red); color:var(--dee-red);
+  font-size:11px; font-weight:600;
+  padding:4px 10px; border-radius:2px; margin-top:8px;
+  cursor:pointer;
+}
+.co-discount-badge:hover { background:#fff5f5; }
+
+/* Totals */
+.co-totals { padding:14px 16px; border-bottom:1px solid #f0f0f0; }
+.co-total-row {
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:13px; color:#555; margin-bottom:8px;
+}
+.co-total-row .label { color:#888; }
+.co-total-row .dash { color:#bbb; }
+
+.co-grand-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding-top:10px; border-top:1px solid #f0f0f0; margin-top:4px;
+}
+.co-grand-row .gl { font-size:13px; color:#555; }
+.co-grand-row .gr { display:flex; align-items:baseline; gap:4px; }
+.co-grand-row .gr .currency { font-size:11px; color:#888; }
+.co-grand-row .gr .amount { font-size:20px; font-weight:800; color:#111; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-  <div class="lg:col-span-2 bg-white p-6 rounded shadow">
-    <h2 class="text-2xl font-semibold mb-4">Thông tin giao hàng</h2>
+<div class="co-page">
+<div class="co-container">
 
-    <form method="post" class="space-y-4">
-      {% csrf_token %}
+  <!-- Breadcrumb steps -->
+  <nav class="co-steps">
+    <a href="{% url 'cart:cart_detail' %}">Giỏ hàng</a>
+    <i class="fas fa-chevron-right"></i>
+    <span style="color:#111; font-weight:600;">Thông tin giao hàng</span>
+    <i class="fas fa-chevron-right"></i>
+    <span>Phương thức thanh toán</span>
+  </nav>
 
-      {% if form.non_field_errors %}
-      <div class="p-3 rounded bg-red-50 text-red-700 border border-red-200">
-        {{ form.non_field_errors }}
-      </div>
-      {% endif %}
+  <div class="co-layout">
 
-      <div>
-        <label class="block mb-1 font-medium" for="{{ form.full_name.id_for_label }}">{{ form.full_name.label }}</label>
-        {{ form.full_name }}
-        {% if form.full_name.errors %}<p class="text-sm text-red-600 mt-1">{{ form.full_name.errors|striptags }}</p>{% endif %}
-      </div>
+    <!-- ════ LEFT: FORM ════ -->
+    <div>
+      <div class="co-section">
+        <div class="co-section-title">Thông tin giao hàng</div>
 
-      <div>
-        <label class="block mb-1 font-medium" for="{{ form.phone.id_for_label }}">{{ form.phone.label }}</label>
-        {{ form.phone }}
-        {% if form.phone.errors %}<p class="text-sm text-red-600 mt-1">{{ form.phone.errors|striptags }}</p>{% endif %}
-      </div>
-
-      <div>
-        <label class="block mb-1 font-medium" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
-        {{ form.email }}
-        {% if form.email.errors %}<p class="text-sm text-red-600 mt-1">{{ form.email.errors|striptags }}</p>{% endif %}
-      </div>
-
-      <div>
-        <label class="block mb-1 font-medium" for="{{ form.address.id_for_label }}">{{ form.address.label }}</label>
-        {{ form.address }}
-        {% if form.address.errors %}<p class="text-sm text-red-600 mt-1">{{ form.address.errors|striptags }}</p>{% endif %}
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div>
-          <label class="block mb-1 font-medium">{{ form.province.label }}</label>
-          {{ form.province }}
+        {% if not user.is_authenticated %}
+        <div class="co-login-hint">
+          Bạn đã có tài khoản? <a href="{% url 'accounts:login' %}?next={{ request.path }}">Đăng nhập</a>
         </div>
-        <div>
-          <label class="block mb-1 font-medium">{{ form.district.label }}</label>
-          {{ form.district }}
+        {% endif %}
+
+        <form method="post" id="checkoutForm" novalidate>
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+          <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:10px 14px;font-size:12px;margin-bottom:12px;border-radius:2px;">
+            {{ form.non_field_errors }}
+          </div>
+          {% endif %}
+
+          <!-- Họ và tên -->
+          <div class="co-field">
+            <label for="{{ form.full_name.id_for_label }}">{{ form.full_name.label }}</label>
+            <input type="text" id="{{ form.full_name.id_for_label }}" name="full_name"
+                   class="co-input {% if form.full_name.errors %}error{% endif %}"
+                   placeholder="Họ và tên" value="{{ form.full_name.value|default:'' }}">
+            {% if form.full_name.errors %}<div class="co-field-error">{{ form.full_name.errors|striptags }}</div>{% endif %}
+          </div>
+
+          <!-- Email + SĐT -->
+          <div class="co-row">
+            <div class="co-field">
+              <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+              <input type="email" id="{{ form.email.id_for_label }}" name="email"
+                     class="co-input {% if form.email.errors %}error{% endif %}"
+                     placeholder="Email" value="{{ form.email.value|default:'' }}">
+              {% if form.email.errors %}<div class="co-field-error">{{ form.email.errors|striptags }}</div>{% endif %}
+            </div>
+            <div class="co-field">
+              <label for="{{ form.phone.id_for_label }}">{{ form.phone.label }}</label>
+              <input type="tel" id="{{ form.phone.id_for_label }}" name="phone"
+                     class="co-input {% if form.phone.errors %}error{% endif %}"
+                     placeholder="Số điện thoại" value="{{ form.phone.value|default:'' }}">
+              {% if form.phone.errors %}<div class="co-field-error">{{ form.phone.errors|striptags }}</div>{% endif %}
+            </div>
+          </div>
+
+          <!-- Địa chỉ -->
+          <div class="co-field">
+            <label for="{{ form.address.id_for_label }}">{{ form.address.label }}</label>
+            <input type="text" id="{{ form.address.id_for_label }}" name="address"
+                   class="co-input {% if form.address.errors %}error{% endif %}"
+                   placeholder="Địa chỉ" value="{{ form.address.value|default:'' }}">
+            {% if form.address.errors %}<div class="co-field-error">{{ form.address.errors|striptags }}</div>{% endif %}
+          </div>
+
+          <!-- Tỉnh / Quận -->
+          <div class="co-row" style="margin-bottom:12px;">
+            <select name="province" id="province_select" class="co-input">
+              <option value="">Tỉnh / thành</option>
+            </select>
+            <select name="district" id="district_select" class="co-input">
+              <option value="">Quận / huyện</option>
+            </select>
+          </div>
+
+          <!-- Ghi chú -->
+          <div class="co-field" style="margin-bottom:0;">
+            <label for="{{ form.note.id_for_label }}">{{ form.note.label }}</label>
+            <textarea id="{{ form.note.id_for_label }}" name="note"
+                      class="co-input" rows="2"
+                      placeholder="Ghi chú (tùy chọn)">{{ form.note.value|default:'' }}</textarea>
+          </div>
+
+          <!-- Actions -->
+          <div class="co-actions" style="margin-top:16px;">
+            <button type="submit" class="btn-submit-co">
+              Tiếp tục đến phương thức thanh toán
+            </button>
+            <a href="{% url 'cart:cart_detail' %}" class="btn-back-co">
+              <i class="fas fa-arrow-left" style="font-size:10px;"></i> Giỏ hàng
+            </a>
+          </div>
+        </form>
+      </div>
+    </div><!-- /left -->
+
+    <!-- ════ RIGHT: ORDER SUMMARY ════ -->
+    <div class="co-summary">
+
+      <!-- Items -->
+      <div class="co-summary-items">
+        {% for item in cart_items %}
+        <div class="co-item-row">
+          <div class="co-item-img-wrap">
+            {% if item.product.images.first %}
+            <img class="co-item-img" src="{{ item.product.images.first.image.url }}" alt="{{ item.product.name }}">
+            {% else %}
+            <img class="co-item-img" src="{% static 'images/no-image.jpg' %}" alt="{{ item.product.name }}">
+            {% endif %}
+            <span class="co-item-badge">{{ item.quantity }}</span>
+          </div>
+          <div class="co-item-name">
+            {{ item.product.name }}
+          </div>
+          <div class="co-item-price">{{ item.subtotal|vnd }}</div>
         </div>
-        <div>
-          <label class="block mb-1 font-medium">{{ form.ward.label }}</label>
-          {{ form.ward }}
+        {% endfor %}
+      </div>
+
+      <!-- Coupon -->
+      <div class="co-coupon">
+        <div class="co-coupon-row">
+          <input type="text" class="co-coupon-input" placeholder="Mã giảm giá" id="couponInput">
+          <button class="btn-apply-coupon" onclick="applyCoupon()">Sử dụng</button>
+        </div>
+        <a href="#" class="co-coupon-link">
+          <i class="fas fa-sync-alt" style="font-size:10px;"></i> Xem thêm mã giảm giá
+        </a>
+        <!-- Applied badge (shown when coupon applied) -->
+        <div class="co-discount-badge" id="discountBadge" style="display:none;">
+          <i class="fas fa-tag" style="font-size:10px;"></i>
+          <span id="discountLabel">Giảm Ship 35.000đ</span>
+          <i class="fas fa-times" style="font-size:9px; margin-left:4px;" onclick="removeCoupon()"></i>
         </div>
       </div>
 
-      <div>
-        <label class="block mb-1 font-medium" for="{{ form.note.id_for_label }}">{{ form.note.label }}</label>
-        {{ form.note }}
-        {% if form.note.errors %}<p class="text-sm text-red-600 mt-1">{{ form.note.errors|striptags }}</p>{% endif %}
-      </div>
-
-      <div class="flex flex-wrap gap-3 pt-2">
-        <button type="submit" class="px-5 py-3 bg-red-600 text-white rounded font-medium">Xác nhận và thanh toán MoMo</button>
-        <a href="{% url 'cart:cart_detail' %}" class="px-5 py-3 border rounded font-medium">Quay lại giỏ hàng</a>
-      </div>
-    </form>
-  </div>
-
-  <div class="bg-white p-6 rounded shadow h-fit">
-    <h3 class="text-xl font-semibold mb-4">Đơn hàng</h3>
-    <div class="space-y-3 mb-4">
-      {% for item in cart_items %}
-      <div class="flex justify-between gap-4 text-sm border-b pb-3">
-        <div>
-          <div class="font-medium">{{ item.product.name }}</div>
-          <div class="text-gray-600">SL: {{ item.quantity }}</div>
+      <!-- Totals -->
+      <div class="co-totals">
+        <div class="co-total-row">
+          <span class="label">Tạm tính</span>
+          <span>{{ total|vnd }}</span>
         </div>
-        <div class="text-right font-semibold">{{ item.subtotal|vnd }}</div>
+        <div class="co-total-row">
+          <span class="label">Phí vận chuyển</span>
+          <span class="dash">—</span>
+        </div>
       </div>
-      {% endfor %}
-    </div>
 
-    <div class="flex justify-between text-lg font-semibold">
-      <span>Tổng cộng</span>
-      <span>{{ total|vnd }}</span>
-    </div>
-    <p class="text-sm text-gray-500 mt-3">Thông tin giao hàng sẽ được lưu vào đơn hàng trước khi chuyển sang MoMo.</p>
-  </div>
+      <!-- Grand total -->
+      <div style="padding:14px 16px;">
+        <div class="co-grand-row">
+          <span class="gl">Tổng cộng</span>
+          <div class="gr">
+            <span class="currency">VND</span>
+            <span class="amount">{{ total|vnd }}</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /summary -->
+
+  </div><!-- /co-layout -->
+</div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Load Vietnam provinces/districts/wards using provinces.open-api.vn
-async function fetchJSON(url){
-  const res = await fetch(url);
-  if(!res.ok) throw new Error('Network error');
-  return res.json();
+/* ── Province / District API ── */
+async function fetchJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('Network error');
+  return r.json();
 }
 
-document.addEventListener('DOMContentLoaded', async function(){
-  const provSelect = document.getElementById('province_select');
-  const distSelect = document.getElementById('district_select');
-  const wardSelect = document.getElementById('ward_select');
+document.addEventListener('DOMContentLoaded', async function () {
+  const provSel = document.getElementById('province_select');
+  const distSel = document.getElementById('district_select');
 
-  try{
-    const provinces = await fetchJSON('https://provinces.open-api.vn/api/?depth=1');
-    // populate provinces
-    provinces.forEach(p => {
-      const opt = document.createElement('option'); opt.value = p.code; opt.text = p.name; provSelect.appendChild(opt);
+  try {
+    const provs = await fetchJSON('https://provinces.open-api.vn/api/?depth=1');
+    provs.forEach(p => {
+      const o = document.createElement('option');
+      o.value = p.code; o.text = p.name;
+      provSel.appendChild(o);
     });
 
-    provSelect.addEventListener('change', async function(){
-      const code = this.value; distSelect.innerHTML = '<option value="">Chọn Quận/Huyện</option>'; wardSelect.innerHTML = '<option value="">Chọn Phường/Xã</option>';
-      if(!code) return;
-      const districts = await fetchJSON('https://provinces.open-api.vn/api/p/' + code + '?depth=2');
-      if(districts && districts.districts){
-        districts.districts.forEach(d => { const o = document.createElement('option'); o.value = d.code; o.text = d.name; distSelect.appendChild(o); });
-      }
+    provSel.addEventListener('change', async function () {
+      distSel.innerHTML = '<option value="">Quận / huyện</option>';
+      if (!this.value) return;
+      const data = await fetchJSON('https://provinces.open-api.vn/api/p/' + this.value + '?depth=2');
+      (data.districts || []).forEach(d => {
+        const o = document.createElement('option');
+        o.value = d.code; o.text = d.name;
+        distSel.appendChild(o);
+      });
     });
-
-    distSelect.addEventListener('change', async function(){
-      const dcode = this.value; wardSelect.innerHTML = '<option value="">Chọn Phường/Xã</option>';
-      if(!dcode) return;
-      const wards = await fetchJSON('https://provinces.open-api.vn/api/d/' + dcode + '?depth=2');
-      if(wards && wards.wards){
-        wards.wards.forEach(w => { const o = document.createElement('option'); o.value = w.code; o.text = w.name; wardSelect.appendChild(o); });
-      }
-    });
-
-  }catch(err){
-    console.warn('Address API failed', err);
+  } catch (e) {
+    console.warn('Address API unavailable', e);
   }
 });
+
+/* ── Coupon ── */
+function applyCoupon() {
+  const code = document.getElementById('couponInput').value.trim();
+  if (!code) return;
+  // Demo: accept any code
+  document.getElementById('discountLabel').textContent = 'Mã: ' + code;
+  document.getElementById('discountBadge').style.display = 'inline-flex';
+  document.getElementById('couponInput').value = '';
+}
+function removeCoupon() {
+  document.getElementById('discountBadge').style.display = 'none';
+}
 </script>
 {% endblock %}

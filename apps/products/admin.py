@@ -1,7 +1,7 @@
 from django.contrib import admin
 from import_export.admin import ImportExportModelAdmin
 from .models import (
-    Category, Brand, Color, Product,
+    Category, Brand, Color, Size, Product,
     ProductVariant, ProductImage
 )
 from .resources import *   # Import tất cả Resource
@@ -33,18 +33,41 @@ class ColorAdmin(admin.ModelAdmin):
     search_fields = ('name',)
 
 
+# ====================== SIZE ======================
+@admin.register(Size)
+class SizeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'order')
+    search_fields = ('name',)
+    ordering = ('order', 'name')
+
+
+# ====================== INLINE CHO SẢN PHẨM ======================
 # ====================== INLINE CHO SẢN PHẨM ======================
 class ProductImageInline(admin.TabularInline):
     model = ProductImage
-    extra = 3
-    max_num = 10
+    extra = 2
+    max_num = 30
+    fields = ('image', 'image_preview', 'color', 'is_primary', 'order')
+    readonly_fields = ('image_preview',)
+
+    def image_preview(self, obj):
+        from django.utils.html import format_html
+        if obj.image:
+            return format_html(
+                '<img src="{}" style="height:60px;width:60px;object-fit:contain;'
+                'border:1px solid #eee;border-radius:2px;" />',
+                obj.image.url
+            )
+        return "—"
+    image_preview.short_description = "Preview"
 
 
 class ProductVariantInline(admin.TabularInline):
     model = ProductVariant
     extra = 1
-    fields = ('size', 'color', 'sku', 'stock', 'price', 'is_active')  # ← Đã sửa trùng
+    fields = ('size', 'color', 'sku', 'stock', 'price', 'is_active')
     readonly_fields = ('sku',)
+    autocomplete_fields = ('size', 'color')
 
 
 # ====================== SẢN PHẨM CHÍNH ======================
@@ -87,16 +110,29 @@ class ProductVariantAdmin(ImportExportModelAdmin):
     list_display = ('product', 'size', 'color', 'sku', 'stock', 'price', 'is_active')
     list_filter = ('is_active', 'size', 'color')
     search_fields = ('product__name', 'sku')
-    autocomplete_fields = ('product', 'color')
+    autocomplete_fields = ('product', 'size', 'color')
 
 
 # ====================== HÌNH ẢNH SẢN PHẨM ======================
 @admin.register(ProductImage)
 class ProductImageAdmin(admin.ModelAdmin):
-    list_display = ('product', 'is_primary', 'alt_text')
-    list_filter = ('is_primary',)
-    search_fields = ('product__name',)
+    list_display = ('image_preview', 'product', 'color', 'is_primary', 'order', 'alt_text')
+    list_filter = ('is_primary', 'color')
+    search_fields = ('product__name', 'alt_text')
     autocomplete_fields = ('product',)
+    list_select_related = ('product', 'color')
+    ordering = ('product', 'color', 'order')
+
+    def image_preview(self, obj):
+        from django.utils.html import format_html
+        if obj.image:
+            return format_html(
+                '<img src="{}" style="height:50px;width:50px;object-fit:contain;'
+                'border:1px solid #eee;" />',
+                obj.image.url
+            )
+        return "—"
+    image_preview.short_description = "Ảnh"
 
 
 # ====================== Cấu hình Admin Site ======================

@@ -22,7 +22,7 @@ from .services import (
     set_user_cart_item_quantity,
 )
 from .forms import CheckoutForm
-from .models import Order
+from .models import Order, Voucher
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 
@@ -66,7 +66,19 @@ def cart_detail(request):
             })
             total += subtotal
 
-    return render(request, 'cart_detail.html', {'cart_items': items, 'total': total})
+    # Sản phẩm đã xem gần đây (lưu trong session)
+    rv_ids = request.session.get('recently_viewed', [])
+    recently_viewed = []
+    if rv_ids:
+        rv_qs = Product.objects.filter(id__in=rv_ids, is_active=True).prefetch_related('images')
+        rv_map = {p.id: p for p in rv_qs}
+        recently_viewed = [rv_map[pid] for pid in rv_ids if pid in rv_map]
+
+    return render(request, 'cart_detail.html', {
+        'cart_items': items,
+        'total': total,
+        'recently_viewed': recently_viewed,
+    })
 
 
 @login_required
@@ -107,6 +119,20 @@ def checkout(request):
         messages.error(request, 'Giỏ hàng trống, chưa thể thanh toán.')
         return redirect('cart:cart_detail')
 
+    # Đọc voucher từ session
+    voucher_code = request.session.get('voucher_code', '')
+    voucher = None
+    discount_amount = Decimal('0')
+    if voucher_code:
+        v = Voucher.objects.filter(code=voucher_code.upper(), is_active=True).first()
+        if v:
+            ok, _ = v.is_valid(total)
+            if ok:
+                voucher = v
+                discount_amount = v.calc_discount(total)
+
+    final_total = total - discount_amount
+
     initial = {}
     if request.user.is_authenticated:
         initial['email'] = getattr(request.user, 'email', '') or ''
@@ -116,10 +142,18 @@ def checkout(request):
     if request.method == 'POST':
         form = CheckoutForm(request.POST)
         if form.is_valid():
-            order = create_order_from_cart(request.user if request.user.is_authenticated else None, request.session, form.cleaned_data)
+            order = create_order_from_cart(
+                request.user if request.user.is_authenticated else None,
+                request.session,
+                form.cleaned_data,
+                voucher=voucher,
+            )
             if not order:
                 messages.error(request, 'Không thể tạo đơn hàng từ giỏ hàng hiện tại.')
                 return redirect('cart:cart_detail')
+
+            # Xóa voucher khỏi session sau khi tạo đơn
+            request.session.pop('voucher_code', None)
 
             redirect_url = request.build_absolute_uri(reverse('cart:momo_return'))
             ipn_url = request.build_absolute_uri(reverse('cart:momo_ipn'))
@@ -162,6 +196,10 @@ def checkout(request):
         'form': form,
         'cart_items': items,
         'total': total,
+        'voucher': voucher,
+        'discount_amount': discount_amount,
+        'final_total': final_total,
+        'voucher_code': voucher_code,
     })
 
 
@@ -221,6 +259,53 @@ def clear_cart(request):
         clear_user_cart(request.user)
     clear_session_cart(request.session)
     return redirect('cart:cart_detail')
+
+
+@require_POST
+def apply_voucher(request):
+    """AJAX: kiểm tra và lưu voucher vào session."""
+    from django.utils import timezone
+    code = request.POST.get('code', '').strip().upper()
+
+    if not code:
+        return JsonResponse({'ok': False, 'error': 'Vui lòng nhập mã voucher.'})
+
+    # Tính tổng giỏ hàng hiện tại
+    total = Decimal('0')
+    if request.user.is_authenticated:
+        for item in get_user_cart_items(request.user):
+            total += (item.price or item.product.final_price) * item.quantity
+    else:
+        cart = get_session_cart(request.session)
+        for pid, payload in cart.items():
+            from django.apps import apps as _apps
+            Product_ = _apps.get_model('products', 'Product')
+            p = Product_.objects.filter(pk=pid).first()
+            if p:
+                total += (p.final_price) * int(payload.get('quantity', 0))
+
+    # Tra cứu voucher
+    voucher = Voucher.objects.filter(code=code).first()
+    if not voucher:
+        return JsonResponse({'ok': False, 'error': 'Mã voucher không tồn tại.'})
+
+    ok, err = voucher.is_valid(total)
+    if not ok:
+        return JsonResponse({'ok': False, 'error': err})
+
+    discount = int(voucher.calc_discount(total))
+
+    # Lưu vào session
+    request.session['voucher_code'] = code
+    request.session.modified = True
+
+    return JsonResponse({
+        'ok': True,
+        'code': code,
+        'description': voucher.description or f'Giảm {discount:,}₫',
+        'discount_amount': discount,
+        'final_total': int(total) - discount,
+    })
 
 
 @require_POST

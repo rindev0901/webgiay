@@ -4,104 +4,560 @@
 
 {% block title %}{{ title|default:product.name }}{% endblock %}
 
-{% block content %}
-<div class="max-w-7xl mx-auto mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2 bg-white rounded-lg p-6 shadow">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                {% if images %}
-                <img id="mainImage" src="{{ images.0.image.url }}" class="w-full max-w-full max-h-130 object-contain rounded relative z-10" alt="{{ product.name }}">
-                {% else %}
-                <img id="mainImage" src="{% static 'images/no-image.jpg' %}" class="w-full max-w-full max-h-130 object-contain rounded relative z-10" alt="{{ product.name }}">
-                {% endif %}
+{% block extra_css %}
+<style>
+/* Breadcrumb */
+.pd-bc { font-size:12px; color:#999; padding:10px 0 14px; display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+.pd-bc a { color:#999; text-decoration:none; }
+.pd-bc a:hover { color:var(--dee-red); }
+.pd-bc i { font-size:8px; color:#ccc; }
 
-                <div class="mt-4 flex flex-wrap gap-3 w-full">
-                    {% for img in images %}
-                    <img src="{{ img.image.url }}" class="w-20 h-20 object-cover rounded cursor-pointer border hover:ring-2 box-border flex-none" onclick="document.getElementById('mainImage').src='{{ img.image.url }}'" alt="thumb">
-                    {% endfor %}
-                </div>
-            </div>
+.pd-page { background:#f3f4f6; padding-bottom:40px; }
 
-            <div class="p-4 flex flex-col">
-                <h1 class="text-2xl font-bold mb-2">{{ product.name }}</h1>
-                <p class="text-gray-600 mb-4">{{ product.brand.name }} • {{ product.category.name }}</p>
+/* 2-column layout */
+.pd-layout {
+  display: grid;
+  grid-template-columns: 440px 1fr;
+  gap: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+}
+@media (max-width:900px) { .pd-layout { grid-template-columns:1fr; } }
 
-                <div class="mb-4">
-                    {% if product.discount_price %}
-                    <div><span class="line-through text-gray-500">{{ product.price|vnd }}</span></div>
-                    <div class="text-red-600 text-2xl font-bold">{{ product.final_price|vnd }}</div>
-                    {% else %}
-                    <div class="text-2xl font-bold">{{ product.price|vnd }}</div>
-                    {% endif %}
-                </div>
+/* ─── GALLERY ─── */
+.pd-gallery { padding:16px; border-right:1px solid #f0f0f0; }
+.pd-main-wrap {
+  position:relative; background:#fff;
+  border:1px solid #f0f0f0; aspect-ratio:1/1; overflow:hidden;
+}
+.pd-main-wrap img { width:100%; height:100%; object-fit:contain; padding:10px; transition:transform .3s; }
+.pd-main-wrap:hover img { transform:scale(1.05); }
+.gal-arrow {
+  position:absolute; top:50%; transform:translateY(-50%);
+  background:rgba(255,255,255,0.9); border:1px solid #e5e7eb;
+  width:30px; height:30px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; color:#555; cursor:pointer; z-index:5; transition:background .15s;
+}
+.gal-arrow:hover { background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.1); }
+.gal-arrow.left { left:6px; } .gal-arrow.right { right:6px; }
+.pd-thumbs { display:flex; gap:6px; margin-top:10px; overflow-x:auto; padding-bottom:2px; }
+.pd-thumb {
+  flex-shrink:0; width:62px; height:62px; object-fit:contain;
+  padding:3px; border:1.5px solid #e5e7eb; background:#fff;
+  cursor:pointer; transition:border-color .15s;
+}
+.pd-thumb:hover, .pd-thumb.active { border-color:var(--dee-red); }
 
-                {% if variants %}
-                <div class="mb-4">
-                    <label class="block font-medium mb-2">Chọn biến thể</label>
-                    <select id="variantSelect" name="variant_id" class="w-full border px-3 py-2 rounded">
-                        {% for v in variants %}
-                        <option value="{{ v.id }}" data-price="{{ v.price }}">{{ v.name }} - {{ v.price|vnd }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                {% endif %}
+/* ─── INFO ─── */
+.pd-info { padding:20px 24px; }
+.pd-name {
+  font-size:17px; font-weight:700; color:#111;
+  line-height:1.4; margin-bottom:6px;
+  display:flex; align-items:flex-start; gap:8px; flex-wrap:wrap;
+}
+.badge-in-stock  { flex-shrink:0; background:#16a34a; color:white; font-size:10px; font-weight:700; padding:3px 9px; border-radius:2px; align-self:center; white-space:nowrap; }
+.badge-out-stock { flex-shrink:0; background:#dc2626; color:white; font-size:10px; font-weight:700; padding:3px 9px; border-radius:2px; align-self:center; white-space:nowrap; }
+.pd-authentic { display:flex; align-items:center; gap:5px; font-size:12px; color:#16a34a; font-weight:600; margin-bottom:8px; }
+.pd-meta {
+  display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  font-size:12px; color:#666;
+  padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid #f0f0f0;
+}
+.pd-meta a { color:var(--dee-red); text-decoration:none; font-weight:600; }
+.pd-sep { color:#ddd; }
 
-                <div class="mt-8">
-                    <form action="{% url 'cart:add_to_cart' product.id %}" method="post" class="flex items-center gap-3">
-                        {% csrf_token %}
-                        <input type="hidden" name="variant_id" id="variant_id_input" value="{% if variants %}{{ variants.0.id }}{% endif %}">
-                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <input type="number" name="quantity" value="1" min="1" class="w-20 px-3 py-2 border rounded" />
-                        <button type="submit" class="flex-1 bg-red-600 text-white py-3 rounded font-medium hover:bg-red-700 transition">
-                            Thêm vào giỏ
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
+/* Price */
+.pd-price-row { margin-bottom:8px; }
+.pd-price-sale { font-size:24px; font-weight:800; color:var(--dee-red); }
+.pd-price-orig { font-size:14px; color:#aaa; text-decoration:line-through; margin-left:8px; }
+.pd-sale-tag {
+  display:inline-flex; align-items:center; gap:6px;
+  background:#f59e0b; color:white; font-size:11px; font-weight:700;
+  padding:5px 14px; border-radius:2px; margin-bottom:14px; letter-spacing:.5px;
+}
 
-        <div class="mt-6">
-            <h3 class="text-lg font-semibold mb-2">Mô tả</h3>
-            <div class="prose max-w-none text-gray-700">{{ product.description|linebreaks }}</div>
-        </div>
-    </div>
+/* ─── COLOR SWATCHES ─── */
+.pd-color-label { font-size:12.5px; font-weight:600; color:#222; margin-bottom:8px; }
+.pd-color-label span { color:var(--dee-red); margin-left:4px; font-weight:700; }
+.color-swatches { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+.color-swatch {
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  cursor:pointer; padding:3px;
+  border:2px solid transparent; border-radius:3px;
+  transition: border-color .15s;
+}
+.color-swatch:hover { border-color:#bbb; }
+.color-swatch.active { border-color:var(--dee-red); }
+.swatch-circle {
+  width:28px; height:28px; border-radius:50%;
+  border:1px solid #ddd;
+  box-shadow: 0 1px 3px rgba(0,0,0,.12);
+}
+.swatch-name { font-size:10px; color:#555; max-width:52px; text-align:center; line-height:1.3; }
 
-    <aside class="lg:col-span-1">
-        <div class="bg-white rounded-lg p-6 shadow sticky" style="top: 100px;">
-            <h5 class="font-semibold mb-3">Sản phẩm liên quan</h5>
-            <div class="space-y-4">
-                {% for rp in related_products %}
-                <a href="{% url 'products:product_detail' rp.slug %}" class="flex items-center gap-3">
-                    {% if rp.images.first %}
-                    <img src="{{ rp.images.first.image.url }}" class="w-16 h-16 object-cover rounded" alt="{{ rp.name }}">
-                    {% else %}
-                    <img src="{% static 'images/no-image.jpg' %}" class="w-16 h-16 object-cover rounded" alt="{{ rp.name }}">
-                    {% endif %}
+/* ─── SIZE BUTTONS ─── */
+.pd-size-header {
+  display:flex; align-items:center; gap:14px;
+  font-size:12.5px; font-weight:600; color:#222; margin-bottom:9px;
+}
+.pd-size-guide { display:flex; align-items:center; gap:4px; font-size:11px; color:#888; font-weight:400; cursor:pointer; }
+.pd-size-guide:hover { color:var(--dee-red); }
+.pd-sizes { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:18px; }
+.size-btn {
+  min-width:44px; height:34px; padding:0 8px;
+  border:1.5px solid #ddd; background:white;
+  color:#333; font-size:12.5px; font-weight:600;
+  cursor:pointer; border-radius:2px; transition:all .12s; position:relative;
+}
+.size-btn:hover:not(.oos) { border-color:var(--dee-red); color:var(--dee-red); }
+.size-btn.active { border-color:var(--dee-red); background:var(--dee-red); color:white; }
+.size-btn.oos { color:#ccc; border-color:#ebebeb; background:#fafafa; cursor:not-allowed; }
+.size-btn.oos::after {
+  content:''; position:absolute; top:50%; left:0; width:100%; height:1px;
+  background:#ddd; transform:rotate(-12deg);
+}
 
-                    <div>
-                        <div class="text-sm font-medium">{{ rp.name }}</div>
-                        <div class="text-sm text-red-600 font-bold">
-                            {% if rp.discount_price %}{{ rp.final_price|vnd }}{% else %}{{ rp.price|vnd }}{% endif %}
-                        </div>
-                    </div>
-                </a>
-                {% endfor %}
-            </div>
-        </div>
-    </aside>
-</div>
+/* ─── ACTIONS ─── */
+.pd-actions { display:flex; align-items:center; gap:8px; margin-bottom:22px; flex-wrap:wrap; }
+.qty-box { display:flex; align-items:center; border:1.5px solid #ddd; height:42px; overflow:hidden; }
+.qty-btn { width:34px; height:100%; background:white; border:none; font-size:17px; color:#555; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .12s; }
+.qty-btn:hover { background:#f5f5f5; }
+.qty-num { width:42px; height:100%; border:none; border-left:1.5px solid #ddd; border-right:1.5px solid #ddd; text-align:center; font-size:14px; font-weight:600; outline:none; -moz-appearance:textfield; appearance:textfield; }
+.qty-num::-webkit-inner-spin-button, .qty-num::-webkit-outer-spin-button { -webkit-appearance:none; }
+.btn-cart { flex:1; min-width:150px; height:42px; background:#333; color:white; border:none; font-size:13px; font-weight:600; cursor:pointer; transition:background .2s; border-radius:1px; }
+.btn-cart:hover { background:#111; }
+.btn-buynow { min-width:110px; height:42px; background:white; color:#333; border:1.5px solid #ccc; font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; border-radius:1px; text-decoration:none; display:flex; align-items:center; justify-content:center; }
+.btn-buynow:hover { border-color:#333; }
 
-<script>
-    // sync variant select -> hidden input (if variants exist)
-    (function(){
-        const select = document.getElementById('variantSelect');
-        const hid = document.getElementById('variant_id_input');
-        if (select && hid) {
-            // set initial value already provided by template; keep sync on change
-            select.addEventListener('change', function(){ hid.value = this.value; });
-        }
-    })();
-</script>
+/* ─── COMMITS ─── */
+.pd-commits { display:grid; grid-template-columns:repeat(3,1fr); border:1px solid #f0f0f0; margin-bottom:16px; }
+.pd-commit { display:flex; flex-direction:column; align-items:center; padding:18px 8px; text-align:center; border-right:1px solid #f0f0f0; background:#fafafa; }
+.pd-commit:last-child { border-right:none; }
+.commit-icon-wrap { position:relative; margin-bottom:10px; }
+.commit-icon-wrap i { font-size:32px; color:#666; }
+.commit-badge { position:absolute; top:-6px; left:-10px; width:20px; height:20px; background:var(--dee-red); color:white; border-radius:50%; font-size:9px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+.commit-text { font-size:11.5px; color:#555; line-height:1.4; font-weight:500; }
 
+/* ─── COUPON ─── */
+.pd-coupon { display:flex; align-items:stretch; border:1px solid #e5e7eb; background:white; margin-bottom:20px; }
+.coupon-amt { background:var(--dee-red); color:white; font-size:18px; font-weight:800; padding:14px 16px; display:flex; align-items:center; flex-shrink:0; }
+.coupon-body { padding:8px 12px; flex:1; }
+.coupon-body .cn { font-size:13px; font-weight:700; color:#111; }
+.coupon-body .cm { font-size:11px; color:#666; }
+.coupon-body .cc { font-size:10px; color:#999; }
+.coupon-body .cc span { color:var(--dee-red); font-weight:600; }
+.coupon-copy-btn { background:var(--dee-red); color:white; border:none; padding:0 14px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap; display:flex; align-items:center; transition:background .2s; }
+.coupon-copy-btn:hover { background:var(--dee-red-dark); }
+
+/* ─── TABS ─── */
+.pd-tab-nav { display:flex; border-bottom:2px solid #e5e7eb; margin-bottom:14px; }
+.pd-tab-nav button { padding:10px 18px; font-size:13px; font-weight:600; color:#888; background:none; border:none; border-bottom:2px solid transparent; margin-bottom:-2px; cursor:pointer; transition:color .15s,border-color .15s; }
+.pd-tab-nav button.on { color:var(--dee-red); border-bottom-color:var(--dee-red); }
+.pd-tab-body { font-size:13px; color:#444; line-height:1.8; }
+.pd-tab-body .tab-pane { display:none; }
+.pd-tab-body .tab-pane.on { display:block; }
+
+/* ─── RELATED ─── */
+.pd-related-title { font-size:14px; font-weight:700; color:#222; border-left:4px solid var(--dee-red); padding-left:10px; margin-bottom:12px; }
+.related-item { display:flex; gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid #f3f4f6; text-decoration:none; }
+.related-item:last-child { border-bottom:none; }
+.related-item img { width:64px; height:64px; object-fit:contain; background:#f8f8f8; border:1px solid #eee; padding:3px; flex-shrink:0; }
+.related-item .rn { font-size:12px; color:#333; line-height:1.4; margin-bottom:3px; }
+.related-item:hover .rn { color:var(--dee-red); }
+.related-item .rp { font-size:13px; font-weight:700; color:var(--dee-red); }
+.related-item .ro { font-size:11px; color:#bbb; text-decoration:line-through; margin-left:4px; }
+</style>
 {% endblock %}
 
+{% block content %}
+<div class="pd-page">
+<div style="max-width:1200px; margin:0 auto; padding:0 16px;">
+
+  <!-- Breadcrumb -->
+  <nav class="pd-bc">
+    <a href="{% url 'landing' %}">Trang chủ</a>
+    <i class="fas fa-chevron-right"></i>
+    <a href="{% url 'products:category_detail' product.category.slug %}">{{ product.category.name }}</a>
+    <i class="fas fa-chevron-right"></i>
+    <span style="color:#555;">{{ product.name }}</span>
+  </nav>
+
+  <div class="pd-layout">
+
+    <!-- ══ GALLERY ══ -->
+    <div class="pd-gallery">
+      <div class="pd-main-wrap">
+        <button class="gal-arrow left" id="galPrev"><i class="fas fa-chevron-left"></i></button>
+        {% if initial_images %}
+        <img id="mainImg" src="{{ initial_images.0.url }}" alt="{{ product.name }}">
+        {% else %}
+        <img id="mainImg" src="{% static 'images/no-image.jpg' %}" alt="{{ product.name }}">
+        {% endif %}
+        <button class="gal-arrow right" id="galNext"><i class="fas fa-chevron-right"></i></button>
+      </div>
+      <div class="pd-thumbs" id="thumbStrip">
+        {% for img in initial_images %}
+        <img class="pd-thumb {% if forloop.first %}active{% endif %}"
+             src="{{ img.url }}" data-src="{{ img.url }}"
+             data-idx="{{ forloop.counter0 }}" alt="{{ img.alt }}"
+             onclick="thumbClick(this)">
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ══ INFO ══ -->
+    <div class="pd-info">
+
+      <!-- Name + badge -->
+      <h1 class="pd-name">
+        {{ product.name }}
+        {% if variants %}
+          {% for v in variants %}{% if v.stock > 0 and forloop.first %}<span class="badge-in-stock">Còn Hàng</span>{% endif %}{% endfor %}
+        {% else %}
+          <span class="badge-out-stock">Hết Hàng</span>
+        {% endif %}
+      </h1>
+
+      <div class="pd-authentic"><i class="fas fa-check-circle"></i><span>Authentic 100%</span></div>
+
+      <!-- Meta -->
+      <div class="pd-meta">
+        <span>Thương hiệu:&nbsp;<a href="{% url 'products:product_list' %}?brand={{ product.brand.slug }}">{{ product.brand.name }}</a></span>
+        <span class="pd-sep">|</span>
+        <span>Loại:&nbsp;<a href="{% url 'products:category_detail' product.category.slug %}">{{ product.category.name }}</a></span>
+        <span class="pd-sep">|</span>
+        <span>MSP:&nbsp;<span id="mspTxt" style="color:var(--dee-red);font-weight:600;">{% if variants %}{{ variants.0.sku }}{% else %}—{% endif %}</span></span>
+      </div>
+
+      <!-- Price -->
+      <div class="pd-price-row">
+        <span class="pd-price-sale" id="priceDisplay">{{ product.final_price|vnd }}</span>
+        {% if product.discount_price %}<span class="pd-price-orig">{{ product.price|vnd }}</span>{% endif %}
+      </div>
+
+      {% if product.discount_price %}
+      <div class="pd-sale-tag">KẾT THÚC TRONG:&nbsp;<span id="countdown">00:00:00</span></div>
+      {% endif %}
+
+      <!-- ── COLOR SWATCHES ── -->
+      {% if colors_list %}
+      <div class="pd-color-label">
+        Màu sắc: <span id="colorNameDisplay">{% if colors_list %}{{ colors_list.0.name }}{% endif %}</span>
+      </div>
+      <div class="color-swatches" id="colorSwatches">
+      {% for c in colors_list %}
+        <div class="color-swatch {% if forloop.first %}active{% endif %}"
+             data-color-id="{{ c.id }}"
+             data-color-name="{{ c.name }}"
+             onclick="pickColor(this)">
+          <div class="swatch-circle" style="background:{{ c.hex|default:'#cccccc' }};"></div>
+          <span class="swatch-name">{{ c.name }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- ── SIZES (rendered by JS, initial from first color) ── -->
+      {% if variants %}
+      <div class="pd-size-header">
+        <span>Kích thước:</span>
+        <span class="pd-size-guide"><i class="fas fa-ruler-horizontal"></i>&nbsp;Hướng dẫn chọn size</span>
+      </div>
+      <div class="pd-sizes" id="sizeButtons">
+        <!-- Populated by JS on load and color change -->
+      </div>
+      {% endif %}
+
+      <!-- Form -->
+      <form method="post" action="{% url 'cart:add_to_cart' product.id %}" id="cartForm">
+        {% csrf_token %}
+        <input type="hidden" name="variant_id" id="vidInput" value="">
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <div class="pd-actions">
+          <div class="qty-box">
+            <button type="button" class="qty-btn" onclick="chgQty(-1)">−</button>
+            <input type="number" name="quantity" id="qtyInput" value="1" min="1" class="qty-num">
+            <button type="button" class="qty-btn" onclick="chgQty(1)">+</button>
+          </div>
+          <button type="submit" class="btn-cart">Thêm vào giỏ</button>
+          <a href="{% url 'cart:checkout' %}" class="btn-buynow">Mua ngay</a>
+        </div>
+      </form>
+
+      <!-- 3 Commits -->
+      <div class="pd-commits">
+        <div class="pd-commit">
+          <div class="commit-icon-wrap"><i class="fas fa-box-open"></i><span class="commit-badge">×2</span></div>
+          <div class="commit-text">Đóng gói cẩn thận<br>double box</div>
+        </div>
+        <div class="pd-commit">
+          <div class="commit-icon-wrap"><i class="fas fa-exchange-alt"></i><span class="commit-badge">7</span></div>
+          <div class="commit-text">Miễn phí đổi hàng<br>trong 07 ngày</div>
+        </div>
+        <div class="pd-commit">
+          <div class="commit-icon-wrap"><i class="fas fa-truck"></i><span class="commit-badge" style="font-size:7px;">L</span></div>
+          <div class="commit-text">Giao hàng nhanh<br>toàn quốc</div>
+        </div>
+      </div>
+
+      <!-- Coupon -->
+      <div class="pd-coupon">
+        <div class="coupon-amt">35k</div>
+        <div class="coupon-body">
+          <div class="cn">Miễn Phí Vận Chuyển</div>
+          <div class="cm">Đơn hàng từ 500k</div>
+          <div class="cc">Mã: <span>FS2026</span>&nbsp; HSD: 31/12/2026</div>
+        </div>
+        <button class="coupon-copy-btn" onclick="cpCoupon('FS2026',this)">Sao chép mã</button>
+      </div>
+
+      <!-- Tabs -->
+      <div class="pd-tab-nav">
+        <button class="on" onclick="switchTab(this,'tDesc')">Mô tả sản phẩm</button>
+        <button onclick="switchTab(this,'tSpec')">Thông số kỹ thuật</button>
+      </div>
+      <div class="pd-tab-body">
+        <div class="tab-pane on" id="tDesc">{{ product.description|linebreaks }}</div>
+        <div class="tab-pane" id="tSpec">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:8px 0;color:#888;width:38%;">Thương hiệu</td><td style="padding:8px 0;font-weight:600;">{{ product.brand.name }}</td></tr>
+            <tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:8px 0;color:#888;">Danh mục</td><td style="padding:8px 0;font-weight:600;">{{ product.category.name }}</td></tr>
+            {% if variants %}
+            <tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:8px 0;color:#888;">Size có sẵn</td><td style="padding:8px 0;font-weight:600;">{% for v in variants %}{{ v.size.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td></tr>
+            {% endif %}
+            <tr><td style="padding:8px 0;color:#888;">Trạng thái</td><td style="padding:8px 0;">{% if variants %}<span class="badge-in-stock">Còn hàng</span>{% else %}<span class="badge-out-stock">Hết hàng</span>{% endif %}</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Related -->
+      {% if related_products %}
+      <div style="margin-top:28px;padding-top:20px;border-top:1px solid #f0f0f0;">
+        <div class="pd-related-title">Sản phẩm liên quan</div>
+        {% for rp in related_products %}
+        <a href="{% url 'products:product_detail' rp.slug %}" class="related-item">
+          {% if rp.images.first %}<img src="{{ rp.images.first.image.url }}" alt="{{ rp.name }}">
+          {% else %}<img src="{% static 'images/no-image.jpg' %}" alt="{{ rp.name }}">{% endif %}
+          <div>
+            <div class="rn">{{ rp.name }}</div>
+            <span class="rp">{{ rp.final_price|vnd }}</span>
+            {% if rp.discount_price %}<span class="ro">{{ rp.price|vnd }}</span>{% endif %}
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+    </div><!-- /pd-info -->
+  </div><!-- /pd-layout -->
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ── Data from server ── */
+const COLORS          = {{ variants_json|safe }};
+const IMAGES_BY_COLOR = {{ images_by_color_json|safe }};
+const INITIAL_COLOR_ID = {{ initial_color_id|default:0 }};
+const INITIAL_SIZE_ID  = {{ initial_size_id|default:0 }};
+const NO_IMAGE = "{% static 'images/no-image.jpg' %}";
+
+let activeColorId   = null;
+let activeSizeId    = null;
+let activeVariantId = null;
+let galleryImgs     = [];   // [{url, alt}] hiện đang hiển thị
+let cur             = 0;
+
+/* ── Format VND ── */
+function fmtVnd(val) {
+  return parseInt(val).toLocaleString('vi-VN') + ' ₫';
+}
+
+/* ── Cập nhật URL không reload ── */
+function updateUrl(colorId, sizeId) {
+  const url = new URL(window.location.href);
+  if (colorId) url.searchParams.set('color', colorId);
+  else         url.searchParams.delete('color');
+  if (sizeId)  url.searchParams.set('size', sizeId);
+  else         url.searchParams.delete('size');
+  history.replaceState({ colorId, sizeId }, '', url.toString());
+}
+
+/* ── Đổi gallery theo colorId ── */
+function switchGallery(colorId) {
+  /* Ưu tiên ảnh gắn màu → fallback ảnh chung (key=0) → fallback no-image */
+  const imgs = IMAGES_BY_COLOR[colorId]
+            || IMAGES_BY_COLOR[0]
+            || [];
+
+  galleryImgs = imgs.length ? imgs : [{ url: NO_IMAGE, alt: '' }];
+  cur = 0;
+
+  /* Render main image */
+  const mainImg = document.getElementById('mainImg');
+  if (mainImg) {
+    mainImg.src = galleryImgs[0].url;
+    mainImg.alt = galleryImgs[0].alt;
+  }
+
+  /* Render thumbnails */
+  const strip = document.getElementById('thumbStrip');
+  if (strip) {
+    strip.innerHTML = galleryImgs.map((img, i) => `
+      <img class="pd-thumb ${i === 0 ? 'active' : ''}"
+           src="${img.url}" data-src="${img.url}"
+           data-idx="${i}" alt="${img.alt}"
+           onclick="thumbClick(this)">`
+    ).join('');
+  }
+}
+
+/* ── Gallery nav ── */
+function setMain(idx) {
+  if (!galleryImgs.length) return;
+  cur = (idx + galleryImgs.length) % galleryImgs.length;
+  const mainImg = document.getElementById('mainImg');
+  if (mainImg) { mainImg.src = galleryImgs[cur].url; mainImg.alt = galleryImgs[cur].alt; }
+  document.querySelectorAll('.pd-thumb').forEach((t, i) => t.classList.toggle('active', i === cur));
+}
+function thumbClick(el) { setMain(parseInt(el.dataset.idx)); }
+document.getElementById('galPrev').addEventListener('click', () => setMain(cur - 1));
+document.getElementById('galNext').addEventListener('click', () => setMain(cur + 1));
+
+/* ── Render size buttons ── */
+function renderSizes(colorId, preselectSizeId) {
+  const container = document.getElementById('sizeButtons');
+  if (!container) return;
+  const color = COLORS.find(c => c.id == colorId);
+  if (!color) { container.innerHTML = ''; return; }
+
+  container.innerHTML = '';
+  let firstAvailBtn = null;
+  let preselectedBtn = null;
+
+  color.sizes.forEach(s => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'size-btn' + (s.stock === 0 ? ' oos' : '');
+    btn.textContent = s.size;
+    btn.dataset.vid    = s.id;
+    btn.dataset.sizeId = s.size_id;
+    btn.dataset.price  = s.price;
+    btn.dataset.sku    = s.sku;
+    btn.dataset.stock  = s.stock;
+    if (s.stock === 0) btn.disabled = true;
+    btn.addEventListener('click', () => pickSize(btn));
+    container.appendChild(btn);
+    if (!firstAvailBtn && s.stock > 0) firstAvailBtn = btn;
+    if (preselectSizeId && s.size_id == preselectSizeId) preselectedBtn = btn;
+  });
+
+  const target = preselectedBtn || firstAvailBtn;
+  if (target) pickSize(target, false);
+  else { activeVariantId = null; activeSizeId = null; document.getElementById('vidInput').value = ''; }
+}
+
+/* ── Chọn màu ── */
+function pickColor(el, doUpdateUrl) {
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  activeColorId = parseInt(el.dataset.colorId);
+
+  const nameEl = document.getElementById('colorNameDisplay');
+  if (nameEl) nameEl.textContent = el.dataset.colorName;
+
+  /* Đổi gallery */
+  switchGallery(activeColorId);
+
+  /* Re-render sizes (khi user tự chọn màu mới thì không giữ size cũ) */
+  const keepSize = (doUpdateUrl === false) ? activeSizeId : null;
+  renderSizes(activeColorId, keepSize);
+}
+
+/* ── Chọn size ── */
+function pickSize(btn, doUpdateUrl) {
+  document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeVariantId = btn.dataset.vid;
+  activeSizeId    = parseInt(btn.dataset.sizeId);
+  document.getElementById('vidInput').value = activeVariantId;
+
+  const msp = document.getElementById('mspTxt');
+  if (msp && btn.dataset.sku) msp.textContent = btn.dataset.sku;
+
+  const pr = document.getElementById('priceDisplay');
+  if (pr && btn.dataset.price) pr.textContent = fmtVnd(btn.dataset.price);
+
+  if (doUpdateUrl !== false) updateUrl(activeColorId, activeSizeId);
+}
+
+/* ── Khởi tạo ── */
+(function init() {
+  if (!COLORS.length) return;
+
+  const targetColorId = INITIAL_COLOR_ID || COLORS[0].id;
+
+  /* Khởi tạo gallery ngay với màu ban đầu */
+  switchGallery(targetColorId);
+
+  /* Active color swatch */
+  const swatch = document.querySelector(`.color-swatch[data-color-id="${targetColorId}"]`);
+  if (swatch) {
+    swatch.classList.add('active');
+    activeColorId = targetColorId;
+    const nameEl = document.getElementById('colorNameDisplay');
+    if (nameEl) nameEl.textContent = swatch.dataset.colorName;
+  } else {
+    const first = document.querySelector('.color-swatch');
+    if (first) {
+      first.classList.add('active');
+      activeColorId = parseInt(first.dataset.colorId);
+    }
+  }
+
+  /* Render sizes với pre-select từ URL */
+  renderSizes(targetColorId, INITIAL_SIZE_ID || null);
+
+  /* Ghi URL ban đầu nếu chưa có */
+  if (!window.location.search.includes('color=')) {
+    updateUrl(activeColorId, activeSizeId);
+  }
+})();
+
+/* ── Qty ── */
+function chgQty(d) {
+  const el = document.getElementById('qtyInput');
+  el.value = Math.max(1, (parseInt(el.value) || 1) + d);
+}
+
+/* ── Tabs ── */
+function switchTab(btn, id) {
+  document.querySelectorAll('.pd-tab-nav button').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById(id).classList.add('on');
+}
+
+/* ── Coupon ── */
+function cpCoupon(code, btn) {
+  navigator.clipboard && navigator.clipboard.writeText(code).then(() => {
+    const o = btn.textContent; btn.textContent = '✓ Đã sao chép!';
+    setTimeout(() => btn.textContent = o, 2000);
+  });
+}
+
+/* ── Countdown ── */
+(function() {
+  const el = document.getElementById('countdown');
+  if (!el) return;
+  let s = 12 * 3600;
+  const fmt = n => String(n).padStart(2, '0');
+  setInterval(() => {
+    el.textContent = `${fmt(Math.floor(s/3600))}:${fmt(Math.floor(s%3600/60))}:${fmt(s%60)}`;
+    if (s > 0) s--;
+  }, 1000);
+})();
+</script>
+{% endblock %}

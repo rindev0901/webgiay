@@ -2,48 +2,955 @@
 {% load static %}
 {% load format_money %}
 
-{% block title %}{{ title|default:'WebGiày - Trang chủ' }}{% endblock %}
+{% block title %}{{ title|default:'Dee Store - Giày Chính Hãng' }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        position: relative;
+        z-index: 1;
+        min-height: 200px;
+    }
+
+    @media (max-width: 768px) {
+        .feature-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 480px) {
+        .feature-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    /* Mỗi ô tính năng */
+    .feature-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 28px 16px 20px;
+        text-align: center;
+        border-right: 1px dashed #bbb;
+        position: relative;
+    }
+
+    .feature-item:last-child {
+        border-right: none;
+    }
+
+    /* Icon với badge số */
+    .feature-icon-wrap {
+        position: relative;
+        width: 64px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 14px;
+    }
+
+    .feature-icon-wrap i {
+        font-size: 36px;
+        color: #555;
+    }
+
+    .feature-icon-badge {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        width: 22px;
+        height: 22px;
+        background: #8b0000;
+        color: white;
+        border-radius: 50%;
+        font-size: 10px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .feature-text {
+        font-size: 13px;
+        color: #333;
+        font-weight: 500;
+        line-height: 1.4;
+    }
+
+    /* Thanh đỏ dưới feature banner */
+    .feature-red-bar {
+        background: #8b0000;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    @media (max-width: 768px) {
+        .feature-red-bar {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    .feature-red-item {
+        padding: 12px 8px;
+        text-align: center;
+        color: white;
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: 1px;
+        border-right: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .feature-red-item:last-child {
+        border-right: none;
+    }
+
+    /* Dots phân trang -->
+.banner-dots {
+    text-align: center;
+    padding: 10px 0 4px;
+    background: white;
+}
+.dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #ccc;
+    margin: 0 3px;
+}
+.dot.active { background: #8b0000; }
+
+/* ===== MÃ GIẢM GIÁ ===== */
+    .section-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 16px;
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 16px;
+        font-weight: 700;
+        color: #222;
+        margin: 0 0 16px;
+        padding-left: 12px;
+        border-left: 4px solid #8b0000;
+        letter-spacing: 0.3px;
+    }
+
+    .section-title i {
+        color: #f59e0b;
+    }
+
+    /* Card mã giảm giá */
+    .coupon-card {
+        display: flex;
+        align-items: stretch;
+        border: 1px solid #e5e7eb;
+        border-radius: 4px;
+        overflow: hidden;
+        max-width: 320px;
+        background: white;
+    }
+
+    .coupon-amount {
+        background: #8b0000;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px 14px;
+        font-size: 20px;
+        font-weight: 700;
+        flex-shrink: 0;
+        min-width: 60px;
+    }
+
+    .coupon-info {
+        padding: 10px 14px;
+        flex: 1;
+    }
+
+    .coupon-info .coupon-name {
+        font-weight: 700;
+        font-size: 13px;
+        color: #111;
+        margin-bottom: 3px;
+    }
+
+    .coupon-info .coupon-min {
+        font-size: 11px;
+        color: #666;
+        margin-bottom: 4px;
+    }
+
+    .coupon-info .coupon-meta {
+        font-size: 10px;
+        color: #999;
+        line-height: 1.6;
+    }
+
+    .coupon-info .coupon-code {
+        color: #333;
+        font-weight: 600;
+    }
+
+    .btn-copy {
+        background: #333;
+        color: white;
+        border: none;
+        padding: 4px 10px;
+        font-size: 11px;
+        border-radius: 2px;
+        cursor: pointer;
+        margin-top: 6px;
+        transition: background 0.2s;
+    }
+
+    .btn-copy:hover {
+        background: #8b0000;
+    }
+
+    /* ===== SIÊU KHUYẾN MÃI ===== */
+    .sale-section {
+        background: #8b0000;
+        padding: 20px 0 24px;
+    }
+
+    .sale-section .section-title {
+        color: white;
+        border-left-color: #f59e0b;
+    }
+
+    .sale-section .section-title i {
+        color: #fbbf24;
+    }
+
+    /* Grid sản phẩm - 5 cột cho sale section */
+    .products-grid-5 {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+    }
+
+    @media (max-width: 1024px) {
+        .products-grid-5 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    @media (max-width: 640px) {
+        .products-grid-5 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    /* Grid sản phẩm - 5 cột cho section sneaker */
+    .products-grid-sneaker {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    @media (max-width: 1024px) {
+        .products-grid-sneaker {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    @media (max-width: 640px) {
+        .products-grid-sneaker {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    /* Nút Xem tất cả */
+    .btn-see-all {
+        display: block;
+        width: fit-content;
+        margin: 16px auto 0;
+        padding: 9px 28px;
+        border: 1.5px solid #333;
+        background: white;
+        color: #333;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        border-radius: 2px;
+        transition: background 0.2s, color 0.2s;
+        text-align: center;
+    }
+
+    .btn-see-all:hover {
+        background: #333;
+        color: white;
+    }
+
+    .btn-see-all-dark {
+        border-color: rgba(255, 255, 255, 0.5);
+        background: transparent;
+        color: white;
+    }
+
+    .btn-see-all-dark:hover {
+        background: white;
+        color: #8b0000;
+    }
+
+    /* ===== GIÀY SNEAKER + TABS ===== */
+    .sneaker-section {
+        background: white;
+        padding: 0;
+        margin: 0;
+    }
+
+    /* Header section với tabs bên phải */
+    .sneaker-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .sneaker-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #111;
+        letter-spacing: 0.5px;
+    }
+
+    /* Tab buttons lọc theo thương hiệu */
+    .brand-tabs {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .brand-tab {
+        padding: 6px 14px;
+        font-size: 12px;
+        font-weight: 600;
+        border: 1.5px solid #ddd;
+        background: white;
+        color: #555;
+        cursor: pointer;
+        border-radius: 2px;
+        letter-spacing: 0.5px;
+        transition: all 0.15s;
+        white-space: nowrap;
+    }
+
+    .brand-tab:hover {
+        border-color: #8b0000;
+        color: #8b0000;
+    }
+
+    .brand-tab.active {
+        background: #8b0000;
+        color: white;
+        border-color: #8b0000;
+    }
+
+    /* ===== SECTION WRAPPER ===== */
+    .section-wrapper {
+        padding: 20px 0;
+        background: #f3f4f6;
+    }
+
+    .section-wrapper+.section-wrapper {
+        padding-top: 0;
+    }
+
+    /* ===== FEATURE BANNER (ảnh nền store) ===== */
+    .feature-banner {
+        position: relative;
+        background: #d9d0c8;
+        overflow: hidden;
+    }
+
+    .feature-banner-bg {
+        position: absolute;
+        inset: 0;
+        background:
+            linear-gradient(to right, rgba(180,170,160,0.7) 0%, rgba(210,200,190,0.4) 50%, rgba(180,170,160,0.7) 100%),
+            repeating-linear-gradient(
+                90deg,
+                transparent 0px, transparent 24%, 
+                rgba(0,0,0,0.06) 24%, rgba(0,0,0,0.06) 25%
+            );
+        z-index: 0;
+    }
+
+    .feature-grid {
+        position: relative;
+        z-index: 1;
+    }
+
+    .feature-red-bar {
+        position: relative;
+        z-index: 1;
+    }
+
+    .banner-dots {
+        position: relative;
+        z-index: 1;
+        background: rgba(255,255,255,0.6);
+    }
+
+    /* ===== BRAND BANNER CAROUSEL ===== */
+    .brand-carousel {
+        position: relative;
+        width: 100%;
+        height: 500px;
+        overflow: hidden;
+        background: #111;
+    }
+
+    @media (max-width: 768px) {
+        .brand-carousel { height: 300px; }
+    }
+
+    .brand-slide {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        transition: opacity 0.7s ease;
+        background-size: cover;
+        background-position: center center;
+        background-repeat: no-repeat;
+        z-index: 0;
+    }
+
+    .brand-slide.active {
+        opacity: 1;
+        z-index: 1;
+    }
+
+    /* Overlay tối nhẹ cho chữ dễ đọc */
+    .brand-slide-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.38);
+        z-index: 0;
+    }
+
+    /* Nội dung giữa slide */
+    .brand-slide-content {
+        position: relative;
+        z-index: 2;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 24px 20px;
+        text-align: center;
+    }
+
+    .brand-slide-logo {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: white;
+        line-height: 1.15;
+        gap: 4px;
+        filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+    }
+
+    .brand-slide-tagline {
+        color: rgba(255, 255, 255, 0.92);
+        font-size: 14px;
+        letter-spacing: 2px;
+        font-weight: 500;
+        margin: 0;
+        text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+    }
+
+    @media (max-width: 640px) {
+        .brand-slide-tagline {
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+    }
+
+    .brand-slide-btn {
+        display: inline-block;
+        margin-top: 10px;
+        border: 2px solid white;
+        color: white;
+        background: transparent;
+        padding: 10px 38px;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-decoration: none;
+        border-radius: 2px;
+        transition: background 0.2s, color 0.2s;
+        backdrop-filter: blur(2px);
+    }
+
+    .brand-slide-btn:hover {
+        background: white;
+        color: #111;
+    }
+
+    /* Mũi tên prev/next */
+    .brand-carousel-arrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1.5px solid rgba(255, 255, 255, 0.45);
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background 0.2s;
+        backdrop-filter: blur(4px);
+    }
+
+    .brand-carousel-arrow:hover {
+        background: rgba(255, 255, 255, 0.32);
+    }
+
+    .brand-carousel-arrow--prev { left: 16px; }
+    .brand-carousel-arrow--next { right: 16px; }
+
+    /* Dots */
+    .brand-carousel-dots {
+        position: absolute;
+        bottom: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        display: flex;
+        gap: 7px;
+    }
+
+    .brand-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        border: 1.5px solid rgba(255, 255, 255, 0.65);
+        background: transparent;
+        cursor: pointer;
+        transition: background 0.2s, border-color 0.2s;
+        padding: 0;
+    }
+
+    .brand-dot.active {
+        background: white;
+        border-color: white;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto mt-8">
-    <section class="bg-linear-to-r from-red-600 to-pink-500 rounded-lg text-white p-12 mb-8" data-aos="fade-up">
-        <div class="flex flex-col lg:flex-row items-center gap-8">
-            <div class="flex-1" data-aos="fade-right">
-                <h1 class="text-4xl font-extrabold mb-4">WebGiày — Giày đẹp cho mọi phong cách</h1>
-                <p class="text-lg mb-6">Khám phá bộ sưu tập mới nhất, ưu đãi hấp dẫn và giao hàng nhanh chóng.</p>
-                <div class="flex gap-3">
-                    <a href="{% url 'products:product_list' %}" class="bg-white text-red-600 px-5 py-3 rounded-md font-semibold shadow">Mua sắm ngay</a>
+
+<!-- ============================================================
+     BRAND BANNER CAROUSEL
+     3 slide: Store / Adidas / Nike — tự động chuyển + dot + arrow
+     ============================================================ -->
+<div class="brand-carousel" id="brandCarousel">
+    <!-- ── Slide 1: Store / Feature banner ── -->
+    <div class="brand-slide active" style="background-image: url('{% static 'images/slide1.png' %}');">
+        <div class="brand-slide-overlay"></div>
+        <div class="brand-slide-content">
+        </div>
+    </div>
+
+    <!-- ── Slide 2: Adidas ── -->
+    <div class="brand-slide" style="background-image: url('{% static 'images/slide2.png' %}');">
+    </div>
+
+    <!-- ── Slide 3: Nike ── -->
+    <div class="brand-slide" style="background-image: url('{% static 'images/slide3.png' %}');">
+    </div>
+
+    <!-- Prev / Next arrows -->
+    <button class="brand-carousel-arrow brand-carousel-arrow--prev" id="brandPrev" aria-label="Slide trước">
+        <i class="fas fa-chevron-left"></i>
+    </button>
+    <button class="brand-carousel-arrow brand-carousel-arrow--next" id="brandNext" aria-label="Slide tiếp">
+        <i class="fas fa-chevron-right"></i>
+    </button>
+
+    <!-- Dots -->
+    <div class="brand-carousel-dots" id="brandDots">
+        <button class="brand-dot active" data-idx="0" aria-label="Slide 1"></button>
+        <button class="brand-dot" data-idx="1" aria-label="Slide 2"></button>
+        <button class="brand-dot" data-idx="2" aria-label="Slide 3"></button>
+    </div>
+</div>
+
+<!-- ============================================================
+     MÃ GIẢM GIÁ
+     ============================================================ -->
+<div class="section-wrapper">
+    <div class="section-container">
+        <!-- Tiêu đề section với border trái đỏ -->
+        <h2 class="section-title">MÃ GIẢM GIÁ</h2>
+
+        <!-- Danh sách coupon (có thể thêm nhiều card) -->
+        <div style="display:flex; gap:14px; flex-wrap:wrap;">
+            <!-- Coupon: Miễn Phí Vận Chuyển -->
+            <div class="coupon-card">
+                <div class="coupon-amount">35k</div>
+                <div class="coupon-info">
+                    <div class="coupon-name">Miễn Phí Vận Chuyển</div>
+                    <div class="coupon-min">Đơn hàng từ 500k</div>
+                    <div class="coupon-meta">
+                        MK: <span class="coupon-code">FS2026</span><br>
+                        HSD: 31/12/2025
+                    </div>
+                    <button class="btn-copy"
+                        onclick="navigator.clipboard&&navigator.clipboard.writeText('FS2026');this.textContent='Đã sao chép!'">
+                        Sao chép mã
+                    </button>
                 </div>
             </div>
-            <div class="flex-1" data-aos="fade-left">
-                <img src="{% static 'images/hero-shoes.png' %}" alt="Hero" class="rounded-md mx-auto overflow-hidden max-h-56 object-cover" />
+
+            <!-- Coupon thứ 2 (nếu muốn thêm) -->
+            <div class="coupon-card">
+                <div class="coupon-amount" style="background:#333;">10%</div>
+                <div class="coupon-info">
+                    <div class="coupon-name">Giảm 10% Toàn Bộ</div>
+                    <div class="coupon-min">Đơn hàng từ 1.000k</div>
+                    <div class="coupon-meta">
+                        MK: <span class="coupon-code">DEE10</span><br>
+                        HSD: 31/12/2025
+                    </div>
+                    <button class="btn-copy"
+                        onclick="navigator.clipboard&&navigator.clipboard.writeText('DEE10');this.textContent='Đã sao chép!'">
+                        Sao chép mã
+                    </button>
+                </div>
             </div>
         </div>
-    </section>
+    </div>
+</div>
 
-    <section class="mb-8">
-        <h2 class="text-2xl font-semibold mb-4">Sản phẩm nổi bật</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {% for p in featured %}
-            <div class="bg-white rounded-lg shadow p-4 flex flex-col h-full">
-                {% if p.images.first %}
-                <img src="{{ p.images.first.image.url }}" alt="{{ p.name }}" class="w-full h-40 object-cover mb-3" />
-                {% else %}
-                <img src="{% static 'images/no-image.jpg' %}" class="w-full h-40 object-cover mb-3" />
-                {% endif %}
-                <div class="flex-1">
-                    <h3 class="font-medium text-sm line-clamp-2">{{ p.name }}</h3>
-                    <p class="text-xs text-gray-500">{{ p.brand.name }}</p>
+<!-- ============================================================
+     SIÊU KHUYẾN MÃI
+     Hiển thị sản phẩm đang giảm giá trên nền đỏ đậm
+     ============================================================ -->
+<div class="sale-section">
+    <div class="section-container">
+        <!-- Tiêu đề với icon sấm sét vàng -->
+        <h2 class="section-title">
+            <i class="fas fa-bolt"></i> SIÊU KHUYẾN MÃI
+        </h2>
+
+        <!-- Grid sản phẩm đang sale -->
+        <div class="products-grid-5">
+            {% for p in sale_products %}
+            <div class="product-card">
+                <div class="card-img-wrap">
+                    <!-- Badge % giảm giá -->
+                    {% if p.discount_price %}
+                    <span class="badge-discount">
+                        -{% widthratio p.discount_price p.price 100 as ratio %}{# tính phần trăm #}
+                        {% if p.price and p.discount_price %}
+                        {{ p.price|add:"-0"|floatformat:0 }}
+                        {% endif %}
+                        {# Hiển thị gần đúng vì không có template filter tính % #}
+                        %
+                    </span>
+                    {% endif %}
+
+                    <!-- Ảnh sản phẩm -->
+                    {% if p.images.all %}
+                    {% for img in p.images.all %}
+                    <img src="{{ img.image.url }}" alt="{{ p.name }}" loading="lazy" />
+                    {% if forloop.first %}{% endif %}
+                    {% endfor %}
+                    {% else %}
+                    <img src="{% static 'images/no-image.jpg' %}" alt="{{ p.name }}" />
+                    {% endif %}
+
+                    <!-- Nút thêm vào giỏ -->
+                    <a href="{% url 'products:product_detail' p.slug %}" class="btn-add-cart" title="Xem sản phẩm">
+                        <i class="fas fa-shopping-cart"></i>
+                    </a>
                 </div>
-                <div class="mt-3">
-                    <span class="font-bold text-red-600">{{ p.final_price|vnd }}</span>
+                <div class="card-body">
+                    <a href="{% url 'products:product_detail' p.slug %}" style="text-decoration:none;">
+                        <p class="card-name">{{ p.name }}</p>
+                    </a>
+                    <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+                        <span class="card-price-sale">{{ p.final_price|vnd }}</span>
+                        {% if p.discount_price %}
+                        <span class="card-price-original">{{ p.price|vnd }}</span>
+                        {% endif %}
+                    </div>
+                    <!-- Nếu có nhãn khuyến mãi đặc biệt -->
+                    {% if p.featured %}
+                    <span class="badge-khuyen-mai">• Khuyến Mãi Đặc Biệt</span>
+                    {% endif %}
                 </div>
-                <a href="{% url 'products:product_detail' p.slug %}" class="mt-3 block text-center bg-red-600 text-white py-2 rounded">Xem</a>
             </div>
             {% empty %}
-            <p>Chưa có sản phẩm nổi bật.</p>
+            <!-- Hiển thị placeholder khi chưa có sản phẩm sale -->
+            {% for i in "12345" %}
+            <div class="product-card">
+                <div class="card-img-wrap" style="background:#f0f0f0;">
+                    <span class="badge-discount">-{{ forloop.counter0|add:20 }}%</span>
+                    <img src="{% static 'images/no-image.jpg' %}" alt="Sản phẩm" />
+                    <a href="{% url 'products:product_list' %}" class="btn-add-cart">
+                        <i class="fas fa-shopping-cart"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    <p class="card-name">Giày Sneaker Chính Hãng - Mẫu {{ forloop.counter }}</p>
+                    <div>
+                        <span class="card-price-sale">2.090.000₫</span>
+                        <span class="card-price-original">2.790.000₫</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
             {% endfor %}
         </div>
-    </section>
+
+        <!-- Dots -->
+        <div style="text-align:center; margin:14px 0 10px;">
+            <span class="dot active" style="background:white;"></span>
+            <span class="dot" style="background:rgba(255,255,255,0.4);"></span>
+        </div>
+
+        <!-- Nút Xem tất cả -->
+        <a href="{% url 'products:product_list' %}" class="btn-see-all btn-see-all-dark">
+            Xem tất cả »
+        </a>
+    </div>
 </div>
+
+<!-- ============================================================
+     GIÀY SNEAKER - Tabs theo thương hiệu + Lưới sản phẩm
+     ============================================================ -->
+<div class="section-wrapper" style="background:white; padding:24px 0;">
+    <div class="section-container">
+        <!-- Header: Tiêu đề + Tabs thương hiệu -->
+        <div class="sneaker-header">
+            <h2 class="sneaker-title">GIÀY SNEAKER</h2>
+
+            <!-- Các nút lọc theo thương hiệu -->
+            <div class="brand-tabs" role="tablist" aria-label="Lọc theo thương hiệu">
+                <button class="brand-tab active" data-brand="all" role="tab" aria-selected="true">
+                    GIÀY NIKE
+                </button>
+                <button class="brand-tab" data-brand="adidas" role="tab" aria-selected="false">
+                    GIÀY ADIDAS
+                </button>
+                <button class="brand-tab" data-brand="mlb" role="tab" aria-selected="false">
+                    GIÀY MLB
+                </button>
+                <button class="brand-tab" data-brand="puma" role="tab" aria-selected="false">
+                    GIÀY PUMA
+                </button>
+                <button class="brand-tab" data-brand="fila" role="tab" aria-selected="false">
+                    GIÀY FILA
+                </button>
+                <button class="brand-tab" data-brand="other" role="tab" aria-selected="false">
+                    GIÀY CHÍNH HÃNG KHÁC
+                </button>
+            </div>
+        </div>
+
+        <!-- Grid sản phẩm nổi bật (hàng 1) -->
+        <div class="products-grid-sneaker" id="sneakerGrid">
+            {% for p in featured %}
+            <div class="product-card">
+                <div class="card-img-wrap">
+                    <!-- Badge NEW cho sản phẩm mới -->
+                    {% if forloop.counter == 3 or forloop.counter == 5 %}
+                    <span class="badge-new">NEW</span>
+                    {% elif p.discount_price %}
+                    <span class="badge-discount">
+                        -{{ p.discount_price|floatformat:0 }}%{# Ghi chú: hiển thị gần đúng #}
+                    </span>
+                    {% endif %}
+
+                    <!-- Ảnh sản phẩm -->
+                    {% if p.images.all %}
+                    {% for img in p.images.all %}
+                    <img src="{{ img.image.url }}" alt="{{ p.name }}" loading="lazy" />
+                    {% if forloop.first %}{% endif %}
+                    {% endfor %}
+                    {% else %}
+                    <img src="{% static 'images/no-image.jpg' %}" alt="{{ p.name }}" />
+                    {% endif %}
+
+                    <!-- Nút giỏ hàng -->
+                    <a href="{% url 'products:product_detail' p.slug %}" class="btn-add-cart" title="Xem sản phẩm">
+                        <i class="fas fa-shopping-cart"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'products:product_detail' p.slug %}" style="text-decoration:none;">
+                        <p class="card-name">{{ p.name }}</p>
+                    </a>
+                    <div style="display:flex; align-items:center; flex-wrap:wrap; gap:2px; margin-bottom:4px;">
+                        <span class="card-price-sale">{{ p.final_price|vnd }}</span>
+                        {% if p.discount_price %}
+                        <span class="card-price-original">{{ p.price|vnd }}</span>
+                        {% endif %}
+                    </div>
+                    <!-- Trạng thái tồn kho -->
+                    {% with total_stock=p.variants.all %}
+                    <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+                        <span style="font-size:12px; color:#dc2626; font-weight:600;">{{ p.final_price|vnd }}</span>
+                        {% if not p.variants.exists %}
+                        <span class="badge-het-hang">Hết hàng</span>
+                        {% endif %}
+                    </div>
+                    {% endwith %}
+                </div>
+            </div>
+            {% empty %}
+            <!-- Placeholder khi chưa có sản phẩm nổi bật -->
+            {% for i in "1234567890" %}
+            <div class="product-card">
+                <div class="card-img-wrap" style="background:#f8f8f8;">
+                    {% if forloop.counter == 3 %}<span class="badge-new">NEW</span>{% endif %}
+                    {% if forloop.counter == 4 %}<span class="badge-discount">-18%</span>{% endif %}
+                    <img src="{% static 'images/no-image.jpg' %}" alt="Giày Sneaker" />
+                    <a href="{% url 'products:product_list' %}" class="btn-add-cart">
+                        <i class="fas fa-shopping-cart"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    <p class="card-name">Giày Nike Air Force 1 '07 - Mẫu {{ forloop.counter }}</p>
+                    <div>
+                        <span class="card-price-sale">2.990.000₫</span>
+                    </div>
+                    <div style="margin-top:4px;">
+                        <span class="card-price-sale">2.990.000₫</span>
+                        <span class="badge-het-hang">Hết hàng</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% endfor %}
+        </div>
+
+        <!-- Nút Xem tất cả giày sneaker -->
+        <a href="{% url 'products:product_list' %}" class="btn-see-all">
+            Xem tất cả »
+        </a>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    /* ===================================================
+       Xử lý click tab thương hiệu trong section Giày Sneaker
+       Hiện tại chỉ toggle active state (UI),
+       có thể mở rộng để gọi AJAX lọc sản phẩm theo brand
+       =================================================== */
+    const brandTabs = document.querySelectorAll('.brand-tab');
+    brandTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Bỏ active tất cả các tab
+            brandTabs.forEach(t => {
+                t.classList.remove('active');
+                t.setAttribute('aria-selected', 'false');
+            });
+            // Active tab được click
+            tab.classList.add('active');
+            tab.setAttribute('aria-selected', 'true');
+
+            // Lấy brand slug từ data attribute
+            const brand = tab.dataset.brand;
+
+            /* Nếu muốn filter qua URL (không dùng AJAX):
+               window.location.href = `/products/?brand=${brand}`;
+            */
+        });
+    });
+
+    /* ===================================================
+       Copy mã giảm giá vào clipboard với fallback
+       =================================================== */
+    document.querySelectorAll('.btn-copy').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const code = this.closest('.coupon-info').querySelector('.coupon-code')?.textContent;
+            if (code && navigator.clipboard) {
+                navigator.clipboard.writeText(code).then(() => {
+                    const orig = this.textContent;
+                    this.textContent = '✓ Đã sao chép!';
+                    setTimeout(() => this.textContent = orig, 2000);
+                });
+            }
+        });
+    });
+
+    /* ===================================================
+       BRAND BANNER CAROUSEL — auto-play + arrow + dot
+       =================================================== */
+    (function () {
+        const slides = document.querySelectorAll('#brandCarousel .brand-slide');
+        const dots   = document.querySelectorAll('#brandCarousel .brand-dot');
+        const prev   = document.getElementById('brandPrev');
+        const next   = document.getElementById('brandNext');
+        if (!slides.length) return;
+
+        let current = 0;
+        let timer;
+
+        function goTo(idx) {
+            slides[current].classList.remove('active');
+            dots[current] && dots[current].classList.remove('active');
+            current = (idx + slides.length) % slides.length;
+            slides[current].classList.add('active');
+            dots[current] && dots[current].classList.add('active');
+        }
+
+        function startAuto() {
+            timer = setInterval(() => goTo(current + 1), 4500);
+        }
+
+        function resetAuto() {
+            clearInterval(timer);
+            startAuto();
+        }
+
+        if (prev) prev.addEventListener('click', () => { goTo(current - 1); resetAuto(); });
+        if (next) next.addEventListener('click', () => { goTo(current + 1); resetAuto(); });
+        dots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                goTo(parseInt(dot.dataset.idx));
+                resetAuto();
+            });
+        });
+
+        // Swipe support (mobile)
+        const carousel = document.getElementById('brandCarousel');
+        let touchStartX = 0;
+        carousel.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+        carousel.addEventListener('touchend', e => {
+            const diff = touchStartX - e.changedTouches[0].clientX;
+            if (Math.abs(diff) > 40) { goTo(diff > 0 ? current + 1 : current - 1); resetAuto(); }
+        }, { passive: true });
+
+        startAuto();
+    })();
+</script>
 {% endblock %}
