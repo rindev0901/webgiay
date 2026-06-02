@@ -90,8 +90,26 @@ class Product(models.Model):
     @property
     def discount_percent(self):
         """Tính phần trăm giảm giá (dùng trong template)"""
-        if self.discount_price and self.price and self.price > 0:
-            return int((1 - self.discount_price / self.price) * 100)
+        # Check if both prices exist and are valid
+        if not self.discount_price or not self.price:
+            return 0
+        
+        try:
+            # Convert to float for proper division
+            discount_float = float(self.discount_price)
+            price_float = float(self.price)
+            
+            # Validate positive values
+            if discount_float <= 0 or price_float <= 0:
+                return 0
+            
+            # Only show discount if discount_price is less than price
+            if discount_float < price_float:
+                percent = int((1 - discount_float / price_float) * 100)
+                return percent if percent > 0 else 0
+        except (ValueError, TypeError, ZeroDivisionError):
+            return 0
+        
         return 0
 
     @property

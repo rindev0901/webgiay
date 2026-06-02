@@ -662,14 +662,9 @@
             <div class="product-card">
                 <div class="card-img-wrap">
                     <!-- Badge % giảm giá -->
-                    {% if p.discount_price %}
+                    {% if p.discount_percent > 0 %}
                     <span class="badge-discount">
-                        -{% widthratio p.discount_price p.price 100 as ratio %}{# tính phần trăm #}
-                        {% if p.price and p.discount_price %}
-                        {{ p.price|add:"-0"|floatformat:0 }}
-                        {% endif %}
-                        {# Hiển thị gần đúng vì không có template filter tính % #}
-                        %
+                        -{{ p.discount_percent }}%
                     </span>
                     {% endif %}
 
@@ -770,10 +765,12 @@
                     <!-- Badge NEW cho sản phẩm mới -->
                     {% if forloop.counter == 3 or forloop.counter == 5 %}
                     <span class="badge-new">NEW</span>
-                    {% elif p.discount_price %}
-                    <span class="badge-discount">
-                        -{{ p.discount_price|floatformat:0 }}%{# Ghi chú: hiển thị gần đúng #}
-                    </span>
+                    {% else %}
+                        {% if p.discount_percent and p.discount_percent > 0 %}
+                        <span class="badge-discount">
+                            -{{ p.discount_percent }}%
+                        </span>
+                        {% endif %}
                     {% endif %}
 
                     <!-- Ảnh sản phẩm -->
