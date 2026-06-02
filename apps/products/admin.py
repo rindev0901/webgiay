@@ -197,9 +197,11 @@ class StockMovementAdmin(admin.ModelAdmin):
     def quantity_display(self, obj):
         qty = int(obj.quantity) if obj.quantity is not None else 0
         color = '#16a34a' if qty > 0 else '#dc2626'
+        # Format the number first with sign, then pass to format_html
+        qty_formatted = f"{qty:+d}"
         return format_html(
-            '<span style="color:{};font-weight:700;">{:+d}</span>',
-            color, int(qty)
+            '<span style="color:{};font-weight:700;">{}</span>',
+            color, qty_formatted
         )
     quantity_display.short_description = 'SL'
 
