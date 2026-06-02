@@ -1,0 +1,475 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Nhập kho hàng{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+* {
+    box-sizing: border-box;
+}
+
+.stock-in-wrapper {
+    background: #f5f5f5;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.stock-in-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.page-header h1 {
+    color: white;
+    margin: 0;
+    font-size: 28px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.page-header h1 i {
+    font-size: 32px;
+}
+
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.card-header {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #333;
+    font-weight: 600;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #444;
+    font-size: 14px;
+}
+
+.form-control {
+    width: 100%;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    background: #fafafa;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #667eea;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn i {
+    font-size: 16px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: white;
+    color: #666;
+    border: 2px solid #e0e0e0;
+}
+
+.btn-secondary:hover {
+    background: #f5f5f5;
+    border-color: #ccc;
+}
+
+.variants-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 20px;
+}
+
+.variants-table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.variants-table th {
+    padding: 16px 12px;
+    text-align: left;
+    color: white;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.variants-table th:first-child {
+    border-top-left-radius: 8px;
+}
+
+.variants-table th:last-child {
+    border-top-right-radius: 8px;
+}
+
+.variants-table tbody tr {
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.variants-table tbody tr:nth-child(even) {
+    background: #fafafa;
+}
+
+.variants-table tbody tr:hover {
+    background: #f0f4ff;
+    transform: scale(1.01);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.variants-table td {
+    padding: 16px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 14px;
+    color: #333;
+}
+
+.variants-table tbody tr:last-child td:first-child {
+    border-bottom-left-radius: 8px;
+}
+
+.variants-table tbody tr:last-child td:last-child {
+    border-bottom-right-radius: 8px;
+}
+
+.stock-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.stock-ok {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+}
+
+.stock-low {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.stock-out {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: white;
+}
+
+.qty-input {
+    width: 100px;
+    padding: 10px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.qty-input:focus {
+    outline: none;
+    border-color: #667eea;
+    background: #f0f4ff;
+}
+
+.actions {
+    margin-top: 30px;
+    display: flex;
+    gap: 12px;
+    padding-top: 20px;
+    border-top: 2px solid #f0f0f0;
+}
+
+.alert {
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+}
+
+.alert i {
+    font-size: 20px;
+}
+
+.alert-info {
+    background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+    color: #006064;
+    border: 2px solid #4dd0e1;
+}
+
+.sku-badge {
+    background: #f5f5f5;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #666;
+    border: 1px solid #e0e0e0;
+}
+
+.color-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.color-swatch {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 2px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.size-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #667eea;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 13px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="stock-in-wrapper">
+    <div class="stock-in-container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>
+                <i class="fas fa-box-open"></i>
+                Nhập kho hàng
+            </h1>
+        </div>
+
+        <!-- Product Selection -->
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-search"></i> Chọn sản phẩm</h3>
+            </div>
+            <form method="get" action="">
+                <div class="form-group">
+                    <label for="product">Sản phẩm cần nhập kho:</label>
+                    <select name="product" id="product" class="form-control" onchange="this.form.submit()">
+                        <option value="">-- Chọn sản phẩm để bắt đầu --</option>
+                        {% for product in products %}
+                        <option value="{{ product.id }}" {% if selected_product and selected_product.id == product.id %}selected{% endif %}>
+                            {{ product.name }} ({{ product.brand.name }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+
+        {% if selected_product %}
+        <!-- Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ variants|length }}</div>
+                <div class="stat-label">Tổng biến thể</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ selected_product.variants.all|length }}</div>
+                <div class="stat-label">Tổng size/màu</div>
+            </div>
+        </div>
+
+        <!-- Stock In Form -->
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-clipboard-list"></i> Thông tin nhập kho</h3>
+            </div>
+            
+            <form method="post" action="">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="note"><i class="fas fa-sticky-note"></i> Ghi chú nhập kho (tùy chọn):</label>
+                    <input type="text" name="note" id="note" class="form-control" 
+                           placeholder="Ví dụ: Nhập hàng từ nhà cung cấp ABC, lô hàng ngày 01/01/2024" />
+                </div>
+
+                {% if variants %}
+                <h3 style="margin: 25px 0 15px; color: #333; font-size: 18px;">
+                    <i class="fas fa-th-list"></i> Danh sách biến thể
+                </h3>
+
+                <table class="variants-table">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-ruler"></i> Size</th>
+                            <th><i class="fas fa-palette"></i> Màu sắc</th>
+                            <th><i class="fas fa-barcode"></i> SKU</th>
+                            <th><i class="fas fa-warehouse"></i> Tồn hiện tại</th>
+                            <th><i class="fas fa-plus-circle"></i> SL nhập</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for variant in variants %}
+                        <tr>
+                            <td>
+                                <span class="size-badge">{{ variant.size.name }}</span>
+                            </td>
+                            <td>
+                                <div class="color-indicator">
+                                    {% if variant.color %}
+                                        <span>{{ variant.color.name }}</span>
+                                        {% if variant.color.hex_code %}
+                                        <span class="color-swatch" style="background:{{ variant.color.hex_code }};"></span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span style="color: #999;">Mặc định</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="sku-badge">{{ variant.sku }}</span>
+                            </td>
+                            <td>
+                                {% if variant.stock == 0 %}
+                                <span class="stock-badge stock-out">
+                                    <i class="fas fa-times-circle"></i> Hết hàng (0)
+                                </span>
+                                {% elif variant.stock <= 3 %}
+                                <span class="stock-badge stock-low">
+                                    <i class="fas fa-exclamation-triangle"></i> {{ variant.stock }}
+                                </span>
+                                {% else %}
+                                <span class="stock-badge stock-ok">
+                                    <i class="fas fa-check-circle"></i> {{ variant.stock }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <input type="number" name="qty_{{ variant.id }}" min="0" value="0" 
+                                       class="qty-input" placeholder="0" />
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check-circle"></i> Xác nhận nhập kho
+                    </button>
+                    <a href="{% url 'admin:products_product_changelist' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Quay lại
+                    </a>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Sản phẩm này chưa có biến thể nào. Vui lòng thêm biến thể (size/màu) trước khi nhập kho.</span>
+                </div>
+                <a href="{% url 'admin:products_product_change' selected_product.id %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Thêm biến thể
+                </a>
+                {% endif %}
+            </form>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="alert alert-info">
+                <i class="fas fa-hand-point-up"></i>
+                <span>Vui lòng chọn sản phẩm cần nhập kho từ danh sách bên trên để bắt đầu.</span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

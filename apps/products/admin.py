@@ -77,6 +77,7 @@ class ProductVariantInline(admin.TabularInline):
 @admin.register(Product)
 class ProductAdmin(ImportExportModelAdmin):
     resource_class = ProductResource
+    change_list_template = 'admin/products/product_changelist.html'
 
     list_display = ('name', 'brand', 'category', 'final_price_display',
                    'stock_status', 'featured', 'is_active')
@@ -126,7 +127,7 @@ class ProductVariantAdmin(ImportExportModelAdmin):
     autocomplete_fields = ('product', 'size', 'color')
     inlines = [StockMovementInline]
     readonly_fields = ('sku',)
-    actions = ['mark_in_stock', 'mark_out_of_stock']
+    actions = ['mark_in_stock', 'mark_out_of_stock', 'go_to_stock_in']
 
     def stock_badge(self, obj):
         if obj.stock == 0:
@@ -151,6 +152,13 @@ class ProductVariantAdmin(ImportExportModelAdmin):
             adjust_stock(v, 10, note='Admin nhập kho nhanh +10',
                          actor=str(request.user))
         self.message_user(request, f'Đã nhập thêm 10 đôi cho {queryset.count()} biến thể.')
+    
+    @admin.action(description='🔽 Mở trang Nhập kho hàng')
+    def go_to_stock_in(self, request, queryset):
+        """Redirect to stock in page"""
+        from django.http import HttpResponseRedirect
+        from django.urls import reverse
+        return HttpResponseRedirect(reverse('products:stock_in'))
 
 
 # ====================== LỊCH SỬ TỒN KHO ======================

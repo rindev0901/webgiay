@@ -1,0 +1,367 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Nhập kho hàng{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+* { box-sizing: border-box; }
+
+.page-header {
+    background: #2c2c2c;
+    padding: 20px 25px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    border-left: 4px solid #417690;
+}
+
+.page-header h1 {
+    color: #f5f5f5;
+    margin: 0;
+    font-size: 24px;
+    font-weight: 400;
+}
+
+.form-section {
+    background: #2c2c2c;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 400;
+    margin-bottom: 5px;
+    color: #ccc;
+    font-size: 13px;
+}
+
+.form-control {
+    width: 100%;
+    border: 1px solid #3d3d3d;
+    border-radius: 3px;
+    font-size: 13px;
+    background: #1f1f1f;
+    color: #f5f5f5;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #417690;
+    background: #252525;
+}
+
+.form-control option {
+    background: #2c2c2c;
+    color: #f5f5f5;
+}
+
+.btn {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 400;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background: #417690;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #4e8aa8;
+}
+
+.btn-secondary {
+    background: #3d3d3d;
+    color: #ccc;
+}
+
+.btn-secondary:hover {
+    background: #4a4a4a;
+}
+
+.variants-table-wrapper {
+    background: #2c2c2c;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 20px;
+}
+
+.variants-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.variants-table thead {
+    background: #1f1f1f;
+}
+
+.variants-table th {
+    padding: 12px 15px;
+    text-align: left;
+    color: #aaa;
+    font-weight: 400;
+    font-size: 12px;
+    text-transform: uppercase;
+    border-bottom: 1px solid #3d3d3d;
+}
+
+.variants-table tbody tr {
+    background: #2c2c2c;
+    border-bottom: 1px solid #3d3d3d;
+    transition: background 0.2s ease;
+}
+
+.variants-table tbody tr:hover {
+    background: #333;
+}
+
+.variants-table td {
+    padding: 12px 15px;
+    font-size: 13px;
+    color: #ccc;
+}
+
+.product-thumb {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+    background: #1f1f1f;
+    border: 1px solid #3d3d3d;
+    border-radius: 3px;
+    padding: 5px;
+}
+
+.size-badge {
+    background: #3d3d3d;
+    color: #f5f5f5;
+    padding: 4px 10px;
+    border-radius: 3px;
+    font-weight: 400;
+    font-size: 13px;
+    display: inline-block;
+}
+
+.color-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.color-swatch {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border-radius: 2px;
+    border: 1px solid #555;
+}
+
+.sku-badge {
+    background: #1f1f1f;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #888;
+    border: 1px solid #3d3d3d;
+}
+
+.stock-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+.stock-ok {
+    background: #234f32;
+    color: #4dbd74;
+}
+
+.stock-low {
+    background: #5c3c1f;
+    color: #f9b115;
+}
+
+.stock-out {
+    background: #4a1f1f;
+    color: #dd4b39;
+}
+
+.qty-input {
+    width: 80px;
+    padding: 6px 8px;
+    border: 1px solid #3d3d3d;
+    border-radius: 3px;
+    text-align: center;
+    font-size: 13px;
+    background: #1f1f1f;
+    color: #f5f5f5;
+}
+
+.qty-input:focus {
+    outline: none;
+    border-color: #417690;
+    background: #252525;
+}
+
+.actions {
+    margin-top: 20px;
+    padding: 15px 20px;
+    background: #2c2c2c;
+    border-radius: 4px;
+    display: flex;
+    gap: 10px;
+}
+
+.alert {
+    padding: 12px 15px;
+    border-radius: 3px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+}
+
+.alert-info {
+    background: #1f3a52;
+    color: #8ab4d5;
+    border-left: 4px solid #417690;
+}
+
+.section-title {
+    color: #f5f5f5;
+    font-size: 14px;
+    font-weight: 400;
+    margin: 20px 0 15px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #3d3d3d;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:1400px; margin:0 auto; padding: 0 10px;">
+
+        <div class="form-section">
+            <form method="get" action="">
+                <div class="form-group">
+                    <label for="product">Chọn sản phẩm cần nhập kho:</label>
+                    <select name="product" id="product" class="form-control" onchange="this.form.submit()">
+                        <option value="">----------</option>
+                        {% for product in products %}
+                        <option value="{{ product.id }}" {% if selected_product and selected_product.id == product.id %}selected{% endif %}>
+                            {{ product.name }} ({{ product.brand.name }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+
+        {% if selected_product %}
+        <form method="post" action="">
+            {% csrf_token %}
+            
+            <div class="form-section">
+                <div class="form-group">
+                    <label for="note">Ghi chú (tùy chọn):</label>
+                    <input type="text" name="note" id="note" class="form-control" 
+                           placeholder="Ví dụ: Nhập hàng từ NCC ABC" />
+                </div>
+            </div>
+
+            {% if variants %}
+            <h2 class="section-title">Danh sách biến thể</h2>
+            
+            <div class="variants-table-wrapper">
+                <table class="variants-table">
+                    <thead>
+                        <tr>
+                            <th>ẢNH</th>
+                            <th>PRODUCT</th>
+                            <th>MÀU SẮC</th>
+                            <th>SIZE</th>
+                            <th>TỒN HIỆN TẠI</th>
+                            <th>SỐ LƯỢNG NHẬP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for variant in variants %}
+                        <tr>
+                            <td>
+                                {% if variant.product.images.first %}
+                                <img src="{{ variant.product.images.first.image.url }}" class="product-thumb">
+                                {% else %}
+                                <img src="{% static 'images/no-image.jpg' %}" class="product-thumb">
+                                {% endif %}
+                            </td>
+
+                            <td>{{ variant.product.name }}</td>
+                            <td>
+                                <div class="color-indicator">
+                                    {% if variant.color %}
+                                        <span>{{ variant.color.name }}</span>
+                                        {% if variant.color.hex_code %}
+                                        <span class="color-swatch" style="background:{{ variant.color.hex_code }};"></span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span style="color: #666;">-</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td><span class="size-badge">{{ variant.size.name }}</span></td>
+                            <td>
+                                {% if variant.stock == 0 %}
+                                <span class="stock-badge stock-out">0</span>
+                                {% elif variant.stock <= 3 %}
+                                <span class="stock-badge stock-low">{{ variant.stock }}</span>
+                                {% else %}
+                                <span class="stock-badge stock-ok">{{ variant.stock }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <input type="number" name="qty_{{ variant.id }}" min="0" value="0" 
+                                       class="qty-input" />
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">Xác nhận nhập kho</button>
+                <a href="{% url 'admin:products_product_changelist' %}" class="btn btn-secondary">Hủy</a>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <span>Sản phẩm này chưa có biến thể. Vui lòng thêm biến thể trước.</span>
+            </div>
+            {% endif %}
+        </form>
+        {% else %}
+        <div class="alert alert-info">
+            <span>Vui lòng chọn sản phẩm cần nhập kho từ danh sách bên trên.</span>
+        </div>
+        {% endif %}
+    </div>
+{% endblock %}
