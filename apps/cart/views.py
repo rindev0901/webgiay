@@ -309,6 +309,13 @@ def apply_voucher(request):
 
 
 @require_POST
+def remove_voucher(request):
+    """Xóa voucher khỏi session."""
+    request.session.pop('voucher_code', None)
+    return JsonResponse({'ok': True})
+
+
+@require_POST
 def momo_checkout(request):
     return redirect('cart:checkout')
 

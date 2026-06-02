@@ -310,18 +310,28 @@ select.co-input {
 
       <!-- Coupon -->
       <div class="co-coupon">
-        <div class="co-coupon-row">
-          <input type="text" class="co-coupon-input" placeholder="Mã giảm giá" id="couponInput">
-          <button class="btn-apply-coupon" onclick="applyCoupon()">Sử dụng</button>
+        <!-- Input row -->
+        <div class="co-coupon-row" id="couponInputRow" {% if voucher %}style="display:none;"{% endif %}>
+          <input type="text" class="co-coupon-input" id="couponInput"
+                 placeholder="Mã giảm giá"
+                 value="{{ voucher_code|default:'' }}"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();applyCoupon();}">
+          <button class="btn-apply-coupon" id="btnApply" onclick="applyCoupon()">Sử dụng</button>
         </div>
-        <a href="#" class="co-coupon-link">
-          <i class="fas fa-sync-alt" style="font-size:10px;"></i> Xem thêm mã giảm giá
-        </a>
-        <!-- Applied badge (shown when coupon applied) -->
-        <div class="co-discount-badge" id="discountBadge" style="display:none;">
+
+        <!-- Error message -->
+        <div id="couponError" style="font-size:11px;color:#dc2626;margin-top:4px;display:none;"></div>
+
+        <!-- Applied badge -->
+        <div id="discountBadge"
+             style="{% if not voucher %}display:none;{% endif %}"
+             class="co-discount-badge">
           <i class="fas fa-tag" style="font-size:10px;"></i>
-          <span id="discountLabel">Giảm Ship 35.000đ</span>
-          <i class="fas fa-times" style="font-size:9px; margin-left:4px;" onclick="removeCoupon()"></i>
+          <span id="discountLabel">
+            {% if voucher %}{{ voucher.description|default:voucher.code }}{% endif %}
+          </span>
+          <i class="fas fa-times" style="font-size:9px;margin-left:6px;cursor:pointer;"
+             onclick="removeCoupon()" title="Bỏ mã"></i>
         </div>
       </div>
 
@@ -329,7 +339,17 @@ select.co-input {
       <div class="co-totals">
         <div class="co-total-row">
           <span class="label">Tạm tính</span>
-          <span>{{ total|vnd }}</span>
+          <span id="subtotalDisplay">{{ total|vnd }}</span>
+        </div>
+        <!-- Discount row — chỉ hiện khi có voucher -->
+        <div class="co-total-row" id="discountRow"
+             style="{% if not discount_amount %}display:none;{% endif %}color:var(--dee-red);">
+          <span class="label" style="color:var(--dee-red);">
+            Giảm giá (<span id="discountCodeLabel">{{ voucher_code }}</span>)
+          </span>
+          <span id="discountAmountDisplay">
+            {% if discount_amount %}-{{ discount_amount|vnd }}{% endif %}
+          </span>
         </div>
         <div class="co-total-row">
           <span class="label">Phí vận chuyển</span>
@@ -343,7 +363,7 @@ select.co-input {
           <span class="gl">Tổng cộng</span>
           <div class="gr">
             <span class="currency">VND</span>
-            <span class="amount">{{ total|vnd }}</span>
+            <span class="amount" id="grandTotalDisplay">{{ final_total|default:total|vnd }}</span>
           </div>
         </div>
       </div>
@@ -391,17 +411,92 @@ document.addEventListener('DOMContentLoaded', async function () {
   }
 });
 
-/* ── Coupon ── */
-function applyCoupon() {
-  const code = document.getElementById('couponInput').value.trim();
-  if (!code) return;
-  // Demo: accept any code
-  document.getElementById('discountLabel').textContent = 'Mã: ' + code;
-  document.getElementById('discountBadge').style.display = 'inline-flex';
-  document.getElementById('couponInput').value = '';
+/* ── Voucher AJAX ── */
+const APPLY_URL  = "{% url 'cart:apply_voucher' %}";
+const REMOVE_URL = "{% url 'cart:remove_voucher' %}";
+const CSRF       = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+function fmtVnd(n) {
+  return parseInt(n).toLocaleString('vi-VN') + ' ₫';
 }
-function removeCoupon() {
-  document.getElementById('discountBadge').style.display = 'none';
+
+async function applyCoupon() {
+  const input   = document.getElementById('couponInput');
+  const errEl   = document.getElementById('couponError');
+  const btnEl   = document.getElementById('btnApply');
+  const code    = input.value.trim().toUpperCase();
+
+  if (!code) {
+    showError('Vui lòng nhập mã voucher.');
+    return;
+  }
+
+  btnEl.disabled = true;
+  btnEl.textContent = '...';
+  errEl.style.display = 'none';
+
+  try {
+    const res  = await fetch(APPLY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': CSRF },
+      body: `code=${encodeURIComponent(code)}`,
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      /* Hiện badge */
+      document.getElementById('discountLabel').textContent = data.description || ('Mã: ' + data.code);
+      document.getElementById('discountBadge').style.display = 'inline-flex';
+      document.getElementById('couponInputRow').style.display = 'none';
+
+      /* Hiện dòng discount */
+      document.getElementById('discountCodeLabel').textContent = data.code;
+      document.getElementById('discountAmountDisplay').textContent = '-' + fmtVnd(data.discount_amount);
+      document.getElementById('discountRow').style.display = 'flex';
+
+      /* Cập nhật grand total */
+      document.getElementById('grandTotalDisplay').textContent = fmtVnd(data.final_total);
+    } else {
+      showError(data.error || 'Mã không hợp lệ.');
+    }
+  } catch {
+    showError('Lỗi kết nối. Vui lòng thử lại.');
+  } finally {
+    btnEl.disabled = false;
+    btnEl.textContent = 'Sử dụng';
+  }
 }
+
+async function removeCoupon() {
+  try {
+    await fetch(REMOVE_URL, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF },
+    });
+  } catch { /* ignore */ }
+
+  /* Reset UI */
+  document.getElementById('discountBadge').style.display  = 'none';
+  document.getElementById('discountRow').style.display    = 'none';
+  document.getElementById('couponInputRow').style.display = 'flex';
+  document.getElementById('couponInput').value            = '';
+  document.getElementById('couponError').style.display    = 'none';
+
+  /* Khôi phục grand total về tạm tính */
+  const subtotal = document.getElementById('subtotalDisplay').textContent;
+  document.getElementById('grandTotalDisplay').textContent = subtotal;
+}
+
+function showError(msg) {
+  const el = document.getElementById('couponError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+/* Enter key support */
+document.getElementById('couponInput') &&
+  document.getElementById('couponInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); applyCoupon(); }
+  });
 </script>
 {% endblock %}
