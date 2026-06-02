@@ -848,66 +848,14 @@
 						<a href="{% url 'landing' %}">Trang chủ</a>
 					</li>
 
-					<!-- Giày Nike (dropdown) -->
+					<!-- Danh mục sản phẩm (lấy từ categories) -->
+					{% for category in categories %}
 					<li>
-						<a href="{% url 'products:product_list' %}">
-							Giày Nike <i class="fas fa-chevron-down" style="font-size:9px;"></i>
+						<a href="{% url 'products:category_detail' category.slug %}">
+							{{ category.name }}
 						</a>
-						<ul class="nav-dropdown">
-							{% for category in categories %}
-							<li>
-								<a href="{% url 'products:category_detail' category.slug %}">{{ category.name }}</a>
-							</li>
-							{% empty %}
-							<li><a href="{% url 'products:product_list' %}">Tất cả sản phẩm</a></li>
-							{% endfor %}
-						</ul>
 					</li>
-
-					<!-- Giày Puma -->
-					<li><a href="{% url 'products:product_list' %}">Giày Puma</a></li>
-
-					<!-- Giày New Balance -->
-					<li><a href="{% url 'products:product_list' %}">Giày New Balance</a></li>
-
-					<!-- Giày Jeep -->
-					<li><a href="{% url 'products:product_list' %}">Giày Jeep</a></li>
-
-					<!-- Giày Khác (dropdown) -->
-					<li>
-						<a href="{% url 'products:product_list' %}">
-							Giày Khác <i class="fas fa-chevron-down" style="font-size:9px;"></i>
-						</a>
-						<ul class="nav-dropdown">
-							<li><a href="{% url 'products:product_list' %}">Converse</a></li>
-							<li><a href="{% url 'products:product_list' %}">Vans</a></li>
-							<li><a href="{% url 'products:product_list' %}">Fila</a></li>
-						</ul>
-					</li>
-
-					<!-- Quần Áo / Phụ Kiện (dropdown) -->
-					<li>
-						<a href="#">
-							Quần Áo/ Phụ Kiện <i class="fas fa-chevron-down" style="font-size:9px;"></i>
-						</a>
-						<ul class="nav-dropdown">
-							<li><a href="#">Quần Áo</a></li>
-							<li><a href="#">Phụ Kiện</a></li>
-							<li><a href="#">Mũ</a></li>
-						</ul>
-					</li>
-
-					<!-- Nước Hoa (dropdown) -->
-					<li>
-						<a href="#">
-							Nước Hoa <i class="fas fa-chevron-down" style="font-size:9px;"></i>
-						</a>
-						<ul class="nav-dropdown">
-							<li><a href="#">Nước Hoa Nam</a></li>
-							<li><a href="#">Nước Hoa Nữ</a></li>
-							<li><a href="#">Nước Hoa Unisex</a></li>
-						</ul>
-					</li>
+					{% endfor %}
 
 					<!-- Hàng Order -->
 					<li><a href="#">Hàng Order</a></li>

@@ -19,6 +19,7 @@ def product_list(request: HttpRequest):
     category_slug = request.GET.get('category')
     brand_slug = request.GET.get('brand')
     sort = request.GET.get('sort', '-created_at')
+    price_range = request.GET.get('price_range')
 
     products = Product.objects.filter(is_active=True)\
         .select_related('brand', 'category')\
@@ -29,28 +30,58 @@ def product_list(request: HttpRequest):
                 is_primary=True))
     )
 
+    # Filter by category
     if category_slug:
         products = products.filter(category__slug=category_slug)
+    
+    # Filter by brand
     if brand_slug:
         products = products.filter(brand__slug=brand_slug)
 
-    # Price range filter (min_price, max_price)
-    min_price = request.GET.get('min_price')
-    max_price = request.GET.get('max_price')
-    if min_price:
+    # Price range filter
+    min_price = None
+    max_price = None
+    
+    if price_range:
         try:
-            min_val = Decimal(min_price)
-            products = products.filter(Q(discount_price__gte=min_val) | Q(discount_price__isnull=True, price__gte=min_val))
-        except InvalidOperation:
+            parts = price_range.split('-')
+            if len(parts) == 2:
+                min_price = int(parts[0])
+                max_price = int(parts[1])
+                
+                # Filter by final_price (discount_price or price)
+                products = products.filter(
+                    Q(discount_price__gte=min_price, discount_price__lte=max_price) |
+                    Q(discount_price__isnull=True, price__gte=min_price, price__lte=max_price)
+                )
+        except (ValueError, IndexError):
             pass
-    if max_price:
+    
+    # Manual min/max price filter (for custom input)
+    manual_min = request.GET.get('min_price')
+    manual_max = request.GET.get('max_price')
+    if manual_min:
         try:
-            max_val = Decimal(max_price)
-            products = products.filter(Q(discount_price__lte=max_val) | Q(discount_price__isnull=True, price__lte=max_val))
-        except InvalidOperation:
+            min_val = Decimal(manual_min)
+            products = products.filter(
+                Q(discount_price__gte=min_val) | 
+                Q(discount_price__isnull=True, price__gte=min_val)
+            )
+            min_price = int(min_val)
+        except (InvalidOperation, ValueError):
+            pass
+    if manual_max:
+        try:
+            max_val = Decimal(manual_max)
+            products = products.filter(
+                Q(discount_price__lte=max_val) | 
+                Q(discount_price__isnull=True, price__lte=max_val)
+            )
+            max_price = int(max_val)
+        except (InvalidOperation, ValueError):
             pass
 
-    # Sắp xếp
+    # Sorting
     if sort == 'price_low':
         products = products.order_by('price')
     elif sort == 'price_high':
@@ -58,7 +89,7 @@ def product_list(request: HttpRequest):
     else:
         products = products.order_by(sort)
 
-    paginator = Paginator(products, 9)
+    paginator = Paginator(products, 12)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
@@ -80,6 +111,7 @@ def product_list(request: HttpRequest):
         'current_category': category_slug,
         'current_brand': brand_slug,
         'current_sort': sort,
+        'current_price_range': price_range,
         'query_string': query_string,
         'min_price': min_price,
         'max_price': max_price,

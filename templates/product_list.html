@@ -4,185 +4,504 @@
 {% block title %}
 {{ title|default:'Tất cả Sản phẩm - WebGiày' }}
 {% endblock %}
+
+{% block extra_css %}
+<style>
+/* Feature banner (4 icons + red bar) */
+.feature-banner-wrapper {
+    background: white;
+    margin-bottom: 0;
+}
+.feature-icons-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    max-width: 1200px;
+    margin: 0 auto;
+    border-bottom: 1px solid #e5e7eb;
+}
+@media (max-width: 768px) {
+    .feature-icons-grid { grid-template-columns: repeat(2, 1fr); }
+}
+.feature-icon-item {
+    padding: 20px 16px;
+    text-align: center;
+    border-right: 1px dashed #ccc;
+}
+.feature-icon-item:last-child { border-right: none; }
+.feature-icon-item i {
+    font-size: 32px;
+    color: #dc2626;
+    margin-bottom: 8px;
+}
+.feature-icon-item .text {
+    font-size: 13px;
+    color: #333;
+    font-weight: 500;
+    line-height: 1.4;
+}
+.feature-red-bar {
+    background: #8b0000;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+}
+@media (max-width: 768px) {
+    .feature-red-bar { grid-template-columns: repeat(2, 1fr); }
+}
+.feature-red-item {
+    padding: 10px 8px;
+    text-align: center;
+    color: white;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    border-right: 1px solid rgba(255,255,255,0.2);
+}
+.feature-red-item:last-child { border-right: none; }
+
+/* Main container */
+.product-list-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px 16px;
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 24px;
+}
+@media (max-width: 1024px) {
+    .product-list-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Sidebar filters */
+.sidebar-filters {
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+}
+.filter-section {
+    border-bottom: 1px solid #e5e7eb;
+    padding: 16px;
+}
+.filter-section:last-child { border-bottom: none; }
+.filter-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #111;
+    margin-bottom: 12px;
+}
+.filter-list { list-style: none; margin: 0; padding: 0; }
+.filter-list li {
+    margin-bottom: 8px;
+}
+.filter-list li:last-child { margin-bottom: 0; }
+.filter-list label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #333;
+    cursor: pointer;
+}
+.filter-list input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+.filter-count {
+    margin-left: auto;
+    color: #999;
+    font-size: 12px;
+}
+
+/* Product grid section */
+.products-section {
+    background: white;
+}
+.products-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.products-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111;
+}
+.products-sort {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.products-sort label {
+    font-size: 13px;
+    color: #666;
+    font-weight: 500;
+}
+.products-sort select {
+    padding: 6px 32px 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+    background: white;
+    cursor: pointer;
+}
+
+/* Product grid */
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    padding: 20px;
+}
+@media (max-width: 1200px) {
+    .products-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+    .products-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Product card */
+.product-card-v2 {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+    position: relative;
+}
+.product-card-v2:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.product-card-v2 .img-wrap {
+    position: relative;
+    aspect-ratio: 1/1;
+    background: #f9fafb;
+    overflow: hidden;
+}
+.product-card-v2 .img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 12px;
+}
+.discount-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: #dc2626;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 2px;
+    z-index: 2;
+}
+.quick-add-btn {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    background: rgba(0,0,0,0.6);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 13px;
+    opacity: 0;
+    transition: opacity 0.2s, background 0.2s;
+}
+.product-card-v2:hover .quick-add-btn {
+    opacity: 1;
+}
+.quick-add-btn:hover {
+    background: #dc2626;
+}
+.product-card-v2 .info {
+    padding: 12px;
+}
+.product-card-v2 .product-name {
+    font-size: 13px;
+    color: #111;
+    line-height: 1.4;
+    margin-bottom: 6px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 36px;
+}
+.product-card-v2 .product-code {
+    font-size: 11px;
+    color: #999;
+    margin-bottom: 8px;
+}
+.product-card-v2 .price-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.product-card-v2 .price-sale {
+    font-size: 15px;
+    font-weight: 700;
+    color: #dc2626;
+}
+.product-card-v2 .price-original {
+    font-size: 12px;
+    color: #999;
+    text-decoration: line-through;
+}
+.product-card-v2 .badge-hot {
+    background: #dc2626;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-7xl mx-auto mt-4">
-	<h1 class="text-3xl font-bold mb-4">
-		{% if category %} {{ category.name }} {% else %} Tất cả Giày {% endif %}
-	</h1>
+<!-- Feature banner: 4 icons + red bar -->
+<div class="feature-banner-wrapper">
+    <div class="feature-icons-grid">
+        <div class="feature-icon-item">
+            <i class="fas fa-shipping-fast"></i>
+            <div class="text">Giao hàng nhanh<br>toàn quốc</div>
+        </div>
+        <div class="feature-icon-item">
+            <i class="fas fa-undo"></i>
+            <div class="text">Miễn phí đổi hàng<br>trong 07 ngày</div>
+        </div>
+        <div class="feature-icon-item">
+            <i class="fas fa-shield-alt"></i>
+            <div class="text">Cam kết hàng<br>100% chính hãng</div>
+        </div>
+        <div class="feature-icon-item">
+            <i class="fas fa-box-open"></i>
+            <div class="text">Đóng gói cẩn thận<br>double box</div>
+        </div>
+    </div>
+    <div class="feature-red-bar">
+        <div class="feature-red-item">SHOPPING ONLINE</div>
+        <div class="feature-red-item">THÔNG MINH</div>
+        <div class="feature-red-item">AN TOÀN</div>
+        <div class="feature-red-item">TIỆN LỢI</div>
+    </div>
+</div>
 
-	<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-		<!-- Bộ lọc -->
-		<div class="lg:col-span-1">
-			<div class="bg-white rounded-lg shadow-md sticky" style="top: 90px">
-				<div
-					class="bg-white border-b border-gray-200 p-4 font-bold rounded-t-lg"
-				>
-					<i class="fas fa-filter"></i> Bộ lọc
-				</div>
-				<div class="p-4">
-					<h6 class="mb-3 font-semibold">Lọc theo giá</h6>
-				  <form method="get" class="space-y-2 mb-4">
-				    {% if current_category %}<input type="hidden" name="category" value="{{ current_category }}" />{% endif %}
-				    {% if current_brand %}<input type="hidden" name="brand" value="{{ current_brand }}" />{% endif %}
-				    {% if current_sort %}<input type="hidden" name="sort" value="{{ current_sort }}" />{% endif %}
-				    <div class="flex gap-2">
-				      <input name="min_price" type="number" min="0" step="1000" placeholder="Từ (VND)" value="{{ min_price|default:'' }}" class="input" />
-				      <input name="max_price" type="number" min="0" step="1000" placeholder="Đến (VND)" value="{{ max_price|default:'' }}" class="input" />
-				    </div>
-				    <div class="flex gap-2 mt-2">
-				      <button type="submit" class="btn-primary flex-1">Áp dụng</button>
-							<a
-								href="{% url 'products:product_list' %}"
-								class="block px-4 py-2 border border-gray-400 text-gray-700 rounded hover:bg-gray-50 transition text-center font-medium"
-								>Xóa tất cả bộ lọc
-							</a>
-				    </div>
-				  </form>
-					<h6 class="mb-3 font-semibold">Danh mục</h6>
-					<div class="space-y-0 mb-4 border rounded">
-						<a
-							href="{% url 'products:product_list' %}"
-							class="block px-4 py-2 hover:bg-gray-100 transition {% if not current_category %}bg-gray-100 text-red-600 font-medium{% endif %}"
-							>Tất cả sản phẩm</a
-						>
-						{% for cat in categories %}
-						<a
-							href="{% url 'products:category_detail' cat.slug %}"
-							class="block px-4 py-2 border-t hover:bg-gray-100 transition {% if current_category == cat.slug %}bg-gray-100 text-red-600 font-medium{% endif %}"
-							>{{ cat.name }}</a
-						>
-						{% endfor %}
-					</div>
-
-					<h6 class="mb-3 font-semibold">Thương hiệu</h6>
-					<div class="space-y-0 border rounded">
-						{% for brand in brands %}
-						<a
-							href="{% url 'products:product_list' %}?{% if current_category %}
-                    category={{ current_category }}&
-                  {% endif %}brand={{ brand.slug }}"
-							class="block px-4 py-2 border-t first:border-t-0 hover:bg-gray-100 transition"
-						>
-							{{ brand.name }}
-						</a>
-						{% endfor %}
-					</div>
-
-				</div>
-
-			</div>
+<!-- Main content: sidebar + products -->
+<div class="product-list-container">
+	<!-- Sidebar filters -->
+	<!-- Sidebar filters -->
+	<aside class="sidebar-filters">
+		<!-- Categories -->
+		<div class="filter-section">
+			<h6 class="filter-title">Danh mục sản phẩm</h6>
+			<ul class="filter-list">
+				{% for cat in categories %}
+				<li>
+					<label>
+						<input type="checkbox" {% if current_category == cat.slug %}checked{% endif %} 
+							onclick="location.href='{% url 'products:product_list' %}?category={{ cat.slug }}{% if current_brand %}&brand={{ current_brand }}{% endif %}{% if current_price_range %}&price_range={{ current_price_range }}{% endif %}{% if current_sort and current_sort != '-created_at' %}&sort={{ current_sort }}{% endif %}'" />
+						<span>{{ cat.name }}</span>
+						<span class="filter-count">({{ cat.products.count }})</span>
+					</label>
+				</li>
+				{% endfor %}
+			</ul>
 		</div>
 
-		<!-- Danh sách sản phẩm -->
-		<div class="lg:col-span-3">
-			<div class="flex justify-between items-center mb-4">
-				<h5 class="font-semibold text-lg">{{ products|length }} sản phẩm</h5>
-				<select
-					class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600"
-					onchange="window.location = this.value"
-				>
-					<option value="{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}{% endif %}" {% if current_sort != 'price_low' and current_sort != 'price_high' %}selected{% endif %}>
-						Mới nhất
+		<!-- Brands -->
+		<div class="filter-section">
+			<h6 class="filter-title">Thương hiệu</h6>
+			<ul class="filter-list">
+				{% for brand in brands %}
+				<li>
+					<label>
+						<input type="checkbox" {% if current_brand == brand.slug %}checked{% endif %}
+							onclick="location.href='{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}&{% endif %}brand={{ brand.slug }}{% if current_price_range %}&price_range={{ current_price_range }}{% endif %}{% if current_sort and current_sort != '-created_at' %}&sort={{ current_sort }}{% endif %}'" />
+						<span>{{ brand.name }}</span>
+						<span class="filter-count">({{ brand.products.count }})</span>
+					</label>
+				</li>
+				{% endfor %}
+			</ul>
+		</div>
+
+		<!-- Price range -->
+		<div class="filter-section">
+			<h6 class="filter-title">Lọc Giá</h6>
+			<ul class="filter-list">
+				<li>
+					<label>
+						<input type="radio" name="price_range" value="0-500000" 
+							{% if current_price_range == '0-500000' %}checked{% endif %}
+							onclick="location.href='{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}&{% endif %}{% if current_brand %}brand={{ current_brand }}&{% endif %}price_range=0-500000{% if current_sort and current_sort != '-created_at' %}&sort={{ current_sort }}{% endif %}'" />
+						<span>Dưới 500.000₫</span>
+					</label>
+				</li>
+				<li>
+					<label>
+						<input type="radio" name="price_range" value="500000-1000000"
+							{% if current_price_range == '500000-1000000' %}checked{% endif %}
+							onclick="location.href='{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}&{% endif %}{% if current_brand %}brand={{ current_brand }}&{% endif %}price_range=500000-1000000{% if current_sort and current_sort != '-created_at' %}&sort={{ current_sort }}{% endif %}'" />
+						<span>500.000₫ - 1.000.000₫</span>
+					</label>
+				</li>
+				<li>
+					<label>
+						<input type="radio" name="price_range" value="1000000-2000000"
+							{% if current_price_range == '1000000-2000000' %}checked{% endif %}
+							onclick="location.href='{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}&{% endif %}{% if current_brand %}brand={{ current_brand }}&{% endif %}price_range=1000000-2000000{% if current_sort and current_sort != '-created_at' %}&sort={{ current_sort }}{% endif %}'" />
+						<span>1.000.000₫ - 2.000.000₫</span>
+					</label>
+				</li>
+				<li>
+					<label>
+						<input type="radio" name="price_range" value="2000000-3000000"
+							{% if current_price_range == '2000000-3000000' %}checked{% endif %}
+							onclick="location.href='{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}&{% endif %}{% if current_brand %}brand={{ current_brand }}&{% endif %}price_range=2000000-3000000{% if current_sort and current_sort != '-created_at' %}&sort={{ current_sort }}{% endif %}'" />
+						<span>2.000.000₫ - 3.000.000₫</span>
+					</label>
+				</li>
+				<li>
+					<label>
+						<input type="radio" name="price_range" value="3000000-999999999"
+							{% if current_price_range == '3000000-999999999' %}checked{% endif %}
+							onclick="location.href='{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}&{% endif %}{% if current_brand %}brand={{ current_brand }}&{% endif %}price_range=3000000-999999999{% if current_sort and current_sort != '-created_at' %}&sort={{ current_sort }}{% endif %}'" />
+						<span>Trên 3.000.000₫</span>
+					</label>
+				</li>
+			</ul>
+		</div>
+
+		<!-- Clear filters button -->
+		{% if current_category or current_brand or current_price_range %}
+		<div class="filter-section">
+			<a href="{% url 'products:product_list' %}" 
+				style="display:block; padding:8px 12px; background:#dc2626; color:white; text-align:center; border-radius:4px; text-decoration:none; font-size:13px;">
+				<i class="fas fa-times"></i> Xóa bộ lọc
+			</a>
+		</div>
+		{% endif %}
+	</aside>
+
+	<!-- Products section -->
+	<div class="products-section">
+		<!-- Header with title and sort -->
+		<div class="products-header">
+			<h2 class="products-title">
+				{% if category %}
+					{{ category.name }}
+				{% elif current_category %}
+					{% for cat in categories %}
+						{% if cat.slug == current_category %}{{ cat.name }}{% endif %}
+					{% endfor %}
+				{% elif current_brand %}
+					{% for brand in brands %}
+						{% if brand.slug == current_brand %}Giày {{ brand.name }}{% endif %}
+					{% endfor %}
+				{% else %}
+					Tất cả sản phẩm
+				{% endif %}
+			</h2>
+			<div class="products-sort">
+				<label>Sắp xếp:</label>
+				<select onchange="window.location = this.value">
+					<option value="{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}&{% endif %}{% if current_brand %}brand={{ current_brand }}&{% endif %}{% if current_price_range %}price_range={{ current_price_range }}{% endif %}" 
+						{% if current_sort != 'price_low' and current_sort != 'price_high' %}selected{% endif %}>
+						Tên: A-Z
 					</option>
-					<option value="{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}&{% endif %}sort=price_low" {% if current_sort == 'price_low' %}selected{% endif %}>
+					<option value="{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}&{% endif %}{% if current_brand %}brand={{ current_brand }}&{% endif %}{% if current_price_range %}price_range={{ current_price_range }}&{% endif %}sort=price_low" 
+						{% if current_sort == 'price_low' %}selected{% endif %}>
 						Giá thấp → cao
 					</option>
-					<option value="{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}&{% endif %}sort=price_high" {% if current_sort == 'price_high' %}selected{% endif %}>
+					<option value="{% url 'products:product_list' %}?{% if current_category %}category={{ current_category }}&{% endif %}{% if current_brand %}brand={{ current_brand }}&{% endif %}{% if current_price_range %}price_range={{ current_price_range }}&{% endif %}sort=price_high" 
+						{% if current_sort == 'price_high' %}selected{% endif %}>
 						Giá cao → thấp
 					</option>
 				</select>
 			</div>
+		</div>
 
-			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-				{% for product in products %}
-				<div
-					class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all hover:-translate-y-2 flex flex-col h-full"
-				>
+		<!-- Product grid -->
+		<div class="products-grid">
+			{% for product in products %}
+			<a href="{% url 'products:product_detail' product.slug %}" class="product-card-v2">
+				<div class="img-wrap">
+					<!-- Discount badge -->
+					{% if product.discount_percent %}
+					<span class="discount-badge">-{{ product.discount_percent }}%</span>
+					{% endif %}
+
+					<!-- Product image -->
 					{% if product.images.first %}
-					<img
-						src="{{ product.images.first.image.url }}"
-						class="w-full h-60 object-cover transition-transform duration-300 hover:scale-110"
-						alt="{{ product.name }}"
-					/>
+					<img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" loading="lazy" />
 					{% else %}
-					<img
-						src="{% static 'images/no-image.jpg' %}"
-						class="w-full h-60 object-cover"
-					/>
+					<img src="{% static 'images/no-image.jpg' %}" alt="{{ product.name }}" />
 					{% endif %}
 
-					<div class="p-5 flex flex-col flex-1">
-						<h6 class="text-lg line-clamp-2 mb-2">{{ product.name }}</h6>
-						<p class="text-gray-600 text-sm mb-4">
-							{{ product.brand.name }} • {{ product.category.name }}
-						</p>
+					<!-- Quick add button -->
+					<button class="quick-add-btn" onclick="event.preventDefault(); alert('Thêm vào giỏ hàng');">
+						<i class="fas fa-shopping-cart"></i>
+					</button>
+				</div>
 
-						<div>
-							{% if product.discount_price %}
-							<span class="line-through text-gray-500"
-								>{{ product.price|vnd }}</span
-							><br />
-							<span class="font-bold text-red-600 text-lg"
-								>{{ product.final_price|vnd }}</span
-							>
-							{% else %}
-							<span class="font-bold text-lg">{{ product.price|vnd }}</span>
-							{% endif %}
-						</div>
-					</div>
-
-					<div class="bg-white px-5 py-4 border-t border-gray-100">
-						<a
-							href="{% url 'products:product_detail' product.slug %}"
-							class="block w-full py-2 bg-red-600 text-white rounded-md font-medium hover:bg-red-700 transition text-center"
-							>Xem chi tiết</a
-						>
+				<div class="info">
+					<div class="product-name">{{ product.name }}</div>
+					<div class="product-code">{{ product.brand.name }}</div>
+					<div class="price-row">
+						<span class="price-sale">{{ product.final_price|vnd }}</span>
+						{% if product.discount_price %}
+						<span class="price-original">{{ product.price|vnd }}</span>
+						<span class="badge-hot">Hot Sale</span>
+						{% endif %}
 					</div>
 				</div>
-				{% empty %}
-				<div class="col-span-full text-center py-20">
-					<h4 class="text-2xl font-semibold text-gray-600">
-						Không tìm thấy sản phẩm
-					</h4>
-				</div>
-				{% endfor %}
+			</a>
+			{% empty %}
+			<div style="grid-column: 1/-1; text-align:center; padding:60px 20px;">
+				<h4 style="font-size:18px; color:#999;">Không tìm thấy sản phẩm</h4>
 			</div>
+			{% endfor %}
+		</div>
 
-			{% if is_paginated %}
-			<div
-				class="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4"
-			>
-				<p class="text-sm text-gray-600">
-					Hiển thị trang {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
-				</p>
-
-				<nav class="flex flex-wrap items-center gap-2" aria-label="Pagination">
-					{% if page_obj.has_previous %}
-					<a
-						href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}"
-						class="px-3 py-2 border rounded-md bg-white text-gray-700 hover:bg-gray-50 transition"
-					>
-						Trước
-					</a>
-					{% endif %} {% for num in paginator.page_range %}
-					<a
-						href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ num }}"
-						class="px-3 py-2 border rounded-md transition {% if num == page_obj.number %}bg-red-600 text-white border-red-600{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}"
-					>
-						{{ num }}
-					</a>
-					{% endfor %} {% if page_obj.has_next %}
-					<a
-						href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}"
-						class="px-3 py-2 border rounded-md bg-white text-gray-700 hover:bg-gray-50 transition"
-					>
-						Sau
-					</a>
-					{% endif %}
-				</nav>
-			</div>
+		<!-- Pagination -->
+		{% if is_paginated %}
+		<div style="padding: 20px; border-top: 1px solid #e5e7eb; display:flex; justify-content:center; gap:8px;">
+			{% if page_obj.has_previous %}
+			<a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}"
+				style="padding:8px 14px; border:1px solid #ddd; border-radius:4px; background:white; color:#333; text-decoration:none; font-size:13px;">
+				Trước
+			</a>
+			{% endif %}
+			
+			{% for num in paginator.page_range %}
+			<a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ num }}"
+				style="padding:8px 14px; border:1px solid #ddd; border-radius:4px; background:{% if num == page_obj.number %}#dc2626{% else %}white{% endif %}; 
+				color:{% if num == page_obj.number %}white{% else %}#333{% endif %}; text-decoration:none; font-size:13px;">
+				{{ num }}
+			</a>
+			{% endfor %}
+			
+			{% if page_obj.has_next %}
+			<a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}"
+				style="padding:8px 14px; border:1px solid #ddd; border-radius:4px; background:white; color:#333; text-decoration:none; font-size:13px;">
+				Sau
+			</a>
 			{% endif %}
 		</div>
+		{% endif %}
 	</div>
 </div>
 {% endblock %}

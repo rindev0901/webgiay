@@ -65,6 +65,9 @@ TEMPLATES = [
 
                 # custom cart
                 'apps.cart.context_processors.cart_count',
+                
+                # navigation data (categories & brands)
+                'apps.products.context_processors.navigation_data',
             ],
         },
     },

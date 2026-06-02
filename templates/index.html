@@ -752,23 +752,13 @@
             <!-- Các nút lọc theo thương hiệu -->
             <div class="brand-tabs" role="tablist" aria-label="Lọc theo thương hiệu">
                 <button class="brand-tab active" data-brand="all" role="tab" aria-selected="true">
-                    GIÀY NIKE
+                    TẤT CẢ
                 </button>
-                <button class="brand-tab" data-brand="adidas" role="tab" aria-selected="false">
-                    GIÀY ADIDAS
+                {% for brand in brands %}
+                <button class="brand-tab" data-brand="{{ brand.slug }}" role="tab" aria-selected="false">
+                    GIÀY {{ brand.name|upper }}
                 </button>
-                <button class="brand-tab" data-brand="mlb" role="tab" aria-selected="false">
-                    GIÀY MLB
-                </button>
-                <button class="brand-tab" data-brand="puma" role="tab" aria-selected="false">
-                    GIÀY PUMA
-                </button>
-                <button class="brand-tab" data-brand="fila" role="tab" aria-selected="false">
-                    GIÀY FILA
-                </button>
-                <button class="brand-tab" data-brand="other" role="tab" aria-selected="false">
-                    GIÀY CHÍNH HÃNG KHÁC
-                </button>
+                {% endfor %}
             </div>
         </div>
 
@@ -862,8 +852,7 @@
 <script>
     /* ===================================================
        Xử lý click tab thương hiệu trong section Giày Sneaker
-       Hiện tại chỉ toggle active state (UI),
-       có thể mở rộng để gọi AJAX lọc sản phẩm theo brand
+       Filter products by brand slug when tab is clicked
        =================================================== */
     const brandTabs = document.querySelectorAll('.brand-tab');
     brandTabs.forEach(tab => {
@@ -878,11 +867,14 @@
             tab.setAttribute('aria-selected', 'true');
 
             // Lấy brand slug từ data attribute
-            const brand = tab.dataset.brand;
+            const brandSlug = tab.dataset.brand;
 
-            /* Nếu muốn filter qua URL (không dùng AJAX):
-               window.location.href = `/products/?brand=${brand}`;
-            */
+            // Navigate to product list with brand filter
+            if (brandSlug === 'all') {
+                window.location.href = '{% url "products:product_list" %}';
+            } else {
+                window.location.href = `{% url "products:product_list" %}?brand=${brandSlug}`;
+            }
         });
     });
 
