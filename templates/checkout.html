@@ -368,6 +368,40 @@ select.co-input {
         </div>
       </div>
 
+      <!-- Phương thức thanh toán -->
+      <div style="padding:0 16px 16px;">
+        <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:10px;">Phương thức thanh toán</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+
+          <!-- SePay -->
+          <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:4px;cursor:pointer;transition:border-color .15s;"
+                 id="lbl-sepay"
+                 onclick="selectPayment('sepay')">
+            <input type="radio" name="payment_choice" value="sepay" id="pay-sepay" style="accent-color:var(--dee-red);">
+            <img src="https://sepay.vn/assets/img/logo-sepay-main.png" alt="SePay"
+                 style="height:22px;" onerror="this.style.display='none'">
+            <span style="font-size:13px;font-weight:600;color:#111;">SePay</span>
+            <span style="font-size:11px;color:#888;">(QR, thẻ ATM, Visa/Master)</span>
+          </label>
+
+          <!-- MoMo -->
+          <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:4px;cursor:pointer;transition:border-color .15s;"
+                 id="lbl-momo"
+                 onclick="selectPayment('momo')">
+            <input type="radio" name="payment_choice" value="momo" id="pay-momo" style="accent-color:var(--dee-red);">
+            <span style="font-size:18px;">🟣</span>
+            <span style="font-size:13px;font-weight:600;color:#111;">Ví MoMo</span>
+          </label>
+
+        </div>
+
+        <button type="button" id="btnPay"
+                style="margin-top:14px;display:block;width:100%;padding:13px;background:var(--dee-red);color:white;font-size:14px;font-weight:700;border:none;cursor:pointer;transition:background .2s;"
+                onclick="submitPayment()">
+          THANH TOÁN NGAY
+        </button>
+      </div>
+
     </div><!-- /summary -->
 
   </div><!-- /co-layout -->
@@ -498,5 +532,38 @@ document.getElementById('couponInput') &&
   document.getElementById('couponInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); applyCoupon(); }
   });
+
+/* ── Payment method selection ── */
+const SEPAY_CHECKOUT_URL = "{% url 'cart:sepay_checkout' %}";
+const MOMO_FORM_ID = document.getElementById('checkoutForm') ? 'checkoutForm' : null;
+
+function selectPayment(method) {
+  ['sepay', 'momo'].forEach(m => {
+    const lbl = document.getElementById('lbl-' + m);
+    if (lbl) lbl.style.borderColor = m === method ? 'var(--dee-red)' : '#e5e7eb';
+  });
+  const radio = document.getElementById('pay-' + method);
+  if (radio) radio.checked = true;
+}
+
+function submitPayment() {
+  const selected = document.querySelector('input[name="payment_choice"]:checked');
+  if (!selected) {
+    alert('Vui lòng chọn phương thức thanh toán.');
+    return;
+  }
+  // Lấy form thông tin giao hàng
+  const infoForm = document.querySelector('form');
+  if (!infoForm) return;
+
+  if (selected.value === 'sepay') {
+    infoForm.action = SEPAY_CHECKOUT_URL;
+  }
+  // momo: action mặc định đã là checkout URL
+  infoForm.submit();
+}
+
+// Mặc định chọn SePay
+selectPayment('sepay');
 </script>
 {% endblock %}

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Đang chuyển hướng đến SePay...{% endblock %}
+
+{% block extra_css %}
+<style>
+.redirect-wrap {
+  min-height: 70vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 20px; padding: 40px 16px;
+}
+.redirect-spinner {
+  width: 48px; height: 48px;
+  border: 4px solid #e5e7eb;
+  border-top-color: var(--dee-red);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.redirect-title {
+  font-size: 16px; font-weight: 700; color: #111;
+}
+.redirect-sub {
+  font-size: 13px; color: #888;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="redirect-wrap">
+  <div class="redirect-spinner"></div>
+  <div class="redirect-title">Đang chuyển hướng đến cổng thanh toán SePay...</div>
+  <div class="redirect-sub">Vui lòng không đóng trang này.</div>
+
+  {# Form theo đúng thứ tự SePay quy định — KHÔNG đổi thứ tự các input #}
+  <form id="sepayForm" action="{{ form_data.checkout_url }}" method="POST" style="display:none;">
+    <input type="hidden" name="order_amount"        value="{{ form_data.order_amount }}">
+    <input type="hidden" name="merchant"             value="{{ form_data.merchant }}">
+    <input type="hidden" name="currency"             value="{{ form_data.currency }}">
+    <input type="hidden" name="operation"            value="{{ form_data.operation }}">
+    <input type="hidden" name="order_description"    value="{{ form_data.order_description }}">
+    <input type="hidden" name="order_invoice_number" value="{{ form_data.order_invoice_number }}">
+    {% if form_data.customer_id %}
+    <input type="hidden" name="customer_id"          value="{{ form_data.customer_id }}">
+    {% endif %}
+    <input type="hidden" name="success_url"          value="{{ form_data.success_url }}">
+    <input type="hidden" name="error_url"            value="{{ form_data.error_url }}">
+    <input type="hidden" name="cancel_url"           value="{{ form_data.cancel_url }}">
+    <input type="hidden" name="signature"            value="{{ form_data.signature }}">
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Tự submit sau 500ms để user thấy spinner
+  setTimeout(() => document.getElementById('sepayForm').submit(), 500);
+</script>
+{% endblock %}

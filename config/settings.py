@@ -65,7 +65,7 @@ TEMPLATES = [
 
                 # custom cart
                 'apps.cart.context_processors.cart_count',
-                
+
                 # navigation data (categories & brands)
                 'apps.products.context_processors.navigation_data',
             ],
@@ -130,6 +130,12 @@ MOMO_ENDPOINT = os.getenv('MOMO_ENDPOINT', 'https://test-payment.momo.vn/v2/gate
 MOMO_RETURN_URL = os.getenv('MOMO_RETURN_URL', 'http://127.0.0.1:8000/cart/momo/return/')
 MOMO_IPN_URL = os.getenv('MOMO_IPN_URL', 'http://127.0.0.1:8000/cart/momo/ipn/')
 MOMO_REQUEST_TYPE = os.getenv('MOMO_REQUEST_TYPE', 'captureWallet')
+
+# ====================== SEPAY PAYMENT ======================
+SEPAY_MERCHANT    = os.getenv('SEPAY_MERCHANT', 'SP-TEST-NH52523A')
+SEPAY_SECRET_KEY  = os.getenv('SEPAY_SECRET_KEY', 'spsk_test_HCxYP62hwrqSsu1QaxR2QyJAA6Ke5pmQ')
+# Sandbox endpoint — đổi thành https://pay.sepay.vn/v1/checkout/init cho production
+SEPAY_CHECKOUT_URL = os.getenv('SEPAY_CHECKOUT_URL', 'https://pay.sepay.vn/v1/checkout/init')
 
 # ====================== REST FRAMEWORK CONFIG ======================
 REST_FRAMEWORK = {

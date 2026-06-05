@@ -55,8 +55,9 @@ class Order(models.Model):
         CANCELLED = 'cancelled', 'Đã hủy'
 
     class PaymentMethod(models.TextChoices):
-        MOMO = 'momo', 'MoMo'
-        COD = 'cod', 'COD'
+        MOMO  = 'momo',  'MoMo'
+        SEPAY = 'sepay', 'SePay'
+        COD   = 'cod',   'COD'
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -87,6 +88,12 @@ class Order(models.Model):
     momo_message = models.CharField(max_length=255, blank=True)
     momo_pay_url = models.URLField(blank=True)
     momo_response_payload = models.TextField(blank=True)
+    # ── SePay ──
+    sepay_invoice_number = models.CharField(max_length=64, blank=True, verbose_name='SePay invoice number')
+    sepay_transaction_id = models.CharField(max_length=100, blank=True, null=True, verbose_name='SePay transaction ID')
+    sepay_pay_url = models.URLField(blank=True, verbose_name='SePay checkout URL')
+    sepay_status = models.CharField(max_length=32, blank=True, verbose_name='SePay order status')
+    sepay_ipn_payload = models.TextField(blank=True, verbose_name='SePay IPN raw payload')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

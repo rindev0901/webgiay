@@ -11,6 +11,7 @@ from django.apps import apps
 from django.views.decorators.http import require_POST
 
 from .momo import create_momo_payment, get_payment_result_code, verify_momo_signature
+from .sepay import build_sepay_form_data, parse_sepay_ipn, verify_sepay_ipn
 from .services import (
     add_product_to_user_cart,
     clear_session_cart,
@@ -550,3 +551,201 @@ def order_retry(request, code):
         return redirect('cart:cart_detail')
 
     return redirect(pay_url)
+
+
+# ══════════════════════════════════════════
+# SEPAY VIEWS
+# ══════════════════════════════════════════
+
+@login_required
+def sepay_checkout(request):
+    """
+    Tạo đơn hàng rồi render trang trung gian có HTML form tự submit tới SePay.
+    """
+    from apps.products.inventory import check_stock
+
+    items = []
+    total = Decimal('0')
+    from apps.products.models import ProductVariant as _PV
+
+    for item in get_user_cart_items(request.user):
+        price = item.price or item.product.final_price
+        subtotal = price * item.quantity
+        items.append({
+            'product': item.product,
+            'variant': item.variant,
+            'quantity': item.quantity,
+            'price': price,
+            'subtotal': subtotal,
+            'cart_item': item,
+        })
+        total += subtotal
+
+    if not items:
+        messages.error(request, 'Giỏ hàng trống, chưa thể thanh toán.')
+        return redirect('cart:cart_detail')
+
+    stock_errors = check_stock(items)
+    if stock_errors:
+        for err in stock_errors:
+            messages.error(
+                request,
+                f'"{err["product"]}" chỉ còn {err["available"]} sản phẩm, bạn đặt {err["requested"]}.'
+            )
+        return redirect('cart:cart_detail')
+
+    # Đọc voucher từ session
+    voucher_code = request.session.get('voucher_code', '')
+    voucher = None
+    discount_amount = Decimal('0')
+    if voucher_code:
+        v = Voucher.objects.filter(code=voucher_code.upper(), is_active=True).first()
+        if v:
+            ok, _ = v.is_valid(total)
+            if ok:
+                voucher = v
+                discount_amount = v.calc_discount(total)
+
+    if request.method == 'POST':
+        form = CheckoutForm(request.POST)
+        if form.is_valid():
+            order = create_order_from_cart(
+                request.user,
+                request.session,
+                form.cleaned_data,
+                voucher=voucher,
+            )
+            if not order:
+                messages.error(request, 'Không thể tạo đơn hàng.')
+                return redirect('cart:cart_detail')
+
+            order.payment_method = Order.PaymentMethod.SEPAY
+            order.sepay_invoice_number = order.code
+            order.save(update_fields=['payment_method', 'sepay_invoice_number', 'updated_at'])
+            request.session.pop('voucher_code', None)
+
+            success_url = request.build_absolute_uri(
+                reverse('cart:sepay_return') + f'?order_code={order.code}'
+            )
+            error_url = request.build_absolute_uri(
+                reverse('cart:sepay_return') + f'?order_code={order.code}&status=error'
+            )
+            cancel_url = request.build_absolute_uri(
+                reverse('cart:sepay_return') + f'?order_code={order.code}&status=cancel'
+            )
+            customer_id = str(request.user.id) if request.user.is_authenticated else ''
+
+            form_data = build_sepay_form_data(
+                order,
+                success_url=success_url,
+                error_url=error_url,
+                cancel_url=cancel_url,
+                customer_id=customer_id,
+            )
+
+            return render(request, 'sepay_redirect.html', {'form_data': form_data})
+    else:
+        initial = {}
+        if request.user.is_authenticated:
+            initial['email'] = getattr(request.user, 'email', '') or ''
+            if getattr(request.user, 'first_name', '') or getattr(request.user, 'last_name', ''):
+                initial['full_name'] = f"{request.user.first_name} {request.user.last_name}".strip()
+        form = CheckoutForm(initial=initial)
+
+    final_total = total - discount_amount
+    return render(request, 'checkout.html', {
+        'form': form,
+        'cart_items': items,
+        'total': total,
+        'voucher': voucher,
+        'discount_amount': discount_amount,
+        'final_total': final_total,
+        'voucher_code': voucher_code,
+        'payment_method': 'sepay',
+    })
+
+
+def sepay_return(request):
+    """
+    SePay redirect về đây sau khi thanh toán (success / error / cancel).
+    Trạng thái thực được cập nhật qua IPN — trang này chỉ hiển thị thông báo.
+    """
+    order_code = request.GET.get('order_code', '')
+    status = request.GET.get('status', 'success')
+
+    order = Order.objects.filter(code=order_code).first()
+    if not order:
+        messages.error(request, 'Không tìm thấy đơn hàng.')
+        return redirect('cart:cart_detail')
+
+    if status == 'success':
+        messages.success(
+            request,
+            f'Đơn hàng {order.code} đang được xác nhận. Chúng tôi sẽ thông báo khi thanh toán hoàn tất.'
+        )
+    elif status == 'cancel':
+        if order.status == Order.Status.PENDING:
+            order.status = Order.Status.CANCELLED
+            order.save(update_fields=['status', 'updated_at'])
+        messages.warning(request, f'Bạn đã hủy thanh toán đơn hàng {order.code}.')
+    else:
+        if order.status == Order.Status.PENDING:
+            order.status = Order.Status.FAILED
+            order.save(update_fields=['status', 'updated_at'])
+        messages.error(request, f'Thanh toán đơn hàng {order.code} thất bại.')
+
+    return redirect('cart:order_detail', code=order.code)
+
+
+@csrf_exempt
+def sepay_ipn(request):
+    """
+    IPN endpoint — SePay POST JSON về đây khi có giao dịch.
+    URL: /cart/sepay/ipn/
+    Phải trả HTTP 200 để SePay không retry.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    if not verify_sepay_ipn(request):
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    try:
+        data = parse_sepay_ipn(request.body)
+    except Exception:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    notification_type = data.get('notification_type', '')
+    order_data = data.get('order', {})
+    invoice_number = order_data.get('order_invoice_number', '')
+
+    order = Order.objects.filter(code=invoice_number).first()
+    if not order:
+        # Trả 200 để SePay không retry vô tận
+        return JsonResponse({'success': True, 'note': 'order not found'})
+
+    order.sepay_ipn_payload = str(data)
+    order.sepay_status = order_data.get('order_status', '')
+
+    if notification_type == 'ORDER_PAID':
+        transaction_data = data.get('transaction', {})
+        order.status = Order.Status.PAID
+        order.sepay_transaction_id = transaction_data.get('transaction_id', '')
+        order.save(update_fields=[
+            'status', 'sepay_transaction_id', 'sepay_status',
+            'sepay_ipn_payload', 'updated_at',
+        ])
+        deduct_stock(order, actor='sepay_ipn')
+        clear_session_cart(request.session)
+        if order.user:
+            clear_user_cart(order.user)
+
+    elif notification_type == 'TRANSACTION_VOID':
+        order.status = Order.Status.CANCELLED
+        order.save(update_fields=['status', 'sepay_status', 'sepay_ipn_payload', 'updated_at'])
+        restore_stock(order, actor='sepay_ipn')
+
+    else:
+        order.save(update_fields=['sepay_status', 'sepay_ipn_payload', 'updated_at'])
+
+    return JsonResponse({'success': True})
