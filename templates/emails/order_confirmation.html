@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Xác nhận đơn hàng {{ order.code }}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f3f4f6; font-family: 'Segoe UI', Arial, sans-serif; color: #222; }
+  .wrapper { max-width: 620px; margin: 32px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.10); }
+
+  /* Header */
+  .header { background: #8b0000; padding: 28px 32px; text-align: center; }
+  .header .logo { font-size: 28px; font-weight: 800; color: white; letter-spacing: 2px; }
+  .header .logo span { color: #fbbf24; }
+  .header .tagline { color: rgba(255,255,255,0.80); font-size: 12px; margin-top: 4px; letter-spacing: 1px; }
+
+  /* Hero */
+  .hero { background: #fff7ed; border-bottom: 3px solid #8b0000; padding: 28px 32px; text-align: center; }
+  .hero .icon { font-size: 48px; margin-bottom: 12px; }
+  .hero h1 { font-size: 22px; color: #8b0000; font-weight: 700; margin-bottom: 6px; }
+  .hero p { font-size: 14px; color: #666; line-height: 1.6; }
+
+  /* Body */
+  .body { padding: 28px 32px; }
+
+  /* Order info box */
+  .order-info { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 18px 20px; margin-bottom: 24px; }
+  .order-info h2 { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .info-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+  .info-row:last-child { border-bottom: none; }
+  .info-row .label { color: #666; }
+  .info-row .value { font-weight: 600; color: #222; }
+  .status-badge { display: inline-block; background: #dcfce7; color: #166534; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+
+  /* Section title */
+  .section-title { font-size: 15px; font-weight: 700; color: #222; margin-bottom: 14px; padding-left: 10px; border-left: 3px solid #8b0000; }
+
+  /* Product table */
+  .products-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  .products-table th { background: #8b0000; color: white; padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .products-table td { padding: 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px; vertical-align: middle; }
+  .products-table tr:last-child td { border-bottom: none; }
+  .products-table tr:nth-child(even) td { background: #fafafa; }
+  .product-name { font-weight: 600; color: #222; }
+  .product-meta { color: #888; font-size: 11px; margin-top: 2px; }
+  .text-right { text-align: right; }
+
+  /* Total box */
+  .total-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px 20px; margin-bottom: 24px; }
+  .total-row { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; }
+  .total-row.discount { color: #16a34a; }
+  .total-row.grand-total { font-size: 17px; font-weight: 800; color: #8b0000; border-top: 2px solid #e5e7eb; margin-top: 8px; padding-top: 12px; }
+
+  /* Delivery info */
+  .delivery-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 18px 20px; margin-bottom: 24px; }
+  .delivery-box h3 { font-size: 14px; color: #0369a1; font-weight: 700; margin-bottom: 10px; }
+  .delivery-row { font-size: 13px; color: #444; margin-bottom: 5px; }
+  .delivery-row strong { color: #222; }
+
+  /* Notice */
+  .notice { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 14px 18px; margin-bottom: 24px; font-size: 13px; color: #92400e; line-height: 1.6; }
+  .notice strong { display: block; margin-bottom: 4px; }
+
+  /* CTA button */
+  .cta { text-align: center; margin-bottom: 24px; }
+  .cta a { display: inline-block; background: #8b0000; color: white; text-decoration: none; padding: 13px 36px; border-radius: 4px; font-weight: 700; font-size: 14px; letter-spacing: 0.5px; }
+
+  /* Footer */
+  .footer { background: #1c1c1c; padding: 24px 32px; text-align: center; }
+  .footer .social { margin-bottom: 12px; }
+  .footer .social a { display: inline-block; width: 32px; height: 32px; background: #333; border-radius: 4px; line-height: 32px; color: white; text-decoration: none; font-size: 13px; margin: 0 3px; }
+  .footer p { color: #999; font-size: 11px; line-height: 1.7; }
+  .footer a { color: #bbb; }
+
+  @media (max-width: 620px) {
+    .wrapper { margin: 0; border-radius: 0; }
+    .body, .header, .hero, .footer { padding: 20px 18px; }
+    .products-table th:last-child, .products-table td:last-child { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">DEE<span>STORE</span></div>
+    <div class="tagline">GIÀY CHÍNH HÃNG • AUTHENTIC</div>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="icon">🎉</div>
+    <h1>Đặt hàng thành công!</h1>
+    <p>Xin chào <strong>{{ order.full_name }}</strong>, cảm ơn bạn đã mua sắm tại Dee Store.<br>
+    Đơn hàng của bạn đã được thanh toán và đang được xử lý.</p>
+  </div>
+
+  <!-- Body -->
+  <div class="body">
+
+    <!-- Order info -->
+    <div class="order-info">
+      <h2>Thông tin đơn hàng</h2>
+      <div class="info-row">
+        <span class="label">Mã đơn hàng</span>
+        <span class="value">#{{ order.code }}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">Ngày đặt</span>
+        <span class="value">{{ order.created_at|date:"d/m/Y H:i" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">Trạng thái</span>
+        <span class="value"><span class="status-badge">✓ Đã thanh toán</span></span>
+      </div>
+      <div class="info-row">
+        <span class="label">Phương thức</span>
+        <span class="value">{{ order.get_payment_method_display }}</span>
+      </div>
+    </div>
+
+    <!-- Products -->
+    <p class="section-title">Sản phẩm đã đặt</p>
+    <table class="products-table">
+      <thead>
+        <tr>
+          <th>Sản phẩm</th>
+          <th style="text-align:center;">SL</th>
+          <th style="text-align:right;">Đơn giá</th>
+          <th style="text-align:right;">Thành tiền</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in order.items.all %}
+        <tr>
+          <td>
+            <div class="product-name">{{ item.product_name }}</div>
+            {% if item.variant %}
+            <div class="product-meta">
+              Size {{ item.variant.size.name }}{% if item.variant.color %} · {{ item.variant.color.name }}{% endif %}
+            </div>
+            {% endif %}
+          </td>
+          <td style="text-align:center;">{{ item.quantity }}</td>
+          <td style="text-align:right;">{{ item.price|floatformat:0 }}₫</td>
+          <td style="text-align:right;font-weight:700;">{{ item.subtotal|floatformat:0 }}₫</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Totals -->
+    <div class="total-box">
+      <div class="total-row">
+        <span>Tạm tính</span>
+        <span>{{ order.total_amount|floatformat:0 }}₫</span>
+      </div>
+      {% if order.discount_amount > 0 %}
+      <div class="total-row discount">
+        <span>Giảm giá{% if order.voucher_code %} ({{ order.voucher_code }}){% endif %}</span>
+        <span>-{{ order.discount_amount|floatformat:0 }}₫</span>
+      </div>
+      {% endif %}
+      <div class="total-row">
+        <span>Phí vận chuyển</span>
+        <span style="color:#16a34a;">Miễn phí</span>
+      </div>
+      <div class="total-row grand-total">
+        <span>TỔNG THANH TOÁN</span>
+        <span>{% if order.discount_amount > 0 %}{{ order.total_amount|add:"-"|add:order.discount_amount|floatformat:0 }}{% else %}{{ order.total_amount|floatformat:0 }}{% endif %}₫</span>
+      </div>
+    </div>
+
+    <!-- Delivery info -->
+    <div class="delivery-box">
+      <h3>📦 Thông tin giao hàng</h3>
+      <div class="delivery-row"><strong>Người nhận:</strong> {{ order.full_name }}</div>
+      <div class="delivery-row"><strong>Điện thoại:</strong> {{ order.phone }}</div>
+      {% if order.address %}
+      <div class="delivery-row"><strong>Địa chỉ:</strong> {{ order.address }}</div>
+      {% endif %}
+      {% if order.note %}
+      <div class="delivery-row"><strong>Ghi chú:</strong> {{ order.note }}</div>
+      {% endif %}
+    </div>
+
+    <!-- Notice -->
+    <div class="notice">
+      <strong>📌 Lưu ý quan trọng:</strong>
+      • Đơn hàng sẽ được giao trong <strong>2-5 ngày làm việc</strong>.<br>
+      • Bạn có thể theo dõi đơn hàng bằng cách click nút bên dưới.<br>
+      • Mọi thắc mắc vui lòng liên hệ hotline: <strong>0848 506 666</strong>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta">
+      <a href="{{ order_detail_url }}">Theo dõi đơn hàng →</a>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>© 2026 <strong style="color:white;">Dee Store</strong> — Giày Chính Hãng<br>
+    Tầng 4, Số nhà 3, ngách 69, ngõ 117 Thái Hà, Đống Đa, Hà Nội<br>
+    <a href="mailto:bydeestore@gmail.com">bydeestore@gmail.com</a> · 0848 506 666<br><br>
+    <span style="font-size:10px; color:#777;">Bạn nhận được email này vì đã đặt hàng tại Dee Store. Đây là email tự động, vui lòng không trả lời.</span>
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

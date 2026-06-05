@@ -345,13 +345,6 @@
         <span>{{ total|vnd }}</span>
       </div>
 
-      <!-- Ghi chú -->
-      <label style="font-size:12px; font-weight:600; color:#555; display:block; margin:12px 0 5px;">Ghi chú đơn hàng</label>
-      <textarea class="summary-note" placeholder="Ghi chú"></textarea>
-
-      <!-- Mã khuyến mãi -->
-      <input type="text" class="summary-coupon-input" placeholder="Nhập mã khuyến mãi (nếu có)">
-
       <!-- Checkout button -->
       {% url 'cart:checkout' as checkout_url %}
       {% if user.is_authenticated %}

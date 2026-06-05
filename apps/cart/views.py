@@ -12,6 +12,7 @@ from django.views.decorators.http import require_POST
 
 from .momo import create_momo_payment, get_payment_result_code, verify_momo_signature
 from .sepay import build_sepay_form_data, parse_sepay_ipn, verify_sepay_ipn
+from .email_service import send_order_confirmation
 from .services import (
     add_product_to_user_cart,
     clear_session_cart,
@@ -458,6 +459,8 @@ def momo_return(request):
         clear_session_cart(request.session)
         if request.user.is_authenticated:
             clear_user_cart(request.user)
+        # Gửi email xác nhận
+        send_order_confirmation(order, request)
         messages.success(request, f'Đơn hàng {order.code} đã thanh toán thành công bằng MoMo.')
     else:
         order.status = order.Status.FAILED
@@ -491,6 +494,8 @@ def momo_ipn(request):
         clear_session_cart(request.session)
         if request.user.is_authenticated:
             clear_user_cart(request.user)
+        # Gửi email xác nhận (IPN không có request context đầy đủ nhưng vẫn gửi được)
+        send_order_confirmation(order)
         return JsonResponse({'resultCode': 0, 'message': 'Success'})
 
     order.status = order.Status.FAILED
@@ -763,6 +768,8 @@ def sepay_ipn(request):
         clear_session_cart(request.session)
         if order.user:
             clear_user_cart(order.user)
+        # Gửi email xác nhận
+        send_order_confirmation(order)
 
     elif notification_type == 'TRANSACTION_VOID':
         order.status = Order.Status.CANCELLED
