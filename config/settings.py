@@ -136,7 +136,7 @@ SEPAY_MERCHANT    = os.getenv('SEPAY_MERCHANT', 'SP-TEST-NH52523A')
 SEPAY_SECRET_KEY  = os.getenv('SEPAY_SECRET_KEY', 'spsk_test_HCxYP62hwrqSsu1QaxR2QyJAA6Ke5pmQ')
 # Sandbox: https://pgapi-sandbox.sepay.vn/v1/checkout/init
 # Production: https://pgapi.sepay.vn/v1/checkout/init
-SEPAY_CHECKOUT_URL = os.getenv('SEPAY_CHECKOUT_URL', 'https://pgapi-sandbox.sepay.vn/v1/checkout/init')
+SEPAY_CHECKOUT_URL = os.getenv('SEPAY_CHECKOUT_URL', 'https://pay-sandbox.sepay.vn/v1/checkout/init')
 
 # ====================== REST FRAMEWORK CONFIG ======================
 REST_FRAMEWORK = {
