@@ -129,13 +129,18 @@ EMAIL_BACKEND = os.getenv(
     'EMAIL_BACKEND',
     'django.core.mail.backends.smtp.EmailBackend'   # đổi sang console khi dev
 )
-EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.resend.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')       # VD: deestore@gmail.com
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')  # App password Gmail
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Dee Store <deestore@gmail.com>')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'resend')       # VD: deestore@gmail.com
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 're_XDhp58qg_7xkZvepyBE3ZoewdtSDY3eHU')  # App password Gmail
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Acme <onboarding@resend.dev>')
 SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000')
+
+if DEBUG:
+    SITE_URL = 'http://localhost:8000'
+else:
+    SITE_URL = 'https://webgiay-gsyh.onrender.com/'
 
 # Khi DEV: dùng console backend để xem nội dung email trong terminal
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
