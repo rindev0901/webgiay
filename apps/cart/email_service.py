@@ -30,7 +30,7 @@ def _send_in_thread(order, order_detail_url: str) -> None:
         params: resend.Emails.SendParams = {
             "from": settings.DEFAULT_FROM_EMAIL,
             "to": [recipient],
-            "subject": f"[Dee Store] Xác nhận đơn hàng #{order.code} - Thanh toán thành công",
+            "subject": f"[Dat Shoes] Xác nhận đơn hàng #{order.code} - Thanh toán thành công",
             "html": html_content,
             "text": (
                 f"Xác nhận đơn hàng #{order.code}\n\n"
@@ -39,7 +39,7 @@ def _send_in_thread(order, order_detail_url: str) -> None:
                 f"Tổng tiền: {int(order.total_amount):,}₫\n"
                 f"Phương thức: {order.get_payment_method_display()}\n\n"
                 f"Xem chi tiết: {order_detail_url}\n\n"
-                f"Cảm ơn bạn đã mua sắm tại Dee Store!\n"
+                f"Cảm ơn bạn đã mua sắm tại Dat Shoes!\n"
                 f"Hotline: 0848 506 666"
             ),
         }
