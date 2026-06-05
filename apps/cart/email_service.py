@@ -40,7 +40,7 @@ def _send_in_thread(order, order_detail_url: str) -> None:
                 f"Phương thức: {order.get_payment_method_display()}\n\n"
                 f"Xem chi tiết: {order_detail_url}\n\n"
                 f"Cảm ơn bạn đã mua sắm tại Dat Shoes!\n"
-                f"Hotline: 0848 506 666"
+                f"Hotline: 0987 654 321"
             ),
         }
 
