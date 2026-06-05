@@ -124,26 +124,13 @@ if not DEBUG:
     # and renames the files with unique names for each version to support long-term caching
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# ====================== EMAIL ======================
-EMAIL_BACKEND = os.getenv(
-    'EMAIL_BACKEND',
-    'django.core.mail.backends.smtp.EmailBackend'   # đổi sang console khi dev
-)
-EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.resend.com')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'resend')       # VD: deestore@gmail.com
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 're_XDhp58qg_7xkZvepyBE3ZoewdtSDY3eHU')  # App password Gmail
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Acme <onboarding@resend.dev>')
+# ====================== EMAIL (Resend SDK) ======================
+RESEND_API_KEY = os.getenv('RESEND_API_KEY', 're_XDhp58qg_7xkZvepyBE3ZoewdtSDY3eHU')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'onboarding@resend.dev')
 SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000')
 
-if DEBUG:
-    SITE_URL = 'http://localhost:8000'
-else:
-    SITE_URL = 'https://webgiay-gsyh.onrender.com/'
-
-# Khi DEV: dùng console backend để xem nội dung email trong terminal
-# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+if not DEBUG:
+    SITE_URL = os.getenv('SITE_URL', 'https://webgiay-gsyh.onrender.com')
 
 # ====================== MOMO PAYMENT ======================
 MOMO_PARTNER_CODE = os.getenv('MOMO_PARTNER_CODE', 'MOMO')

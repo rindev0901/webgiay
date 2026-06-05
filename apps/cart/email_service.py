@@ -1,10 +1,10 @@
 """
-email_service.py — Gửi email xác nhận đơn hàng.
+email_service.py — Gửi email xác nhận đơn hàng qua Resend SDK.
 """
 from __future__ import annotations
 import logging
 import threading
-from django.core.mail import EmailMultiAlternatives
+import resend
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.urls import reverse
@@ -16,36 +16,38 @@ def _send_in_thread(order, order_detail_url: str) -> None:
     """Chạy trong background thread — không block request."""
     recipient = order.email
     try:
+        # Set API key
+        resend.api_key = settings.RESEND_API_KEY
+
+        # Render HTML template
         context = {
             'order': order,
             'order_detail_url': order_detail_url,
         }
         html_content = render_to_string('emails/order_confirmation.html', context)
-        text_content = (
-            f"Xác nhận đơn hàng #{order.code}\n\n"
-            f"Xin chào {order.full_name},\n"
-            f"Đơn hàng #{order.code} của bạn đã được thanh toán thành công.\n\n"
-            f"Tổng tiền: {int(order.total_amount):,}₫\n"
-            f"Phương thức: {order.get_payment_method_display()}\n\n"
-            f"Xem chi tiết: {order_detail_url}\n\n"
-            f"Cảm ơn bạn đã mua sắm tại Dee Store!\n"
-            f"Hotline: 0848 506 666"
-        )
-        subject = f"[Dee Store] Xác nhận đơn hàng #{order.code} - Thanh toán thành công"
 
-        msg = EmailMultiAlternatives(
-            subject=subject,
-            body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[recipient],
-        )
-        msg.attach_alternative(html_content, "text/html")
-        msg.send(fail_silently=True)   # fail_silently=True — không crash nếu SMTP lỗi
+        # Send via Resend SDK
+        params: resend.Emails.SendParams = {
+            "from": settings.DEFAULT_FROM_EMAIL,
+            "to": [recipient],
+            "subject": f"[Dee Store] Xác nhận đơn hàng #{order.code} - Thanh toán thành công",
+            "html": html_content,
+            "text": (
+                f"Xác nhận đơn hàng #{order.code}\n\n"
+                f"Xin chào {order.full_name},\n"
+                f"Đơn hàng #{order.code} đã được thanh toán thành công.\n\n"
+                f"Tổng tiền: {int(order.total_amount):,}₫\n"
+                f"Phương thức: {order.get_payment_method_display()}\n\n"
+                f"Xem chi tiết: {order_detail_url}\n\n"
+                f"Cảm ơn bạn đã mua sắm tại Dee Store!\n"
+                f"Hotline: 0848 506 666"
+            ),
+        }
 
-        logger.info(f"[email] Confirmation sent to {recipient} for order {order.code}")
+        result = resend.Emails.send(params)
+        logger.info(f"[email] Sent to {recipient} for order {order.code} — id: {result.get('id')}")
 
     except Exception as exc:
-        # Bắt toàn bộ exception, chỉ log — không raise lên caller
         logger.error(f"[email] Failed for order {order.code}: {exc}")
 
 
@@ -59,12 +61,11 @@ def send_order_confirmation(order, request=None) -> None:
         logger.warning(f"[email] Order {order.code}: no email — skip.")
         return
 
-    # Kiểm tra có cấu hình email chưa
-    if not getattr(settings, 'EMAIL_HOST_USER', ''):
-        logger.warning(f"[email] EMAIL_HOST_USER not configured — skip sending for {order.code}.")
+    if not getattr(settings, 'RESEND_API_KEY', ''):
+        logger.warning(f"[email] RESEND_API_KEY not configured — skip for {order.code}.")
         return
 
-    # Build URL trước khi vào thread (request không thread-safe)
+    # Build URL before entering thread (request is not thread-safe)
     if request:
         try:
             order_detail_url = request.build_absolute_uri(
