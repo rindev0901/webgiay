@@ -28,9 +28,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # Third-party apps
+    'corsheaders',
     'import_export',
-    'rest_framework',           # Django REST Framework
-    'django_filters',           # Hỗ trợ filter API
+    'rest_framework',
+    'django_filters',
 
     # App của bạn
     'apps.products.apps.ProductsConfig',
@@ -42,12 +43,13 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',          # phải trước CommonMiddleware
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware'
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -130,6 +132,9 @@ MOMO_ENDPOINT = os.getenv('MOMO_ENDPOINT', 'https://test-payment.momo.vn/v2/gate
 MOMO_RETURN_URL = os.getenv('MOMO_RETURN_URL', 'http://127.0.0.1:8000/cart/momo/return/')
 MOMO_IPN_URL = os.getenv('MOMO_IPN_URL', 'http://127.0.0.1:8000/cart/momo/ipn/')
 MOMO_REQUEST_TYPE = os.getenv('MOMO_REQUEST_TYPE', 'captureWallet')
+
+# ====================== CORS ======================
+CORS_ALLOW_ALL_ORIGINS = True
 
 # ====================== SEPAY PAYMENT ======================
 SEPAY_MERCHANT    = os.getenv('SEPAY_MERCHANT', 'SP-TEST-NH52523A')
