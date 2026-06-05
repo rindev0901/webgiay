@@ -1,54 +1,287 @@
 {% extends 'base.html' %}
+{% load static %}
 {% load format_money %}
 
-{% block title %}Đơn hàng {{ order.code }}{% endblock %}
+{% block title %}Đơn hàng #{{ order.code }} - Dat Shoes{% endblock %}
+
+{% block extra_css %}
+<style>
+.od-page { background:#f3f4f6; padding-bottom:48px; min-height:80vh; }
+.od-container { max-width:900px; margin:0 auto; padding:0 16px; }
+
+.od-bc { font-size:12px; color:#999; padding:10px 0 16px; display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+.od-bc a { color:#999; text-decoration:none; }
+.od-bc a:hover { color:var(--dee-red); }
+.od-bc i { font-size:8px; color:#ccc; }
+
+/* Status banner */
+.od-status-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:12px;
+  background:white; border:1px solid #e5e7eb;
+  padding:14px 18px; margin-bottom:12px;
+}
+.od-code { font-size:15px; font-weight:700; color:#111; }
+.od-date { font-size:12px; color:#999; margin-top:2px; }
+
+.od-status-badge {
+  display:inline-block; padding:5px 14px; border-radius:20px;
+  font-size:12px; font-weight:700;
+}
+.od-status-badge.pending   { background:#fef3c7; color:#92400e; }
+.od-status-badge.paid      { background:#d1fae5; color:#065f46; }
+.od-status-badge.failed    { background:#fee2e2; color:#991b1b; }
+.od-status-badge.cancelled { background:#f3f4f6; color:#6b7280; }
+
+/* 2-col layout */
+.od-layout {
+  display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;
+}
+@media(max-width:640px){ .od-layout { grid-template-columns:1fr; } }
+
+.od-card {
+  background:white; border:1px solid #e5e7eb; padding:16px;
+}
+.od-card-title {
+  font-size:12px; font-weight:700; color:#888;
+  text-transform:uppercase; letter-spacing:.5px;
+  margin-bottom:12px; padding-bottom:8px;
+  border-bottom:1px solid #f0f0f0;
+}
+.od-info-row {
+  display:flex; gap:8px; font-size:13px; margin-bottom:6px;
+}
+.od-info-row .label { color:#888; min-width:80px; flex-shrink:0; }
+.od-info-row .value { color:#333; font-weight:500; word-break:break-all; }
+
+/* Items */
+.od-items-card {
+  background:white; border:1px solid #e5e7eb; padding:16px; margin-bottom:12px;
+}
+.od-item-row {
+  display:flex; align-items:center; gap:12px;
+  padding:10px 0; border-bottom:1px solid #f3f4f6;
+}
+.od-item-row:last-child { border-bottom:none; }
+.od-item-img {
+  width:56px; height:56px; object-fit:contain;
+  background:#f8f8f8; border:1px solid #eee; padding:3px; flex-shrink:0;
+}
+.od-item-name { flex:1; font-size:13px; color:#333; line-height:1.4; }
+.od-item-meta { font-size:11px; color:#888; margin-top:2px; }
+.od-item-price { text-align:right; }
+.od-item-price .unit { font-size:12px; color:#888; }
+.od-item-price .sub  { font-size:13px; font-weight:700; color:#111; }
+
+/* Summary */
+.od-summary-card {
+  background:white; border:1px solid #e5e7eb; padding:16px; margin-bottom:12px;
+}
+.od-summary-row {
+  display:flex; justify-content:space-between;
+  font-size:13px; color:#555; margin-bottom:8px;
+}
+.od-summary-row.total {
+  font-size:15px; font-weight:700; color:#111;
+  border-top:1px solid #f0f0f0; padding-top:10px; margin-top:4px;
+}
+.od-summary-row.total span:last-child { color:var(--dee-red); }
+
+/* Action buttons */
+.od-actions { display:flex; gap:10px; flex-wrap:wrap; }
+
+.btn-od-back {
+  padding:10px 20px; border:1.5px solid #ddd; background:white;
+  color:#555; font-size:13px; font-weight:600; text-decoration:none;
+  border-radius:2px; display:inline-flex; align-items:center; gap:6px;
+  transition:all .15s;
+}
+.btn-od-back:hover { border-color:#333; color:#111; }
+
+.btn-od-retry {
+  padding:11px 24px; background:var(--dee-red); color:white;
+  border:none; font-size:13px; font-weight:700;
+  border-radius:2px; cursor:pointer; transition:background .2s;
+  display:inline-flex; align-items:center; gap:6px;
+}
+.btn-od-retry:hover { background:var(--dee-red-dark); }
+
+.btn-od-momo {
+  padding:10px 20px; background:#a50064; color:white;
+  border:none; font-size:13px; font-weight:600; text-decoration:none;
+  border-radius:2px; display:inline-flex; align-items:center; gap:6px;
+  transition:opacity .2s;
+}
+.btn-od-momo:hover { opacity:.85; color:white; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto bg-white p-6 rounded shadow">
-  <h2 class="text-2xl font-semibold mb-4">Đơn hàng {{ order.code }}</h2>
+<div class="od-page">
+<div class="od-container">
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <!-- Breadcrumb -->
+  <nav class="od-bc">
+    <a href="{% url 'landing' %}">Trang chủ</a>
+    <i class="fas fa-chevron-right"></i>
+    <a href="{% url 'cart:orders_list' %}">Đơn hàng</a>
+    <i class="fas fa-chevron-right"></i>
+    <span style="color:#555;">{{ order.code }}</span>
+  </nav>
+
+  <!-- Status bar -->
+  <div class="od-status-bar">
     <div>
-      <h3 class="font-semibold">Thông tin</h3>
-      <p>Người nhận: {{ order.full_name }}</p>
-      <p>SĐT: {{ order.phone }}</p>
-      <p>Email: {{ order.email }}</p>
-      <p>Địa chỉ: {{ order.address }}</p>
-      <p>Ghi chú: {{ order.note }}</p>
+      <div class="od-code">#{{ order.code }}</div>
+      <div class="od-date">{{ order.created_at|date:"d/m/Y H:i" }}</div>
     </div>
-    <div>
-      <h3 class="font-semibold">Trạng thái</h3>
-      <p class="mb-4">{{ order.get_status_display }}</p>
-      {% if order.momo_pay_url %}
-        <a href="{{ order.momo_pay_url }}" class="px-4 py-2 bg-green-600 text-white rounded">Tiến tới MoMo</a>
-      {% endif %}
-      {% if order.status == 'pending' or order.status == 'failed' %}
-        <form action="{% url 'cart:order_retry' order.code %}" method="post" class="inline-block">
-          {% csrf_token %}
-          <button class="px-4 py-2 bg-blue-600 text-white rounded mt-2">Thanh toán lại</button>
-        </form>
-      {% endif %}
-    </div>
+    <span class="od-status-badge {{ order.status }}">{{ order.get_status_display }}</span>
   </div>
 
-  <hr class="my-4" />
+  <!-- Info 2-col -->
+  <div class="od-layout">
 
-  <h3 class="font-semibold mb-2">Sản phẩm</h3>
-  <div class="space-y-3">
-    {% for item in order.items.all %}
-    <div class="flex items-center justify-between">
-      <div>
-        <div class="font-medium">{{ item.product_name }}</div>
-        <div class="text-sm text-gray-600">Số lượng: {{ item.quantity }}</div>
+    <!-- Thông tin giao hàng -->
+    <div class="od-card">
+      <div class="od-card-title">Thông tin giao hàng</div>
+      <div class="od-info-row">
+        <span class="label">Người nhận</span>
+        <span class="value">{{ order.full_name|default:"—" }}</span>
       </div>
-      <div class="text-right">
-        <div>{{ item.price|vnd }}</div>
-        <div class="text-sm text-gray-600">Tạm tính: {{ item.subtotal|vnd }}</div>
+      <div class="od-info-row">
+        <span class="label">Điện thoại</span>
+        <span class="value">{{ order.phone|default:"—" }}</span>
+      </div>
+      <div class="od-info-row">
+        <span class="label">Email</span>
+        <span class="value">{{ order.email|default:"—" }}</span>
+      </div>
+      <div class="od-info-row">
+        <span class="label">Địa chỉ</span>
+        <span class="value">{{ order.address|default:"—" }}</span>
+      </div>
+      {% if order.note %}
+      <div class="od-info-row">
+        <span class="label">Ghi chú</span>
+        <span class="value">{{ order.note }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Thanh toán -->
+    <div class="od-card">
+      <div class="od-card-title">Thanh toán</div>
+      <div class="od-info-row">
+        <span class="label">Phương thức</span>
+        <span class="value">
+          {% if order.payment_method == 'sepay' %}
+            <i class="fas fa-credit-card"></i> SePay
+          {% elif order.payment_method == 'momo' %}
+            <i class="fas fa-wallet"></i> MoMo
+          {% else %}
+            {{ order.get_payment_method_display }}
+          {% endif %}
+        </span>
+      </div>
+      <div class="od-info-row">
+        <span class="label">Trạng thái</span>
+        <span class="value">{{ order.get_status_display }}</span>
+      </div>
+      {% if order.payment_method == 'sepay' and order.sepay_transaction_id %}
+      <div class="od-info-row">
+        <span class="label">Mã GD</span>
+        <span class="value">{{ order.sepay_transaction_id }}</span>
+      </div>
+      {% endif %}
+      {% if order.payment_method == 'momo' and order.momo_trans_id %}
+      <div class="od-info-row">
+        <span class="label">Mã GD</span>
+        <span class="value">{{ order.momo_trans_id }}</span>
+      </div>
+      {% endif %}
+      {% if order.voucher_code %}
+      <div class="od-info-row">
+        <span class="label">Voucher</span>
+        <span class="value" style="color:var(--dee-red);">{{ order.voucher_code }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- Sản phẩm -->
+  <div class="od-items-card">
+    <div class="od-card-title">Sản phẩm đã đặt</div>
+    {% for item in order.items.all %}
+    <div class="od-item-row">
+      {% if item.product and item.product.images.first %}
+      <img class="od-item-img" src="{{ item.product.images.first.image.url }}" alt="{{ item.product_name }}">
+      {% else %}
+      <img class="od-item-img" src="{% static 'images/no-image.jpg' %}" alt="{{ item.product_name }}">
+      {% endif %}
+      <div class="od-item-name">
+        {{ item.product_name }}
+        {% if item.variant %}
+        <div class="od-item-meta">
+          {% if item.variant.size %}Size {{ item.variant.size.name }}{% endif %}
+          {% if item.variant.color %} · {{ item.variant.color.name }}{% endif %}
+        </div>
+        {% endif %}
+      </div>
+      <div class="od-item-price">
+        <div class="unit">{{ item.price|vnd }} × {{ item.quantity }}</div>
+        <div class="sub">{{ item.subtotal|vnd }}</div>
       </div>
     </div>
     {% endfor %}
   </div>
 
-  <div class="mt-4 text-right font-semibold">Tổng: {{ order.total_amount|vnd }}</div>
+  <!-- Tổng tiền -->
+  <div class="od-summary-card">
+    <div class="od-summary-row">
+      <span>Tạm tính</span>
+      <span>{{ order.total_amount|vnd }}</span>
+    </div>
+    {% if order.discount_amount %}
+    <div class="od-summary-row" style="color:var(--dee-red);">
+      <span>Giảm giá{% if order.voucher_code %} ({{ order.voucher_code }}){% endif %}</span>
+      <span>-{{ order.discount_amount|vnd }}</span>
+    </div>
+    {% endif %}
+    <div class="od-summary-row total">
+      <span>Tổng cộng</span>
+      <span>{{ order.total_amount|vnd }}</span>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="od-actions">
+    <a href="{% url 'cart:orders_list' %}" class="btn-od-back">
+      <i class="fas fa-arrow-left" style="font-size:11px;"></i> Danh sách đơn hàng
+    </a>
+
+    {% if order.status == 'pending' or order.status == 'failed' %}
+
+      {% if order.payment_method == 'momo' and order.momo_pay_url %}
+      <a href="{{ order.momo_pay_url }}" class="btn-od-momo">
+        <i class="fas fa-wallet"></i> Tiếp tục thanh toán MoMo
+      </a>
+      {% endif %}
+
+      <form action="{% url 'cart:order_retry' order.code %}" method="post" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn-od-retry">
+          <i class="fas fa-redo" style="font-size:11px;"></i>
+          Thanh toán lại
+          {% if order.payment_method == 'sepay' %}(SePay)
+          {% elif order.payment_method == 'momo' %}(MoMo)
+          {% endif %}
+        </button>
+      </form>
+
+    {% endif %}
+  </div>
+
+</div>
 </div>
 {% endblock %}

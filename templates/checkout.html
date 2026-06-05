@@ -223,7 +223,7 @@ select.co-input {
             <label for="{{ form.full_name.id_for_label }}">{{ form.full_name.label }}</label>
             <input type="text" id="{{ form.full_name.id_for_label }}" name="full_name"
                    class="co-input {% if form.full_name.errors %}error{% endif %}"
-                   placeholder="Họ và tên" value="{{ form.full_name.value|default:'' }}">
+                   placeholder="Họ và tên *" value="{{ form.full_name.value|default:'' }}" required>
             {% if form.full_name.errors %}<div class="co-field-error">{{ form.full_name.errors|striptags }}</div>{% endif %}
           </div>
 
@@ -233,14 +233,14 @@ select.co-input {
               <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
               <input type="email" id="{{ form.email.id_for_label }}" name="email"
                      class="co-input {% if form.email.errors %}error{% endif %}"
-                     placeholder="Email" value="{{ form.email.value|default:'' }}">
+                     placeholder="Email *" value="{{ form.email.value|default:'' }}" required>
               {% if form.email.errors %}<div class="co-field-error">{{ form.email.errors|striptags }}</div>{% endif %}
             </div>
             <div class="co-field">
               <label for="{{ form.phone.id_for_label }}">{{ form.phone.label }}</label>
               <input type="tel" id="{{ form.phone.id_for_label }}" name="phone"
                      class="co-input {% if form.phone.errors %}error{% endif %}"
-                     placeholder="Số điện thoại" value="{{ form.phone.value|default:'' }}">
+                     placeholder="Số điện thoại *" value="{{ form.phone.value|default:'' }}" required>
               {% if form.phone.errors %}<div class="co-field-error">{{ form.phone.errors|striptags }}</div>{% endif %}
             </div>
           </div>
@@ -250,7 +250,7 @@ select.co-input {
             <label for="{{ form.address.id_for_label }}">{{ form.address.label }}</label>
             <input type="text" id="{{ form.address.id_for_label }}" name="address"
                    class="co-input {% if form.address.errors %}error{% endif %}"
-                   placeholder="Địa chỉ" value="{{ form.address.value|default:'' }}">
+                   placeholder="Địa chỉ *" value="{{ form.address.value|default:'' }}" required>
             {% if form.address.errors %}<div class="co-field-error">{{ form.address.errors|striptags }}</div>{% endif %}
           </div>
 
@@ -274,11 +274,8 @@ select.co-input {
 
           <!-- Actions -->
           <div class="co-actions" style="margin-top:16px;">
-            <button type="submit" class="btn-submit-co">
-              Tiếp tục đến phương thức thanh toán
-            </button>
             <a href="{% url 'cart:cart_detail' %}" class="btn-back-co">
-              <i class="fas fa-arrow-left" style="font-size:10px;"></i> Giỏ hàng
+              <i class="fas fa-arrow-left" style="font-size:10px;"></i> Quay lại giỏ hàng
             </a>
           </div>
         </form>
@@ -535,7 +532,7 @@ document.getElementById('couponInput') &&
 
 /* ── Payment method selection ── */
 const SEPAY_CHECKOUT_URL = "{% url 'cart:sepay_checkout' %}";
-const MOMO_FORM_ID = document.getElementById('checkoutForm') ? 'checkoutForm' : null;
+const MOMO_CHECKOUT_URL  = "{% url 'cart:checkout' %}";
 
 function selectPayment(method) {
   ['sepay', 'momo'].forEach(m => {
@@ -552,16 +549,37 @@ function submitPayment() {
     alert('Vui lòng chọn phương thức thanh toán.');
     return;
   }
-  // Lấy form thông tin giao hàng
-  const infoForm = document.querySelector('form');
-  if (!infoForm) return;
 
-  if (selected.value === 'sepay') {
-    infoForm.action = SEPAY_CHECKOUT_URL;
+  const form = document.getElementById('checkoutForm');
+
+  // Validate required fields trước khi submit
+  const required = ['full_name', 'email', 'phone', 'address'];
+  let valid = true;
+  required.forEach(name => {
+    const el = form.querySelector(`[name="${name}"]`);
+    if (el && !el.value.trim()) {
+      el.classList.add('error');
+      valid = false;
+    } else if (el) {
+      el.classList.remove('error');
+    }
+  });
+
+  if (!valid) {
+    // Scroll lên form
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
   }
-  // momo: action mặc định đã là checkout URL
-  infoForm.submit();
+
+  // Set action theo phương thức đã chọn
+  form.action = selected.value === 'sepay' ? SEPAY_CHECKOUT_URL : MOMO_CHECKOUT_URL;
+  form.submit();
 }
+
+// Xóa class error khi user bắt đầu gõ
+document.getElementById('checkoutForm').querySelectorAll('.co-input').forEach(el => {
+  el.addEventListener('input', () => el.classList.remove('error'));
+});
 
 // Mặc định chọn SePay
 selectPayment('sepay');

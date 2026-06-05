@@ -1,47 +1,180 @@
 {% extends 'base.html' %}
+{% load static %}
 {% load format_money %}
 
-{% block title %}Đơn hàng của tôi{% endblock %}
+{% block title %}Đơn hàng của tôi - Dat Shoes{% endblock %}
+
+{% block extra_css %}
+<style>
+.ol-page { background:#f3f4f6; padding-bottom:48px; min-height:80vh; }
+.ol-container { max-width:900px; margin:0 auto; padding:0 16px; }
+
+.ol-bc { font-size:12px; color:#999; padding:10px 0 16px; display:flex; align-items:center; gap:5px; }
+.ol-bc a { color:#999; text-decoration:none; }
+.ol-bc a:hover { color:var(--dee-red); }
+.ol-bc i { font-size:8px; color:#ccc; }
+
+.ol-header {
+  font-size:18px; font-weight:700; color:#111;
+  margin-bottom:16px;
+}
+
+/* Order card */
+.ol-card {
+  background:white; border:1px solid #e5e7eb;
+  margin-bottom:10px; padding:16px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:12px; align-items:center;
+}
+@media(max-width:600px){ .ol-card { grid-template-columns:1fr; } }
+
+.ol-code { font-size:13px; font-weight:700; color:#111; margin-bottom:4px; }
+.ol-date { font-size:12px; color:#999; margin-bottom:4px; }
+.ol-total { font-size:13px; color:#555; }
+.ol-total strong { color:#111; }
+
+.ol-method {
+  font-size:11px; color:#888;
+  display:inline-flex; align-items:center; gap:4px;
+  margin-top:4px;
+}
+
+/* Status badge */
+.ol-status {
+  display:inline-block; padding:3px 10px; border-radius:20px;
+  font-size:11px; font-weight:700; white-space:nowrap;
+  margin-bottom:10px;
+}
+.ol-status.pending  { background:#fef3c7; color:#92400e; }
+.ol-status.paid     { background:#d1fae5; color:#065f46; }
+.ol-status.failed   { background:#fee2e2; color:#991b1b; }
+.ol-status.cancelled{ background:#f3f4f6; color:#6b7280; }
+
+.ol-actions { display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+
+.btn-ol-detail {
+  padding:7px 16px; border:1.5px solid #ddd; background:white;
+  color:#555; font-size:12px; font-weight:600; text-decoration:none;
+  border-radius:2px; transition:all .15s; white-space:nowrap;
+}
+.btn-ol-detail:hover { border-color:#333; color:#111; }
+
+.btn-ol-retry {
+  padding:7px 16px; background:var(--dee-red); color:white;
+  border:none; font-size:12px; font-weight:600;
+  border-radius:2px; cursor:pointer; transition:background .2s; white-space:nowrap;
+}
+.btn-ol-retry:hover { background:var(--dee-red-dark); }
+
+/* Empty */
+.ol-empty {
+  text-align:center; padding:60px 20px;
+  background:white; border:1px solid #e5e7eb;
+}
+.ol-empty i { font-size:48px; color:#ddd; margin-bottom:16px; }
+.ol-empty p { font-size:14px; color:#888; margin-bottom:20px; }
+.ol-empty a {
+  display:inline-block; padding:10px 28px;
+  background:var(--dee-red); color:white;
+  font-size:13px; font-weight:600; text-decoration:none;
+}
+.ol-empty a:hover { background:var(--dee-red-dark); }
+
+/* Pagination */
+.ol-pagination {
+  display:flex; align-items:center; gap:6px;
+  margin-top:16px; flex-wrap:wrap;
+}
+.ol-page-btn {
+  padding:6px 12px; border:1px solid #e5e7eb;
+  background:white; color:#555; font-size:12px;
+  text-decoration:none; border-radius:2px; transition:all .15s;
+}
+.ol-page-btn:hover { border-color:#999; color:#111; }
+.ol-page-btn.active { background:var(--dee-red); color:white; border-color:var(--dee-red); }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto bg-white p-6 rounded shadow">
-  <h2 class="text-2xl font-semibold mb-4">Đơn hàng của tôi</h2>
+<div class="ol-page">
+<div class="ol-container">
+
+  <nav class="ol-bc">
+    <a href="{% url 'landing' %}">Trang chủ</a>
+    <i class="fas fa-chevron-right"></i>
+    <span style="color:#555;">Đơn hàng của tôi</span>
+  </nav>
+
+  <div class="ol-header">Đơn hàng của tôi</div>
+
   {% if page_obj.object_list %}
-  <div class="space-y-4">
+
     {% for order in page_obj.object_list %}
-    <div class="flex items-center justify-between p-4 border rounded">
+    <div class="ol-card">
+      <!-- Left info -->
       <div>
-        <div class="font-medium">{{ order.code }}</div>
-        <div class="text-sm text-gray-600">{{ order.created_at }}</div>
-        <div class="text-sm">Tổng: <span class="font-semibold">{{ order.total_amount|vnd }}</span></div>
+        <div class="ol-code">#{{ order.code }}</div>
+        <div class="ol-date">{{ order.created_at|date:"d/m/Y H:i" }}</div>
+        <div class="ol-total">
+          Tổng: <strong>{{ order.total_amount|vnd }}</strong>
+        </div>
+        <div class="ol-method">
+          {% if order.payment_method == 'sepay' %}
+            <i class="fas fa-credit-card"></i> SePay
+          {% elif order.payment_method == 'momo' %}
+            <i class="fas fa-wallet"></i> MoMo
+          {% else %}
+            <i class="fas fa-money-bill"></i> {{ order.get_payment_method_display }}
+          {% endif %}
+        </div>
       </div>
-      <div class="text-right">
-        <div class="mb-2">Trạng thái: <span class="font-semibold">{{ order.get_status_display }}</span></div>
-        <a href="{% url 'cart:order_detail' order.code %}" class="px-3 py-1 border rounded">Chi tiết</a>
+
+      <!-- Right: status + actions -->
+      <div class="ol-actions">
+        <span class="ol-status {{ order.status }}">{{ order.get_status_display }}</span>
+        <a href="{% url 'cart:order_detail' order.code %}" class="btn-ol-detail">
+          <i class="fas fa-eye" style="font-size:11px;"></i> Chi tiết
+        </a>
         {% if order.status == 'pending' or order.status == 'failed' %}
-        <form action="{% url 'cart:order_retry' order.code %}" method="post" class="inline-block">
+        <form action="{% url 'cart:order_retry' order.code %}" method="post">
           {% csrf_token %}
-          <button class="px-3 py-1 bg-green-600 text-white rounded ml-2">Thanh toán lại</button>
+          <button type="submit" class="btn-ol-retry">
+            <i class="fas fa-redo" style="font-size:10px;"></i>
+            Thanh toán lại
+            {% if order.payment_method == 'sepay' %}(SePay){% elif order.payment_method == 'momo' %}(MoMo){% endif %}
+          </button>
         </form>
         {% endif %}
       </div>
     </div>
     {% endfor %}
-  </div>
 
-  <div class="mt-4">
-    {% if page_obj.has_previous %}
-      <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 border rounded">Trước</a>
-    {% endif %}
-    {% for num in paginator.page_range %}
-      <a href="?page={{ num }}" class="px-3 py-1 border rounded {% if num == page_obj.number %}bg-red-600 text-white{% endif %}">{{ num }}</a>
-    {% endfor %}
-    {% if page_obj.has_next %}
-      <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 border rounded">Sau</a>
-    {% endif %}
-  </div>
+    <!-- Pagination -->
+    <div class="ol-pagination">
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}" class="ol-page-btn">
+        <i class="fas fa-chevron-left" style="font-size:10px;"></i>
+      </a>
+      {% endif %}
+      {% for num in paginator.page_range %}
+      <a href="?page={{ num }}" class="ol-page-btn {% if num == page_obj.number %}active{% endif %}">{{ num }}</a>
+      {% endfor %}
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}" class="ol-page-btn">
+        <i class="fas fa-chevron-right" style="font-size:10px;"></i>
+      </a>
+      {% endif %}
+    </div>
+
   {% else %}
-    <p>Chưa có đơn hàng.</p>
+  <div class="ol-empty">
+    <div><i class="fas fa-receipt"></i></div>
+    <p>Bạn chưa có đơn hàng nào.</p>
+    <a href="{% url 'products:product_list' %}">Mua sắm ngay</a>
+  </div>
   {% endif %}
+
+</div>
 </div>
 {% endblock %}

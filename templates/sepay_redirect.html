@@ -29,11 +29,6 @@
   <div class="redirect-spinner"></div>
   <div class="redirect-title">Dang chuyen huong den cong thanh toan SePay...</div>
   <div class="redirect-sub">Vui long khong dong trang nay.</div>
-
-  {#
-    Thu tu input PHAI khop voi thu tu field khi tao signature.
-    Theo tai lieu SePay - KHONG doi thu tu nay.
-  #}
   <form id="sepayForm" action="{{ form_data.checkout_url }}" method="POST" style="display:none;">
 
     <input type="hidden" name="order_amount"        value="{{ form_data.order_amount }}">

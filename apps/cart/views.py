@@ -521,8 +521,31 @@ def order_retry(request, code):
     order = get_object_or_404(Order, code=code)
     if order.status not in (order.Status.PENDING, order.Status.FAILED):
         messages.error(request, 'Đơn hàng không ở trạng thái có thể thanh toán lại.')
-        return redirect('cart:cart_detail')
+        return redirect('cart:order_detail', code=order.code)
 
+    # Route theo payment_method đã lưu
+    if order.payment_method == Order.PaymentMethod.SEPAY:
+        # SePay: tạo lại form data và render redirect page
+        success_url = request.build_absolute_uri(
+            reverse('cart:sepay_return') + f'?order_code={order.code}'
+        )
+        error_url = request.build_absolute_uri(
+            reverse('cart:sepay_return') + f'?order_code={order.code}&status=error'
+        )
+        cancel_url = request.build_absolute_uri(
+            reverse('cart:sepay_return') + f'?order_code={order.code}&status=cancel'
+        )
+        customer_id = str(order.user.id) if order.user else ''
+        form_data = build_sepay_form_data(
+            order,
+            success_url=success_url,
+            error_url=error_url,
+            cancel_url=cancel_url,
+            customer_id=customer_id,
+        )
+        return render(request, 'sepay_redirect.html', {'form_data': form_data})
+
+    # MoMo (mặc định)
     redirect_url = request.build_absolute_uri(reverse('cart:momo_return'))
     ipn_url = request.build_absolute_uri(reverse('cart:momo_ipn'))
 
@@ -533,7 +556,7 @@ def order_retry(request, code):
         order.momo_message = str(exc)
         order.save(update_fields=['status', 'momo_message', 'updated_at'])
         messages.error(request, str(exc))
-        return redirect('cart:cart_detail')
+        return redirect('cart:order_detail', code=order.code)
 
     order.momo_request_id = request_payload['requestId']
     order.momo_order_id = request_payload['orderId']
@@ -542,13 +565,14 @@ def order_retry(request, code):
     order.momo_message = response_payload.get('message', '')
     order.momo_response_payload = str(response_payload)
     order.save(update_fields=[
-        'momo_request_id', 'momo_order_id', 'momo_pay_url', 'momo_result_code', 'momo_message', 'momo_response_payload', 'updated_at'
+        'momo_request_id', 'momo_order_id', 'momo_pay_url',
+        'momo_result_code', 'momo_message', 'momo_response_payload', 'updated_at',
     ])
 
     pay_url = response_payload.get('payUrl')
     if not pay_url:
         messages.error(request, 'MoMo chưa trả về đường dẫn thanh toán.')
-        return redirect('cart:cart_detail')
+        return redirect('cart:order_detail', code=order.code)
 
     return redirect(pay_url)
 
