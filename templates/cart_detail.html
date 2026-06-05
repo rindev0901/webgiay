@@ -2,7 +2,7 @@
 {% load static %}
 {% load format_money %}
 
-{% block title %}Giỏ hàng - Dee Store{% endblock %}
+{% block title %}Giỏ hàng - Dat Shoes{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -229,6 +229,12 @@
               <div class="cart-item-name">{{ it.product.name }}</div>
             </a>
             <div class="cart-item-meta">
+              {% if it.variant %}
+              <span style="font-size:11px;color:#888;">
+                {% if it.variant.size %}Size {{ it.variant.size.name }}{% endif %}
+                {% if it.variant.color %} · {{ it.variant.color.name }}{% endif %}
+              </span><br>
+              {% endif %}
               {% if it.product.discount_price %}
               <span class="cart-item-price-sale">{{ it.price|vnd }}</span>
               <span class="cart-item-price-orig">{{ it.product.price|vnd }}</span>
@@ -239,14 +245,23 @@
           </div>
 
           <!-- Qty -->
-          <form action="{% url 'cart:update_cart' it.product.id %}" method="post" class="qty-update-form" data-product="{{ it.product.id }}">
+          <form action="{% url 'cart:update_cart' it.product.id %}" method="post" class="qty-update-form">
             {% csrf_token %}
+            {% if it.variant %}<input type="hidden" name="variant_id" value="{{ it.variant.id }}">{% endif %}
             <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
               <div class="ci-qty-wrap">
                 <button type="button" class="ci-qty-btn" onclick="ciQty(this,-1)">−</button>
-                <input type="number" name="quantity" class="ci-qty-num" value="{{ it.quantity }}" min="1">
+                <input type="number" name="quantity" class="ci-qty-num"
+                       value="{{ it.quantity }}"
+                       min="1" max="{{ it.stock }}"
+                       data-stock="{{ it.stock }}">
                 <button type="button" class="ci-qty-btn" onclick="ciQty(this,1)">+</button>
               </div>
+              {% if it.stock > 0 and it.stock <= 5 %}
+              <span style="font-size:10px;color:#f59e0b;font-weight:600;">Còn {{ it.stock }}</span>
+              {% elif it.stock == 0 %}
+              <span style="font-size:10px;color:#dc2626;font-weight:600;">Hết hàng</span>
+              {% endif %}
               <button type="submit" class="btn-remove-item" onclick="this.form.querySelector('[name=quantity]').value=0">Xóa</button>
             </div>
           </form>
@@ -367,16 +382,69 @@
 
 {% block extra_js %}
 <script>
+/* ── Toast thông báo inline ── */
+function showCartToast(msg, type) {
+  let toast = document.getElementById('cartToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'cartToast';
+    toast.style.cssText = [
+      'position:fixed', 'top:80px', 'right:16px', 'z-index:9999',
+      'padding:12px 18px', 'border-radius:4px', 'font-size:13px',
+      'font-weight:600', 'box-shadow:0 4px 16px rgba(0,0,0,.15)',
+      'max-width:320px', 'transition:opacity .3s',
+    ].join(';');
+    document.body.appendChild(toast);
+  }
+  if (type === 'error') {
+    toast.style.background = '#fef2f2';
+    toast.style.border = '1px solid #fecaca';
+    toast.style.color = '#991b1b';
+  } else {
+    toast.style.background = '#f0fdf4';
+    toast.style.border = '1px solid #bbf7d0';
+    toast.style.color = '#166534';
+  }
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+}
+
 /* Qty +/- trong cart item */
 function ciQty(btn, delta) {
   const input = btn.closest('.ci-qty-wrap').querySelector('.ci-qty-num');
-  const val = Math.max(1, (parseInt(input.value) || 1) + delta);
-  input.value = val;
+  const stock = parseInt(input.dataset.stock) || 0;
+  const current = parseInt(input.value) || 1;
+  const next = current + delta;
+
+  if (next < 1) return; // đừng submit nếu đang muốn xóa bằng nút −
+
+  if (stock > 0 && next > stock) {
+    showCartToast(`Chỉ còn ${stock} sản phẩm trong kho.`, 'error');
+    input.value = stock;
+    // vẫn submit để đồng bộ nếu giá trị thực sự thay đổi
+    if (current !== stock) input.closest('form').submit();
+    return;
+  }
+
+  input.value = next;
+  input.closest('form').submit();
 }
 
-/* Auto-submit qty khi blur */
+/* Submit khi user gõ tay rồi blur/Enter */
 document.querySelectorAll('.ci-qty-num').forEach(input => {
-  input.addEventListener('change', () => input.closest('form').submit());
+  input.addEventListener('change', () => {
+    const stock = parseInt(input.dataset.stock) || 0;
+    let val = parseInt(input.value) || 1;
+    if (val < 1) val = 1;
+    if (stock > 0 && val > stock) {
+      showCartToast(`Chỉ còn ${stock} sản phẩm trong kho.`, 'error');
+      val = stock;
+    }
+    input.value = val;
+    input.closest('form').submit();
+  });
 });
 
 /* Copy coupon */

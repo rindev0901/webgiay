@@ -37,51 +37,68 @@ def get_user_cart_item_count(user):
 
 def get_user_cart_items(user):
     cart = Cart.objects.get_or_create(user=user)[0]
-    return cart.items.select_related('product', 'product__brand', 'product__category').prefetch_related('product__images')
+    return cart.items.select_related(
+        'product', 'product__brand', 'product__category', 'variant', 'variant__size', 'variant__color'
+    ).prefetch_related('product__images')
 
 
-def add_product_to_user_cart(user, product, quantity):
+def add_product_to_user_cart(user, product, quantity, variant=None):
     cart = get_or_create_user_cart(user)
+    price = variant.price if (variant and variant.price) else product.final_price
     item, created = CartItem.objects.get_or_create(
         cart=cart,
         product=product,
+        variant=variant,
         defaults={
             'quantity': quantity,
-            'price': product.final_price,
+            'price': price,
         },
     )
     if not created:
-        item.quantity += quantity
-        item.price = product.final_price
+        # Validate không vượt stock
+        if variant:
+            max_qty = variant.stock
+            item.quantity = min(item.quantity + quantity, max_qty)
+        else:
+            item.quantity += quantity
+        item.price = price
         item.save(update_fields=['quantity', 'price', 'updated_at'])
     return item
 
 
-def set_user_cart_item_quantity(user, product, quantity):
+def set_user_cart_item_quantity(user, product, quantity, variant=None):
     cart = get_or_create_user_cart(user)
     if quantity > 0:
+        # Validate stock nếu có variant
+        if variant and quantity > variant.stock:
+            quantity = variant.stock
+        price = variant.price if (variant and variant.price) else product.final_price
         item, created = CartItem.objects.get_or_create(
             cart=cart,
             product=product,
+            variant=variant,
             defaults={
                 'quantity': quantity,
-                'price': product.final_price,
+                'price': price,
             },
         )
         if not created:
             item.quantity = quantity
-            item.price = product.final_price
+            item.price = price
             item.save(update_fields=['quantity', 'price', 'updated_at'])
         return item
 
-    CartItem.objects.filter(cart=cart, product=product).delete()
+    CartItem.objects.filter(cart=cart, product=product, variant=variant).delete()
     return None
 
 
-def remove_product_from_user_cart(user, product):
+def remove_product_from_user_cart(user, product, variant=None):
     cart = Cart.objects.filter(user=user).first()
     if cart:
-        CartItem.objects.filter(cart=cart, product=product).delete()
+        qs = CartItem.objects.filter(cart=cart, product=product)
+        if variant is not None:
+            qs = qs.filter(variant=variant)
+        qs.delete()
 
 
 def clear_user_cart(user):
@@ -163,13 +180,14 @@ def create_order_from_cart(user, session, customer_info=None, voucher=None):
     with transaction.atomic():
         # Tính tổng trước khi giảm
         subtotal = Decimal('0')
-        order_items = []
+        order_items_to_create = []
         for item in cart_items:
-            product = item.product if hasattr(item, 'product') else item['product']
+            product  = item.product  if hasattr(item, 'product')  else item['product']
             quantity = item.quantity if hasattr(item, 'quantity') else item['quantity']
-            price = item.price if hasattr(item, 'price') else item['price']
+            price    = item.price    if hasattr(item, 'price')    else item['price']
+            variant  = getattr(item, 'variant', None) or (item.get('variant') if isinstance(item, dict) else None)
             subtotal += price * quantity
-            order_items.append((product, quantity, price))
+            order_items_to_create.append((product, variant, quantity, price))
 
         # Tính discount
         discount_amount = Decimal('0')
@@ -197,11 +215,12 @@ def create_order_from_cart(user, session, customer_info=None, voucher=None):
             OrderItem(
                 order=order,
                 product=product,
+                variant=variant,
                 product_name=product.name,
                 price=price,
                 quantity=quantity,
             )
-            for product, quantity, price in order_items
+            for product, variant, quantity, price in order_items_to_create
         ])
 
         # Tăng used_count sau khi order được tạo thành công

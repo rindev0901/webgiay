@@ -25,36 +25,31 @@ if TYPE_CHECKING:
 # ────────────────────────────────────────────────
 def deduct_stock(order: 'Order', actor: str = 'system') -> list[dict]:
     """
-    Trừ stock cho từng OrderItem.
-    - Tra variant qua product + SKU stored in order item.
-    - Dùng select_for_update để tránh race condition.
-    - Trả về list lỗi (rỗng = thành công).
+    Trừ stock cho từng OrderItem theo đúng variant được lưu.
+    Dùng select_for_update để tránh race condition.
+    Trả về list lỗi (rỗng = thành công).
     """
     errors = []
-    items = order.items.select_related('product').all()
+    items = order.items.select_related('product', 'variant', 'variant__size').all()
 
     with transaction.atomic():
         for item in items:
             if not item.product:
                 continue
 
-            # Lấy variant: ưu tiên variant gắn với order item (nếu có)
-            # Fallback: lấy variant bất kỳ của product còn stock
-            variants = (
-                ProductVariant.objects
-                .select_for_update()
-                .filter(product=item.product, is_active=True)
-                .order_by('size__order')
-            )
-
-            remaining = item.quantity
-            for variant in variants:
-                if remaining <= 0:
-                    break
-                deduct = min(variant.stock, remaining)
-                if deduct <= 0:
+            if item.variant:
+                # Trừ đúng variant được chọn
+                variant = (
+                    ProductVariant.objects
+                    .select_for_update()
+                    .filter(pk=item.variant.pk, is_active=True)
+                    .first()
+                )
+                if not variant:
+                    errors.append({'product': item.product_name, 'shortage': item.quantity})
                     continue
 
+                deduct = min(variant.stock, item.quantity)
                 _record_movement(
                     variant=variant,
                     movement_type=StockMovement.MovementType.OUT,
@@ -63,13 +58,38 @@ def deduct_stock(order: 'Order', actor: str = 'system') -> list[dict]:
                     note=f'Bán hàng - đơn {order.code}',
                     actor=actor,
                 )
-                remaining -= deduct
+                if deduct < item.quantity:
+                    errors.append({
+                        'product': item.product_name,
+                        'shortage': item.quantity - deduct,
+                    })
+            else:
+                # Fallback cũ: chia đều qua các variant còn hàng
+                variants = (
+                    ProductVariant.objects
+                    .select_for_update()
+                    .filter(product=item.product, is_active=True)
+                    .order_by('size__order')
+                )
+                remaining = item.quantity
+                for variant in variants:
+                    if remaining <= 0:
+                        break
+                    deduct = min(variant.stock, remaining)
+                    if deduct <= 0:
+                        continue
+                    _record_movement(
+                        variant=variant,
+                        movement_type=StockMovement.MovementType.OUT,
+                        quantity=-deduct,
+                        order_code=order.code,
+                        note=f'Bán hàng - đơn {order.code}',
+                        actor=actor,
+                    )
+                    remaining -= deduct
 
-            if remaining > 0:
-                errors.append({
-                    'product': item.product_name,
-                    'shortage': remaining,
-                })
+                if remaining > 0:
+                    errors.append({'product': item.product_name, 'shortage': remaining})
 
     return errors
 
@@ -147,25 +167,36 @@ def adjust_stock(
 # ────────────────────────────────────────────────
 def check_stock(cart_items: list) -> list[dict]:
     """
-    Kiểm tra xem các sản phẩm trong giỏ còn đủ hàng không.
-    cart_items: list of {'product': Product, 'quantity': int}
+    Kiểm tra từng item trong giỏ theo đúng variant được chọn.
+    cart_items: list of dict có key 'product', 'quantity', và tùy chọn 'variant'.
     Trả về list lỗi (rỗng = OK).
     """
     errors = []
     for item in cart_items:
-        product = item.get('product') or getattr(item, 'product', None)
-        quantity = item.get('quantity') or getattr(item, 'quantity', 0)
+        product  = item.get('product')  if isinstance(item, dict) else getattr(item, 'product', None)
+        quantity = item.get('quantity') if isinstance(item, dict) else getattr(item, 'quantity', 0)
+        variant  = item.get('variant')  if isinstance(item, dict) else getattr(item, 'variant', None)
+
         if not product:
             continue
 
-        total_stock = sum(
-            v.stock for v in
-            ProductVariant.objects.filter(product=product, is_active=True)
-        )
-        if total_stock < quantity:
+        if variant:
+            # Lấy stock mới nhất từ DB (tránh stale data)
+            fresh = ProductVariant.objects.filter(pk=variant.pk, is_active=True).first()
+            available = fresh.stock if fresh else 0
+            label = f'{product.name} (Size {variant.size.name})' if getattr(variant, 'size', None) else product.name
+        else:
+            # Fallback: tổng stock tất cả variant
+            available = sum(
+                v.stock for v in
+                ProductVariant.objects.filter(product=product, is_active=True)
+            )
+            label = product.name
+
+        if available < quantity:
             errors.append({
-                'product': product.name,
-                'available': total_stock,
+                'product': label,
+                'available': available,
                 'requested': quantity,
             })
     return errors

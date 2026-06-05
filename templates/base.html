@@ -4,9 +4,9 @@
 <head>
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>{% block title %}Dee Store - Giày Chính Hãng{% endblock %}</title>
+	<title>{% block title %}Dat Shoes - Giày Chính Hãng{% endblock %}</title>
 	<meta name="description"
-		content="Dee Store - Chuyên cung cấp giày authentic chính hãng: Nike, Adidas, Puma, MLB, New Balance và nhiều thương hiệu khác." />
+		content="Dat Shoes - Chuyên cung cấp giày authentic chính hãng: Nike, Adidas, Puma, MLB, New Balance và nhiều thương hiệu khác." />
 
 	<!-- Font Awesome icons -->
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
@@ -46,7 +46,7 @@
 			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 		}
 
-		/* Logo box kiểu Dee Store */
+		/* Logo box kiểu Dat Shoes */
 		.logo-box {
 			border: 2px solid #aaa;
 			padding: 6px 10px;
@@ -779,7 +779,7 @@
 	<header class="site-header">
 		<div style="max-width:1200px; margin:0 auto; padding:10px 16px; display:flex; align-items:center; gap:16px;">
 
-			<!-- Logo Dee Store dạng box viền -->
+			<!-- Logo Dat Shoes dạng box viền -->
 			<a href="{% url 'landing' %}" class="logo-box">
 				<span class="logo-icon"><i class="fas fa-shoe-prints"></i></span>
 			</a>
@@ -795,11 +795,16 @@
 
 			<!-- Utility links bên phải -->
 			<div class="header-util">
-				<!-- Hệ thống cửa hàng -->
-				<a href="#" class="util-link">
-					<i class="fas fa-store"></i>
-					<span>Hệ thống</span>
-					<span>cửa hàng</span>
+
+					<!-- Giỏ hàng -->
+				<a href="{% url 'cart:cart_detail' %}" class="cart-link">
+					<div class="cart-icon">
+						<i class="fas fa-shopping-cart"></i>
+						{% if cart_count > 0 %}
+						<span class="cart-badge">{{ cart_count }}</span>
+						{% endif %}
+					</div>
+					<span>{{ cart_count|default:0 }} Giỏ hàng</span>
 				</a>
 
 				<!-- Đăng nhập / Đăng ký -->
@@ -817,16 +822,7 @@
 				</a>
 				{% endif %}
 
-				<!-- Giỏ hàng -->
-				<a href="{% url 'cart:cart_detail' %}" class="cart-link">
-					<div class="cart-icon">
-						<i class="fas fa-shopping-cart"></i>
-						{% if cart_count > 0 %}
-						<span class="cart-badge">{{ cart_count }}</span>
-						{% endif %}
-					</div>
-					<span>{{ cart_count|default:0 }} Giỏ hàng</span>
-				</a>
+
 			</div>
 
 			<!-- Nút toggle mobile -->
@@ -945,30 +941,22 @@
 				<!-- Cột 1: Giới thiệu -->
 				<div class="footer-col">
 					<h5 class="footer-col-title">GIỚI THIỆU</h5>
-					<p>Dee Store chuyên cung cấp, order các loại giày authentic từ các hãng Nike, Adidas, Puma, MLB...
+					<p>Dat Shoes chuyên cung cấp, order các loại giày authentic từ các hãng Nike, Adidas, Puma, MLB...
 					</p>
 					<address>
 						<div style="display:flex; gap:8px; margin-top:10px;">
 							<i class="fas fa-map-marker-alt" style="color:#9ca3af; margin-top:2px; flex-shrink:0;"></i>
-							<span>Tầng 4 - Số nhà 3, ngách 69, ngõ 117 Thái Hà, Đống Đa, Hà Nội</span>
+							<span>941 Trần Xuân Soạn, Phường Tân Hưng, Quận 7</span>
 						</div>
 						<div style="display:flex; gap:8px; margin-top:8px;">
 							<i class="fas fa-phone" style="color:#9ca3af; flex-shrink:0;"></i>
-							<span>0848506666</span>
+							<span>0987654321</span>
 						</div>
 						<div style="display:flex; gap:8px; margin-top:6px;">
 							<i class="fas fa-envelope" style="color:#9ca3af; flex-shrink:0;"></i>
-							<span>bydeestore@gmail.com</span>
+							<span>datshoes@gmail.com</span>
 						</div>
 					</address>
-					<!-- Badge Đã thông báo Bộ Công Thương -->
-					<div class="bct-badge">
-						<div class="bct-icon"><i class="fas fa-shield-alt"></i></div>
-						<div class="bct-text">
-							<strong>ĐÃ THÔNG BÁO</strong>
-							BỘ CÔNG THƯƠNG
-						</div>
-					</div>
 				</div>
 
 				<!-- Cột 2: Chính sách -->
@@ -1009,7 +997,7 @@
 							</div>
 						</div>
 						<div class="fanpage-info">
-							<div class="fanpage-name">Deestore.vn - Giày Ch...</div>
+							<div class="fanpage-name">datshoes.vn - Giày Ch...</div>
 							<div class="fanpage-followers">5.306 người theo dõi</div>
 						</div>
 						<div class="fanpage-actions">
@@ -1027,7 +1015,7 @@
 
 		<!-- Copyright bar -->
 		<div class="footer-copyright">
-			<p>© Copyright 2026 By Deestore.vn. Powered by Haravan</p>
+			<p>© Copyright 2026 By datshoes.vn. Powered by Haravan</p>
 		</div>
 	</footer>
 

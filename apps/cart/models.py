@@ -23,16 +23,24 @@ class Cart(models.Model):
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey('products.Product', on_delete=models.CASCADE, related_name='cart_items')
+    variant = models.ForeignKey(
+        'products.ProductVariant',
+        on_delete=models.CASCADE,
+        related_name='cart_items',
+        null=True, blank=True,
+        verbose_name='Biến thể (size/màu)',
+    )
     quantity = models.PositiveIntegerField(default=1)
     price = models.DecimalField(max_digits=12, decimal_places=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('cart', 'product')
+        unique_together = ('cart', 'product', 'variant')
 
     def __str__(self):
-        return f'{self.product} x {self.quantity}'
+        variant_str = f' [{self.variant}]' if self.variant else ''
+        return f'{self.product}{variant_str} x {self.quantity}'
 
     @property
     def subtotal(self):
@@ -99,6 +107,11 @@ class Order(models.Model):
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey('products.Product', on_delete=models.SET_NULL, null=True, blank=True)
+    variant = models.ForeignKey(
+        'products.ProductVariant', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        verbose_name='Biến thể (size/màu)',
+    )
     product_name = models.CharField(max_length=200)
     price = models.DecimalField(max_digits=12, decimal_places=0)
     quantity = models.PositiveIntegerField(default=1)

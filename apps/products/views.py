@@ -33,7 +33,7 @@ def product_list(request: HttpRequest):
     # Filter by category
     if category_slug:
         products = products.filter(category__slug=category_slug)
-    
+
     # Filter by brand
     if brand_slug:
         products = products.filter(brand__slug=brand_slug)
@@ -41,14 +41,14 @@ def product_list(request: HttpRequest):
     # Price range filter
     min_price = None
     max_price = None
-    
+
     if price_range:
         try:
             parts = price_range.split('-')
             if len(parts) == 2:
                 min_price = int(parts[0])
                 max_price = int(parts[1])
-                
+
                 # Filter by final_price (discount_price or price)
                 products = products.filter(
                     Q(discount_price__gte=min_price, discount_price__lte=max_price) |
@@ -56,7 +56,7 @@ def product_list(request: HttpRequest):
                 )
         except (ValueError, IndexError):
             pass
-    
+
     # Manual min/max price filter (for custom input)
     manual_min = request.GET.get('min_price')
     manual_max = request.GET.get('max_price')
@@ -64,7 +64,7 @@ def product_list(request: HttpRequest):
         try:
             min_val = Decimal(manual_min)
             products = products.filter(
-                Q(discount_price__gte=min_val) | 
+                Q(discount_price__gte=min_val) |
                 Q(discount_price__isnull=True, price__gte=min_val)
             )
             min_price = int(min_val)
@@ -74,7 +74,7 @@ def product_list(request: HttpRequest):
         try:
             max_val = Decimal(manual_max)
             products = products.filter(
-                Q(discount_price__lte=max_val) | 
+                Q(discount_price__lte=max_val) |
                 Q(discount_price__isnull=True, price__lte=max_val)
             )
             max_price = int(max_val)
@@ -154,7 +154,7 @@ def landing(request: HttpRequest):
         'sneaker_products': sneaker_products,
         'brands': brands,
         'categories': categories,
-        'title': 'Dee Store - Giày Chính Hãng',
+        'title': 'Dat Shoes - Giày Chính Hãng',
     }
     return render(request, 'index.html', context)
 
@@ -294,7 +294,7 @@ def product_detail(request: HttpRequest, slug: str):
         'initial_color_id': url_color_id,
         'initial_size_id': url_size_id,
         'related_products': related_products,
-        'title': f'{product.name} - Dee Store',
+        'title': f'{product.name} - Dat Shoes',
     }
 
     # Track recently viewed (lưu session, tối đa 8 sản phẩm)

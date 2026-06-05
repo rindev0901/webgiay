@@ -38,32 +38,56 @@ def cart_detail(request):
     items = []
     total = Decimal('0')
 
+    from apps.products.models import ProductVariant
+
     if request.user.is_authenticated:
         for item in get_user_cart_items(request.user):
             price = item.price or item.product.final_price
             subtotal = price * item.quantity
+            # Stock chính xác theo variant, fallback tổng nếu không có
+            if item.variant:
+                stock = item.variant.stock
+            else:
+                stock = sum(
+                    v.stock for v in ProductVariant.objects.filter(
+                        product=item.product, is_active=True
+                    )
+                )
             items.append({
                 'product': item.product,
+                'variant': item.variant,
                 'quantity': item.quantity,
                 'price': price,
                 'subtotal': subtotal,
                 'cart_item': item,
+                'stock': stock,
             })
             total += subtotal
     else:
         cart = get_session_cart(request.session)
-        product_ids = [int(pid) for pid in cart.keys()] if cart else []
-        products = Product.objects.filter(id__in=product_ids)
-        for p in products:
-            pid = str(p.pk)
-            qty = int(cart.get(pid, {}).get('quantity', 0))
-            price = getattr(p, 'discount_price', None) or getattr(p, 'price', 0)
+        for key, payload in cart.items():
+            product_id = payload.get('product_id') or key
+            variant_id = payload.get('variant_id')
+            try:
+                p = Product.objects.get(pk=int(product_id))
+            except (Product.DoesNotExist, ValueError):
+                continue
+            qty = int(payload.get('quantity', 0))
+            variant = None
+            if variant_id:
+                variant = ProductVariant.objects.filter(pk=variant_id, product=p, is_active=True).first()
+            price = (variant.price if variant and variant.price else None) or getattr(p, 'discount_price', None) or p.price
             subtotal = price * qty
+            stock = variant.stock if variant else sum(
+                v.stock for v in ProductVariant.objects.filter(product=p, is_active=True)
+            )
             items.append({
                 'product': p,
+                'variant': variant,
                 'quantity': qty,
                 'price': price,
                 'subtotal': subtotal,
+                'stock': stock,
             })
             total += subtotal
 
@@ -87,12 +111,15 @@ def checkout(request):
     items = []
     total = Decimal('0')
 
+    from apps.products.models import ProductVariant
+
     if request.user.is_authenticated:
         for item in get_user_cart_items(request.user):
             price = item.price or item.product.final_price
             subtotal = price * item.quantity
             items.append({
                 'product': item.product,
+                'variant': item.variant,
                 'quantity': item.quantity,
                 'price': price,
                 'subtotal': subtotal,
@@ -101,15 +128,22 @@ def checkout(request):
             total += subtotal
     else:
         cart = get_session_cart(request.session)
-        product_ids = [int(pid) for pid in cart.keys()] if cart else []
-        products = Product.objects.filter(id__in=product_ids)
-        for p in products:
-            pid = str(p.pk)
-            qty = int(cart.get(pid, {}).get('quantity', 0))
-            price = getattr(p, 'discount_price', None) or getattr(p, 'price', 0)
+        for key, payload in cart.items():
+            product_id = payload.get('product_id') or key
+            variant_id = payload.get('variant_id')
+            try:
+                p = Product.objects.get(pk=int(product_id))
+            except (Product.DoesNotExist, ValueError):
+                continue
+            qty = int(payload.get('quantity', 0))
+            variant = None
+            if variant_id:
+                variant = ProductVariant.objects.filter(pk=variant_id, product=p, is_active=True).first()
+            price = (variant.price if variant and variant.price else None) or getattr(p, 'discount_price', None) or p.price
             subtotal = price * qty
             items.append({
                 'product': p,
+                'variant': variant,
                 'quantity': qty,
                 'price': price,
                 'subtotal': subtotal,
@@ -219,17 +253,59 @@ def add_to_cart(request, product_id):
     qty = int(request.POST.get('quantity', 1))
     product = get_object_or_404(Product, pk=product_id)
 
+    from apps.products.models import ProductVariant
+    variant_id = request.POST.get('variant_id')
+    variant = None
+    if variant_id:
+        variant = ProductVariant.objects.filter(pk=variant_id, product=product, is_active=True).first()
+
+    # Validate stock
+    if variant:
+        stock = variant.stock
+    else:
+        stock = sum(v.stock for v in ProductVariant.objects.filter(product=product, is_active=True))
+
     if request.user.is_authenticated:
-        add_product_to_user_cart(request.user, product, qty)
+        # Lấy qty đang có trong giỏ cho đúng variant
+        current_qty = 0
+        try:
+            from .models import Cart, CartItem
+            cart_obj = Cart.objects.get(user=request.user)
+            cart_item = CartItem.objects.get(cart=cart_obj, product=product, variant=variant)
+            current_qty = cart_item.quantity
+        except Exception:
+            pass
+
+        if current_qty + qty > stock:
+            messages.error(
+                request,
+                f'"{product.name}" chỉ còn {stock} sản phẩm '
+                f'(bạn đã có {current_qty} trong giỏ).'
+            )
+            next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or '/'
+            return redirect(next_url)
+
+        add_product_to_user_cart(request.user, product, qty, variant=variant)
     else:
         cart = _get_cart(request)
-        pid = str(product_id)
-        cart.setdefault(pid, {'quantity': 0})
-        cart[pid]['quantity'] = cart[pid].get('quantity', 0) + qty
+        # Session cart key theo variant để tách riêng từng size
+        key = f'{product_id}_{variant_id}' if variant_id else str(product_id)
+        current_qty = int(cart.get(key, {}).get('quantity', 0))
+
+        if current_qty + qty > stock:
+            messages.error(
+                request,
+                f'"{product.name}" chỉ còn {stock} sản phẩm '
+                f'(bạn đã có {current_qty} trong giỏ).'
+            )
+            next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or '/'
+            return redirect(next_url)
+
+        cart.setdefault(key, {'quantity': 0, 'product_id': product_id, 'variant_id': variant_id})
+        cart[key]['quantity'] = current_qty + qty
         request.session.modified = True
 
-    next_url = request.POST.get(
-        'next') or request.META.get('HTTP_REFERER') or '/'
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or '/'
     return redirect(next_url)
 
 
@@ -238,15 +314,29 @@ def update_cart(request, product_id):
     qty = int(request.POST.get('quantity', 0))
     product = get_object_or_404(Product, pk=product_id)
 
+    from apps.products.models import ProductVariant
+    variant_id = request.POST.get('variant_id')
+    variant = None
+    if variant_id:
+        variant = ProductVariant.objects.filter(pk=variant_id, product=product, is_active=True).first()
+
+    if qty > 0 and variant:
+        if qty > variant.stock:
+            messages.error(
+                request,
+                f'"{product.name}" size {variant.size.name} chỉ còn {variant.stock} sản phẩm. Đã điều chỉnh.'
+            )
+            qty = variant.stock
+
     if request.user.is_authenticated:
-        set_user_cart_item_quantity(request.user, product, qty)
+        set_user_cart_item_quantity(request.user, product, qty, variant=variant)
     else:
         cart = _get_cart(request)
-        pid = str(product_id)
+        key = f'{product_id}_{variant_id}' if variant_id else str(product_id)
         if qty > 0:
-            cart[pid] = {'quantity': qty}
+            cart[key] = {'quantity': qty, 'product_id': product_id, 'variant_id': variant_id}
         else:
-            cart.pop(pid, None)
+            cart.pop(key, None)
         request.session.modified = True
 
     return redirect('cart:cart_detail')
@@ -255,10 +345,19 @@ def update_cart(request, product_id):
 def remove_from_cart(request, product_id):
     product = get_object_or_404(Product, pk=product_id)
 
+    from apps.products.models import ProductVariant
+    variant_id = request.POST.get('variant_id') or request.GET.get('variant_id')
+    variant = None
+    if variant_id:
+        variant = ProductVariant.objects.filter(pk=variant_id, product=product).first()
+
     if request.user.is_authenticated:
-        remove_product_from_user_cart(request.user, product)
+        remove_product_from_user_cart(request.user, product, variant=variant)
     else:
         cart = _get_cart(request)
+        key = f'{product_id}_{variant_id}' if variant_id else str(product_id)
+        cart.pop(key, None)
+        # fallback xóa cả key cũ dạng str(product_id)
         cart.pop(str(product_id), None)
         request.session.modified = True
 
