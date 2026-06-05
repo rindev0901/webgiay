@@ -134,8 +134,9 @@ MOMO_REQUEST_TYPE = os.getenv('MOMO_REQUEST_TYPE', 'captureWallet')
 # ====================== SEPAY PAYMENT ======================
 SEPAY_MERCHANT    = os.getenv('SEPAY_MERCHANT', 'SP-TEST-NH52523A')
 SEPAY_SECRET_KEY  = os.getenv('SEPAY_SECRET_KEY', 'spsk_test_HCxYP62hwrqSsu1QaxR2QyJAA6Ke5pmQ')
-# Sandbox endpoint — đổi thành https://pay.sepay.vn/v1/checkout/init cho production
-SEPAY_CHECKOUT_URL = os.getenv('SEPAY_CHECKOUT_URL', 'https://pay.sepay.vn/v1/checkout/init')
+# Sandbox: https://pgapi-sandbox.sepay.vn/v1/checkout/init
+# Production: https://pgapi.sepay.vn/v1/checkout/init
+SEPAY_CHECKOUT_URL = os.getenv('SEPAY_CHECKOUT_URL', 'https://pgapi-sandbox.sepay.vn/v1/checkout/init')
 
 # ====================== REST FRAMEWORK CONFIG ======================
 REST_FRAMEWORK = {
@@ -149,4 +150,22 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ]
+}
+
+# ====================== LOGGING ======================
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'apps.cart.sepay': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
 }

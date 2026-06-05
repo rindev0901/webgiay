@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Đang chuyển hướng đến SePay...{% endblock %}
+{% block title %}Dang chuyen huong den SePay...{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -19,43 +19,52 @@
   animation: spin .8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-.redirect-title {
-  font-size: 16px; font-weight: 700; color: #111;
-}
-.redirect-sub {
-  font-size: 13px; color: #888;
-}
+.redirect-title { font-size: 16px; font-weight: 700; color: #111; }
+.redirect-sub   { font-size: 13px; color: #888; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="redirect-wrap">
   <div class="redirect-spinner"></div>
-  <div class="redirect-title">Đang chuyển hướng đến cổng thanh toán SePay...</div>
-  <div class="redirect-sub">Vui lòng không đóng trang này.</div>
+  <div class="redirect-title">Dang chuyen huong den cong thanh toan SePay...</div>
+  <div class="redirect-sub">Vui long khong dong trang nay.</div>
 
-  {# Form theo đúng thứ tự SePay quy định — KHÔNG đổi thứ tự các input #}
+  {#
+    Thu tu input PHAI khop voi thu tu field khi tao signature.
+    Theo tai lieu SePay - KHONG doi thu tu nay.
+  #}
   <form id="sepayForm" action="{{ form_data.checkout_url }}" method="POST" style="display:none;">
+
     <input type="hidden" name="order_amount"        value="{{ form_data.order_amount }}">
-    <input type="hidden" name="merchant"             value="{{ form_data.merchant }}">
-    <input type="hidden" name="currency"             value="{{ form_data.currency }}">
-    <input type="hidden" name="operation"            value="{{ form_data.operation }}">
-    <input type="hidden" name="order_description"    value="{{ form_data.order_description }}">
+    <input type="hidden" name="merchant"            value="{{ form_data.merchant }}">
+    <input type="hidden" name="currency"            value="{{ form_data.currency }}">
+    <input type="hidden" name="operation"           value="{{ form_data.operation }}">
+    <input type="hidden" name="order_description"   value="{{ form_data.order_description }}">
     <input type="hidden" name="order_invoice_number" value="{{ form_data.order_invoice_number }}">
+
     {% if form_data.customer_id %}
-    <input type="hidden" name="customer_id"          value="{{ form_data.customer_id }}">
+    <input type="hidden" name="customer_id"         value="{{ form_data.customer_id }}">
     {% endif %}
-    <input type="hidden" name="success_url"          value="{{ form_data.success_url }}">
-    <input type="hidden" name="error_url"            value="{{ form_data.error_url }}">
-    <input type="hidden" name="cancel_url"           value="{{ form_data.cancel_url }}">
-    <input type="hidden" name="signature"            value="{{ form_data.signature }}">
+
+    {% if form_data.payment_method %}
+    <input type="hidden" name="payment_method"      value="{{ form_data.payment_method }}">
+    {% endif %}
+
+    <input type="hidden" name="success_url"         value="{{ form_data.success_url }}">
+    <input type="hidden" name="error_url"           value="{{ form_data.error_url }}">
+    <input type="hidden" name="cancel_url"          value="{{ form_data.cancel_url }}">
+
+    <input type="hidden" name="signature"           value="{{ form_data.signature }}">
+
   </form>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  // Tự submit sau 500ms để user thấy spinner
-  setTimeout(() => document.getElementById('sepayForm').submit(), 500);
+  setTimeout(function() {
+    document.getElementById('sepayForm').submit();
+  }, 600);
 </script>
 {% endblock %}
