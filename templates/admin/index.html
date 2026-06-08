@@ -363,83 +363,171 @@ const dataRev12m     = {{ chart_revenue_12m|safe }};
 const dataStatus     = {{ chart_status|safe }};
 const dataTopProd    = {{ chart_top_products|safe }};
 
-// ── Defaults ──────────────────────────────────────────────────
-Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
-Chart.defaults.font.size = 12;
-Chart.defaults.color = '#6b7280';
+// ── Detect dark mode (Unfold adds .dark on <html>) ────────────
+const isDark = () => document.documentElement.classList.contains('dark');
 
-// ── Revenue 30d line ──────────────────────────────────────────
-new Chart(document.getElementById('chartRev30d'), {
+// Watch for dark mode toggle
+const darkObserver = new MutationObserver(() => {
+    updateChartColors();
+});
+darkObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+// ── Colors helper ─────────────────────────────────────────────
+function getColors() {
+    const dark = isDark();
+    return {
+        gridColor:    dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+        tickColor:    dark ? '#9ca3af' : '#6b7280',
+        legendColor:  dark ? '#d1d5db' : '#374151',
+        tooltipBg:    dark ? '#1f2937' : '#ffffff',
+        tooltipText:  dark ? '#f9fafb' : '#111827',
+        tooltipBorder:dark ? '#374151' : '#e5e7eb',
+        primary:      '#8b0000',
+        primaryLight: dark ? 'rgba(139,0,0,0.25)' : 'rgba(139,0,0,0.12)',
+        amber:        '#f59e0b',
+        blue:         dark ? '#60a5fa' : '#2563eb',
+    };
+}
+
+// ── Global defaults (reapplied on toggle) ─────────────────────
+function applyChartDefaults() {
+    const c = getColors();
+    Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+    Chart.defaults.font.size = 12;
+    Chart.defaults.color = c.tickColor;
+    Chart.defaults.plugins.tooltip.backgroundColor = c.tooltipBg;
+    Chart.defaults.plugins.tooltip.titleColor      = c.tooltipText;
+    Chart.defaults.plugins.tooltip.bodyColor       = c.tooltipText;
+    Chart.defaults.plugins.tooltip.borderColor     = c.tooltipBorder;
+    Chart.defaults.plugins.tooltip.borderWidth     = 1;
+}
+applyChartDefaults();
+
+// ── Shared scale config ───────────────────────────────────────
+function scaleConfig() {
+    const c = getColors();
+    return {
+        x: { grid: { display: false }, ticks: { color: c.tickColor } },
+        y: { grid: { color: c.gridColor }, beginAtZero: true, ticks: { color: c.tickColor } }
+    };
+}
+
+// ── Charts ────────────────────────────────────────────────────
+const chartRev30d = new Chart(document.getElementById('chartRev30d'), {
     type: 'line',
-    data: dataRev30d,
+    data: {
+        ...dataRev30d,
+        datasets: dataRev30d.datasets.map(d => ({
+            ...d,
+            backgroundColor: getColors().primaryLight,
+            borderColor: '#8b0000',
+        }))
+    },
     options: {
         responsive: true,
         plugins: { legend: { display: false } },
         scales: {
-            x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
-            y: { grid: { color: 'rgba(0,0,0,0.05)' }, beginAtZero: true,
-                 ticks: { callback: v => v.toLocaleString('vi') + 'K' } }
+            ...scaleConfig(),
+            x: { ...scaleConfig().x, ticks: { maxTicksLimit: 8, color: getColors().tickColor } },
+            y: { ...scaleConfig().y, ticks: { callback: v => v.toLocaleString('vi') + 'K', color: getColors().tickColor } }
         }
     }
 });
 
-// ── Orders 30d bar ────────────────────────────────────────────
-new Chart(document.getElementById('chartOrders30d'), {
+const chartOrders30d = new Chart(document.getElementById('chartOrders30d'), {
     type: 'bar',
-    data: dataOrders30d,
+    data: {
+        ...dataOrders30d,
+        datasets: dataOrders30d.datasets.map(d => ({ ...d, backgroundColor: '#8b0000' }))
+    },
     options: {
         responsive: true,
         plugins: { legend: { display: false } },
         scales: {
-            x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
-            y: { grid: { color: 'rgba(0,0,0,0.05)' }, beginAtZero: true,
-                 ticks: { stepSize: 1 } }
+            ...scaleConfig(),
+            x: { ...scaleConfig().x, ticks: { maxTicksLimit: 8, color: getColors().tickColor } },
+            y: { ...scaleConfig().y, ticks: { stepSize: 1, color: getColors().tickColor } }
         }
     }
 });
 
-// ── Revenue 12m bar+line ──────────────────────────────────────
-new Chart(document.getElementById('chartRev12m'), {
+const chartRev12m = new Chart(document.getElementById('chartRev12m'), {
     type: 'bar',
-    data: dataRev12m,
+    data: {
+        ...dataRev12m,
+        datasets: [
+            { ...dataRev12m.datasets[0], backgroundColor: '#8b0000' },
+            { ...dataRev12m.datasets[1], borderColor: '#f59e0b', borderWidth: 2 },
+        ]
+    },
     options: {
         responsive: true,
-        plugins: { legend: { position: 'top' } },
+        plugins: { legend: { position: 'top', labels: { color: getColors().legendColor } } },
         scales: {
-            x: { grid: { display: false } },
-            y: { grid: { color: 'rgba(0,0,0,0.05)' }, beginAtZero: true,
-                 ticks: { callback: v => v.toLocaleString('vi') + 'K' } }
+            ...scaleConfig(),
+            y: { ...scaleConfig().y, ticks: { callback: v => v.toLocaleString('vi') + 'K', color: getColors().tickColor } }
         }
     }
 });
 
-// ── Order status doughnut ─────────────────────────────────────
-new Chart(document.getElementById('chartStatus'), {
+const chartStatus = new Chart(document.getElementById('chartStatus'), {
     type: 'doughnut',
     data: dataStatus,
     options: {
         responsive: true,
         plugins: {
-            legend: { position: 'bottom' },
+            legend: { position: 'bottom', labels: { color: getColors().legendColor } },
         },
         cutout: '65%',
     }
 });
 
-// ── Top products bar ──────────────────────────────────────────
-new Chart(document.getElementById('chartTopProducts'), {
+const chartTopProd = new Chart(document.getElementById('chartTopProducts'), {
     type: 'bar',
-    data: dataTopProd,
+    data: {
+        ...dataTopProd,
+        datasets: dataTopProd.datasets.map(d => ({ ...d, backgroundColor: '#8b0000' }))
+    },
     options: {
         indexAxis: 'y',
         responsive: true,
         plugins: { legend: { display: false } },
         scales: {
-            x: { grid: { color: 'rgba(0,0,0,0.05)' }, beginAtZero: true,
-                 ticks: { stepSize: 1 } },
-            y: { grid: { display: false } }
+            x: { grid: { color: getColors().gridColor }, beginAtZero: true,
+                 ticks: { stepSize: 1, color: getColors().tickColor } },
+            y: { grid: { display: false }, ticks: { color: getColors().tickColor } }
         }
     }
 });
+
+// ── Re-apply colors when dark mode toggled ────────────────────
+function updateChartColors() {
+    applyChartDefaults();
+    const c = getColors();
+    const s = scaleConfig();
+    const charts = [chartRev30d, chartOrders30d, chartRev12m, chartStatus, chartTopProd];
+
+    chartRev30d.data.datasets[0].backgroundColor = c.primaryLight;
+    chartRev30d.options.scales.x.ticks.color = c.tickColor;
+    chartRev30d.options.scales.y.ticks.color = c.tickColor;
+    chartRev30d.options.scales.y.grid.color  = c.gridColor;
+
+    chartOrders30d.options.scales.x.ticks.color = c.tickColor;
+    chartOrders30d.options.scales.y.ticks.color = c.tickColor;
+    chartOrders30d.options.scales.y.grid.color  = c.gridColor;
+
+    chartRev12m.options.scales.x.ticks.color = c.tickColor;
+    chartRev12m.options.scales.y.ticks.color = c.tickColor;
+    chartRev12m.options.scales.y.grid.color  = c.gridColor;
+    chartRev12m.options.plugins.legend.labels.color = c.legendColor;
+
+    chartStatus.options.plugins.legend.labels.color = c.legendColor;
+
+    chartTopProd.options.scales.x.ticks.color = c.tickColor;
+    chartTopProd.options.scales.y.ticks.color = c.tickColor;
+    chartTopProd.options.scales.x.grid.color  = c.gridColor;
+
+    charts.forEach(chart => chart.update());
+}
 </script>
 {% endblock %}
