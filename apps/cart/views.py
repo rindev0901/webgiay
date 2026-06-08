@@ -23,7 +23,7 @@ from .services import (
     remove_product_from_user_cart,
     set_user_cart_item_quantity,
 )
-from apps.products.inventory import check_stock, deduct_stock, restore_stock
+from apps.products.inventory import check_stock, restore_stock
 from .forms import CheckoutForm
 from .models import Order, Voucher
 from django.contrib.auth.decorators import login_required
@@ -449,32 +449,41 @@ def momo_return(request):
         return redirect('cart:cart_detail')
 
     if verify_momo_signature(payload) and get_payment_result_code(payload) == 0:
-        order.status = order.Status.PAID
-        order.momo_trans_id = payload.get('transId', '')
-        order.momo_result_code = get_payment_result_code(payload)
-        order.momo_message = payload.get('message', '')
-        order.save(update_fields=['status', 'momo_trans_id', 'momo_result_code', 'momo_message', 'updated_at'])
-        # Trừ tồn kho
-        deduct_stock(order, actor='momo_return')
-        # Log status
-        order.log_status(Order.Status.PAID, note='Thanh toán MoMo thành công', actor='momo_return')
-        order.log_status(Order.Status.PROCESSING, note='Đơn hàng đang được xử lý', actor='system')
-        order.status = Order.Status.PROCESSING
-        order.save(update_fields=['status', 'updated_at'])
+        # Chỉ cập nhật trạng thái PAID — KHÔNG trừ tồn kho
+        # Tồn kho sẽ được trừ khi admin duyệt đơn hàng
+        if order.status not in (
+            Order.Status.PAID, Order.Status.PROCESSING,
+            Order.Status.SHIPPED, Order.Status.DELIVERED,
+        ):
+            order.status = Order.Status.PAID
+            order.payment_status = Order.PaymentStatus.PAID
+            order.momo_trans_id = payload.get('transId', '')
+            order.momo_result_code = get_payment_result_code(payload)
+            order.momo_message = payload.get('message', '')
+            order.save(update_fields=[
+                'status', 'payment_status',
+                'momo_trans_id', 'momo_result_code', 'momo_message', 'updated_at'
+            ])
+            order.log_status(
+                Order.Status.PAID,
+                note='Thanh toán MoMo thành công — chờ admin duyệt',
+                actor='momo_return'
+            )
+            send_order_confirmation(order, request)
+
         clear_session_cart(request.session)
         if request.user.is_authenticated:
             clear_user_cart(request.user)
-        # Gửi email xác nhận
-        send_order_confirmation(order, request)
         messages.success(request, f'Đơn hàng {order.code} đã thanh toán thành công bằng MoMo.')
     else:
-        order.status = order.Status.FAILED
+        order.status = Order.Status.FAILED
+        order.payment_status = Order.PaymentStatus.FAILED
         order.momo_result_code = get_payment_result_code(payload)
         order.momo_message = payload.get('message', 'Thanh toán MoMo thất bại')
-        order.save(update_fields=['status', 'momo_result_code', 'momo_message', 'updated_at'])
+        order.save(update_fields=['status', 'payment_status', 'momo_result_code', 'momo_message', 'updated_at'])
         messages.error(request, f'Thanh toán MoMo thất bại cho đơn hàng {order.code}.')
 
-    return redirect('cart:cart_detail')
+    return redirect('cart:order_detail', code=order.code)
 
 
 @csrf_exempt
@@ -490,21 +499,26 @@ def momo_ipn(request):
         return JsonResponse({'resultCode': 1, 'message': 'Order not found'})
 
     if verify_momo_signature(payload) and get_payment_result_code(payload) == 0:
-        order.status = order.Status.PAID
-        order.momo_trans_id = payload.get('transId', '')
-        order.momo_result_code = get_payment_result_code(payload)
-        order.momo_message = payload.get('message', '')
-        order.save(update_fields=['status', 'momo_trans_id', 'momo_result_code', 'momo_message', 'updated_at'])
-        deduct_stock(order, actor='momo_ipn')
-        order.log_status(Order.Status.PAID, note='Thanh toán MoMo (IPN)', actor='momo_ipn')
-        order.log_status(Order.Status.PROCESSING, note='Đơn hàng đang được xử lý', actor='system')
-        order.status = Order.Status.PROCESSING
-        order.save(update_fields=['status', 'updated_at'])
-        clear_session_cart(request.session)
-        if request.user.is_authenticated:
-            clear_user_cart(request.user)
-        # Gửi email xác nhận (IPN không có request context đầy đủ nhưng vẫn gửi được)
-        send_order_confirmation(order)
+        # Chỉ cập nhật trạng thái PAID — KHÔNG trừ tồn kho
+        if order.status not in (
+            Order.Status.PAID, Order.Status.PROCESSING,
+            Order.Status.SHIPPED, Order.Status.DELIVERED,
+        ):
+            order.status = Order.Status.PAID
+            order.payment_status = Order.PaymentStatus.PAID
+            order.momo_trans_id = payload.get('transId', '')
+            order.momo_result_code = get_payment_result_code(payload)
+            order.momo_message = payload.get('message', '')
+            order.save(update_fields=[
+                'status', 'payment_status',
+                'momo_trans_id', 'momo_result_code', 'momo_message', 'updated_at'
+            ])
+            order.log_status(
+                Order.Status.PAID,
+                note='Thanh toán MoMo (IPN) — chờ admin duyệt',
+                actor='momo_ipn'
+            )
+            send_order_confirmation(order)
         return JsonResponse({'resultCode': 0, 'message': 'Success'})
 
     order.status = order.Status.FAILED
@@ -541,36 +555,75 @@ def order_detail(request, code):
 
 def order_qr_confirm(request, code):
     """
-    Public page shown when QR code is scanned.
-    Shows full order info + 'Đã nhận hàng' button.
-    No login required — shipper/anyone can scan.
+    Trang xác nhận nhận hàng qua QR.
+    - Chủ đơn (order.user): được xác nhận
+    - User có quyền view_order hoặc change_order (shipper/staff): được xác nhận
+    - Người khác: chỉ xem, không xác nhận
     """
     order = get_object_or_404(Order, code=code)
-
-    # Already confirmed — show read-only info
     already_confirmed = order.delivery_confirmed
 
-    if request.method == 'POST' and not already_confirmed:
-        # Validate: can only confirm if status is SHIPPED or PAID
-        if order.status in (Order.Status.SHIPPED, Order.Status.PAID, Order.Status.PROCESSING):
-            from django.utils import timezone
-            order.status = Order.Status.DELIVERED
-            order.delivered_at = timezone.now()
-            order.delivery_confirmed = True
-            order.save(update_fields=['status', 'delivered_at', 'delivery_confirmed', 'updated_at'])
-            order.log_status(
-                Order.Status.DELIVERED,
-                note='Khách hàng xác nhận đã nhận hàng qua QR',
-                actor='customer_qr'
-            )
-            messages.success(request, 'Xác nhận nhận hàng thành công!')
-        else:
+    valid_statuses = (Order.OrderStatus.SHIPPED, Order.OrderStatus.PROCESSING)
+
+    is_owner   = request.user.is_authenticated and order.user and request.user == order.user
+    is_shipper = (
+        request.user.is_authenticated
+        and (
+            request.user.has_perm('cart.view_order')
+            or request.user.has_perm('cart.change_order')
+        )
+    )
+
+    can_confirm = (
+        (is_owner or is_shipper)
+        and not already_confirmed
+        and order.order_status in valid_statuses
+    )
+
+    if request.method == 'POST':
+        if not request.user.is_authenticated:
+            from django.contrib.auth.views import redirect_to_login
+            return redirect_to_login(request.get_full_path())
+
+        if not (is_owner or is_shipper):
+            messages.error(request, 'Bạn không có quyền xác nhận đơn hàng này.')
+            return redirect('cart:order_qr_confirm', code=code)
+
+        if already_confirmed:
+            messages.warning(request, 'Đơn hàng này đã được xác nhận nhận hàng trước đó.')
+            return redirect('cart:order_qr_confirm', code=code)
+
+        if order.order_status not in valid_statuses:
             messages.error(request, 'Đơn hàng chưa ở trạng thái có thể xác nhận.')
+            return redirect('cart:order_qr_confirm', code=code)
+
+        from django.utils import timezone
+        order.order_status = Order.OrderStatus.DELIVERED
+        order.status = Order.Status.DELIVERED
+        order.delivered_at = timezone.now()
+        order.delivery_confirmed = True
+        order.save(update_fields=[
+            'order_status', 'status', 'delivered_at', 'delivery_confirmed', 'updated_at'
+        ])
+
+        actor_label = (
+            f'Shipper {request.user.username}' if is_shipper and not is_owner
+            else f'Khách hàng {request.user.username}'
+        )
+        order.log_status(
+            Order.Status.DELIVERED,
+            note=f'{actor_label} xác nhận đã nhận hàng qua QR',
+            actor=str(request.user)
+        )
+        messages.success(request, 'Xác nhận nhận hàng thành công!')
         return redirect('cart:order_qr_confirm', code=code)
 
     return render(request, 'orders/order_qr_confirm.html', {
         'order': order,
         'already_confirmed': already_confirmed,
+        'can_confirm': can_confirm,
+        'is_owner': is_owner,
+        'is_shipper': is_shipper,
     })
 
 
@@ -832,27 +885,31 @@ def sepay_ipn(request):
 
     if notification_type == 'ORDER_PAID':
         transaction_data = data.get('transaction', {})
-        order.status = Order.Status.PAID
-        order.sepay_transaction_id = transaction_data.get('transaction_id', '')
-        order.save(update_fields=[
-            'status', 'sepay_transaction_id', 'sepay_status',
-            'sepay_ipn_payload', 'updated_at',
-        ])
-        deduct_stock(order, actor='sepay_ipn')
-        order.log_status(Order.Status.PAID, note='Thanh toán SePay (IPN)', actor='sepay_ipn')
-        order.log_status(Order.Status.PROCESSING, note='Đơn hàng đang được xử lý', actor='system')
-        order.status = Order.Status.PROCESSING
-        order.save(update_fields=['status', 'updated_at'])
-        clear_session_cart(request.session)
-        if order.user:
-            clear_user_cart(order.user)
-        # Gửi email xác nhận
-        send_order_confirmation(order)
+        # Chỉ cập nhật trạng thái PAID — KHÔNG trừ tồn kho
+        if order.status not in (
+            Order.Status.PAID, Order.Status.PROCESSING,
+            Order.Status.SHIPPED, Order.Status.DELIVERED,
+        ):
+            order.status = Order.Status.PAID
+            order.payment_status = Order.PaymentStatus.PAID
+            order.sepay_transaction_id = transaction_data.get('transaction_id', '')
+            order.save(update_fields=[
+                'status', 'payment_status', 'sepay_transaction_id',
+                'sepay_status', 'sepay_ipn_payload', 'updated_at',
+            ])
+            order.log_status(
+                Order.Status.PAID,
+                note='Thanh toán SePay (IPN) — chờ admin duyệt',
+                actor='sepay_ipn'
+            )
+            send_order_confirmation(order)
+        else:
+            order.save(update_fields=['sepay_status', 'sepay_ipn_payload', 'updated_at'])
 
     elif notification_type == 'TRANSACTION_VOID':
         order.status = Order.Status.CANCELLED
-        order.save(update_fields=['status', 'sepay_status', 'sepay_ipn_payload', 'updated_at'])
-        restore_stock(order, actor='sepay_ipn')
+        order.order_status = Order.OrderStatus.CANCELLED
+        order.save(update_fields=['status', 'order_status', 'sepay_status', 'sepay_ipn_payload', 'updated_at'])
 
     else:
         order.save(update_fields=['sepay_status', 'sepay_ipn_payload', 'updated_at'])

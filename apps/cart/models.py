@@ -53,6 +53,20 @@ class CartItem(models.Model):
 
 # ── Order ─────────────────────────────────────────────────────
 class Order(models.Model):
+
+    class PaymentStatus(models.TextChoices):
+        PENDING = 'pending', 'Chờ thanh toán'
+        PAID    = 'paid',    'Đã thanh toán'
+        FAILED  = 'failed',  'Thanh toán thất bại'
+
+    class OrderStatus(models.TextChoices):
+        NEW        = 'new',        'Mới tạo'
+        PROCESSING = 'processing', 'Đang xử lý'
+        SHIPPED    = 'shipped',    'Đang giao hàng'
+        DELIVERED  = 'delivered',  'Đã giao hàng'
+        CANCELLED  = 'cancelled',  'Đã hủy'
+
+    # Legacy — kept for backward compat with existing data/views, maps to payment_status
     class Status(models.TextChoices):
         PENDING     = 'pending',     'Chờ thanh toán'
         PAID        = 'paid',        'Đã thanh toán'
@@ -86,7 +100,28 @@ class Order(models.Model):
     voucher      = models.ForeignKey('Voucher', on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
     voucher_code = models.CharField(max_length=50, blank=True, verbose_name='Mã voucher (lưu lại)')
 
-    status         = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    # ── Tách đôi: thanh toán vs đơn hàng ─────────────────────
+    payment_status = models.CharField(
+        max_length=20,
+        choices=PaymentStatus.choices,
+        default=PaymentStatus.PENDING,
+        verbose_name='Trạng thái thanh toán',
+    )
+    order_status = models.CharField(
+        max_length=20,
+        choices=OrderStatus.choices,
+        default=OrderStatus.NEW,
+        verbose_name='Trạng thái đơn hàng',
+    )
+
+    # Legacy field — kept to avoid breaking existing code/migrations
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        verbose_name='Trạng thái (legacy)',
+    )
+
     payment_method = models.CharField(max_length=20, choices=PaymentMethod.choices, default=PaymentMethod.MOMO)
 
     # ── Delivery confirmation ──────────────────────

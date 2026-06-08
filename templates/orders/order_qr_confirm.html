@@ -308,20 +308,40 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; min-heig
       <p>Cảm ơn bạn đã mua sắm tại Dat Shoes.<br>
       {% if order.delivered_at %}Xác nhận lúc: {{ order.delivered_at|date:"d/m/Y H:i" }}{% endif %}</p>
     </div>
-    {% elif order.status == 'shipped' or order.status == 'processing' or order.status == 'paid' %}
+
+    {% elif can_confirm %}
     <form method="post">
       {% csrf_token %}
+      {% if is_shipper and not is_owner %}
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#1e40af;">
+        <strong>👷 Shipper:</strong> Bạn đang xác nhận giao hàng thành công cho đơn này.
+      </div>
+      {% endif %}
       <button type="submit" class="btn-confirm">
         <i class="fas fa-check-circle" style="font-size:20px;"></i>
-        Đã nhận được hàng
+        {% if is_shipper and not is_owner %}Xác nhận giao hàng thành công{% else %}Đã nhận được hàng{% endif %}
       </button>
     </form>
     <div class="confirm-warning">
-      ⚠️ Chỉ bấm khi bạn đã <strong>nhận được hàng</strong>. Hành động này không thể hoàn tác.
+      ⚠️ Chỉ bấm khi hàng đã được <strong>giao tận tay</strong>. Hành động này không thể hoàn tác.
+    </div>
+
+    {% elif not user.is_authenticated %}
+    <div class="confirm-warning" style="text-align:center;">
+      <p style="margin-bottom:12px;">Bạn cần đăng nhập để xác nhận nhận hàng.</p>
+      <a href="{% url 'accounts:login' %}?next={{ request.path }}"
+         style="display:inline-block;padding:12px 28px;background:#8b0000;color:white;border-radius:4px;text-decoration:none;font-weight:700;">
+        Đăng nhập
+      </a>
+    </div>
+
+    {% elif order.user and user != order.user and not is_shipper %}
+    <div class="confirm-warning" style="background:#fee2e2;border-color:#fecaca;color:#991b1b;">
+      🔒 Chỉ chủ đơn hàng hoặc shipper (có quyền xem/sửa đơn hàng) mới có thể xác nhận.
     </div>
     {% else %}
     <div class="confirm-warning">
-      Đơn hàng chưa ở trạng thái có thể xác nhận giao hàng ({{ order.get_status_display }}).
+      Đơn hàng chưa ở trạng thái có thể xác nhận ({{ order.get_order_status_display }}).
     </div>
     {% endif %}
   </div>
