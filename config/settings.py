@@ -146,6 +146,7 @@ UNFOLD = {
     "SITE_HEADER": "Dat Shoes Admin",
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
+    "DASHBOARD_CALLBACK": "apps.cart.dashboard.dashboard_callback",
 
     "STYLES": [
         lambda request: static("css/main.css"),

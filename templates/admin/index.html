@@ -1,0 +1,445 @@
+{% extends 'admin/base.html' %}
+{% load i18n %}
+
+{% block title %}Dashboard | Dat Shoes Admin{% endblock %}
+
+{% block branding %}
+{% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+<style>
+/* ── Dashboard layout ── */
+.dash-wrapper { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+/* KPI grid */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+@media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px)  { .kpi-grid { grid-template-columns: 1fr; } }
+
+.kpi-card {
+    background: var(--color-base-0, white);
+    border: 1px solid var(--color-base-200, #e5e7eb);
+    border-radius: 8px;
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+}
+.kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--kpi-color, #8b0000);
+}
+.kpi-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--color-base-500, #6b7280);
+    margin-bottom: 8px;
+}
+.kpi-value {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--color-base-900, #111);
+    line-height: 1;
+    margin-bottom: 8px;
+}
+.kpi-unit { font-size: 13px; font-weight: 400; color: var(--color-base-400, #9ca3af); margin-left: 2px; }
+.kpi-change {
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+.kpi-change.up   { background: #dcfce7; color: #166534; }
+.kpi-change.down { background: #fee2e2; color: #991b1b; }
+.kpi-change.neutral { background: var(--color-base-100, #f3f4f6); color: var(--color-base-500, #6b7280); }
+
+/* Chart grid */
+.chart-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+.chart-grid-3 {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+@media (max-width: 1024px) {
+    .chart-grid-2, .chart-grid-3 { grid-template-columns: 1fr; }
+}
+
+.dash-card {
+    background: var(--color-base-0, white);
+    border: 1px solid var(--color-base-200, #e5e7eb);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.dash-card-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--color-base-100, #f3f4f6);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.dash-card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-base-800, #1f2937);
+}
+.dash-card-sub {
+    font-size: 11px;
+    color: var(--color-base-400, #9ca3af);
+}
+.dash-card-body { padding: 16px 20px; }
+
+/* Orders table */
+.orders-table { width: 100%; border-collapse: collapse; }
+.orders-table th {
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-base-500, #6b7280);
+    border-bottom: 1px solid var(--color-base-100, #f3f4f6);
+}
+.orders-table td {
+    padding: 11px 12px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--color-base-50, #f9fafb);
+    color: var(--color-base-700, #374151);
+}
+.orders-table tr:last-child td { border-bottom: none; }
+.orders-table tr:hover td { background: var(--color-base-50, #f9fafb); }
+
+.badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.badge-pending  { background: #fef3c7; color: #92400e; }
+.badge-paid     { background: #dcfce7; color: #166534; }
+.badge-failed   { background: #fee2e2; color: #991b1b; }
+.badge-cancelled{ background: var(--color-base-100, #f3f4f6); color: var(--color-base-500, #6b7280); }
+
+.section-heading {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-base-800, #1f2937);
+    margin: 24px 0 14px;
+    padding-left: 12px;
+    border-left: 4px solid #8b0000;
+}
+
+/* ── DARK MODE ── */
+@media not print {
+    .dark .kpi-card {
+        background: var(--color-base-900);
+        border-color: var(--color-base-700);
+    }
+    .dark .kpi-value { color: var(--color-base-50); }
+    .dark .kpi-label { color: var(--color-base-400); }
+    .dark .kpi-change.neutral { background: var(--color-base-800); color: var(--color-base-400); }
+
+    .dark .dash-card {
+        background: var(--color-base-900);
+        border-color: var(--color-base-700);
+    }
+    .dark .dash-card-header {
+        border-bottom-color: var(--color-base-800);
+    }
+    .dark .dash-card-title { color: var(--color-base-100); }
+    .dark .dash-card-sub   { color: var(--color-base-500); }
+
+    .dark .orders-table th {
+        color: var(--color-base-400);
+        border-bottom-color: var(--color-base-800);
+    }
+    .dark .orders-table td {
+        color: var(--color-base-300);
+        border-bottom-color: var(--color-base-800);
+    }
+    .dark .orders-table tr:hover td { background: var(--color-base-800); }
+
+    .dark .badge-cancelled {
+        background: var(--color-base-800);
+        color: var(--color-base-400);
+    }
+
+    .dark .section-heading { color: var(--color-base-100); }
+}
+</style>
+
+<div class="dash-wrapper">
+
+  <!-- ── KPI CARDS ── -->
+  <div class="section-heading">Tổng quan</div>
+
+  <div class="kpi-grid">
+
+    <!-- Doanh thu tháng này -->
+    <div class="kpi-card" style="--kpi-color:#8b0000;">
+      <div class="kpi-label">Doanh thu tháng này</div>
+      <div class="kpi-value">{{ kpi.rev_this_month }}<span class="kpi-unit">₫</span></div>
+      <span class="kpi-change {% if kpi.rev_positive %}up{% else %}down{% endif %}">
+        {% if kpi.rev_positive %}▲{% else %}▼{% endif %}
+        {{ kpi.rev_change }} so với tháng trước
+      </span>
+    </div>
+
+    <!-- Đơn hàng tháng này -->
+    <div class="kpi-card" style="--kpi-color:#2563eb;">
+      <div class="kpi-label">Đơn hàng tháng này</div>
+      <div class="kpi-value">{{ kpi.orders_this_month }}<span class="kpi-unit">đơn</span></div>
+      <span class="kpi-change {% if kpi.orders_positive %}up{% else %}down{% endif %}">
+        {% if kpi.orders_positive %}▲{% else %}▼{% endif %}
+        {{ kpi.orders_change }} so với tháng trước
+      </span>
+    </div>
+
+    <!-- Đơn hôm nay -->
+    <div class="kpi-card" style="--kpi-color:#16a34a;">
+      <div class="kpi-label">Đơn hàng hôm nay</div>
+      <div class="kpi-value">{{ kpi.orders_today }}<span class="kpi-unit">đơn</span></div>
+      <span class="kpi-change neutral">Cập nhật realtime</span>
+    </div>
+
+    <!-- Chờ thanh toán -->
+    <div class="kpi-card" style="--kpi-color:#f59e0b;">
+      <div class="kpi-label">Chờ thanh toán</div>
+      <div class="kpi-value">{{ kpi.pending }}<span class="kpi-unit">đơn</span></div>
+      <span class="kpi-change neutral">Tổng doanh thu: {{ kpi.total_rev }}₫</span>
+    </div>
+
+  </div>
+
+  <!-- ── CHART: 30 NGÀY ── -->
+  <div class="section-heading">Doanh thu 30 ngày gần đây</div>
+
+  <div class="chart-grid-2" style="margin-bottom:16px;">
+
+    <!-- Line chart: revenue -->
+    <div class="dash-card">
+      <div class="dash-card-header">
+        <span class="dash-card-title">Doanh thu theo ngày</span>
+        <span class="dash-card-sub">30 ngày qua (nghìn ₫)</span>
+      </div>
+      <div class="dash-card-body">
+        <canvas id="chartRev30d" height="260"></canvas>
+      </div>
+    </div>
+
+    <!-- Bar chart: orders -->
+    <div class="dash-card">
+      <div class="dash-card-header">
+        <span class="dash-card-title">Đơn hàng theo ngày</span>
+        <span class="dash-card-sub">30 ngày qua</span>
+      </div>
+      <div class="dash-card-body">
+        <canvas id="chartOrders30d" height="260"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── CHART: 12 THÁNG + TRẠNG THÁI ── -->
+  <div class="section-heading">Phân tích theo tháng</div>
+
+  <div class="chart-grid-3">
+
+    <!-- Bar chart: 12 months -->
+    <div class="dash-card">
+      <div class="dash-card-header">
+        <span class="dash-card-title">Doanh thu & Đơn hàng 12 tháng</span>
+        <span class="dash-card-sub">nghìn ₫</span>
+      </div>
+      <div class="dash-card-body">
+        <canvas id="chartRev12m" height="260"></canvas>
+      </div>
+    </div>
+
+    <!-- Doughnut: status -->
+    <div class="dash-card">
+      <div class="dash-card-header">
+        <span class="dash-card-title">Trạng thái đơn hàng</span>
+        <span class="dash-card-sub">Toàn thời gian</span>
+      </div>
+      <div class="dash-card-body" style="display:flex; align-items:center; justify-content:center;">
+        <canvas id="chartStatus" style="max-height:260px; max-width:260px;"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── TOP PRODUCTS ── -->
+  <div class="section-heading">Top sản phẩm bán chạy</div>
+
+  <div class="dash-card" style="margin-bottom:24px;">
+    <div class="dash-card-header">
+      <span class="dash-card-title">Top 8 sản phẩm (theo số lượng)</span>
+      <span class="dash-card-sub">Tất cả đơn đã thanh toán</span>
+    </div>
+    <div class="dash-card-body">
+      <canvas id="chartTopProducts" height="180"></canvas>
+    </div>
+  </div>
+
+  <!-- ── RECENT ORDERS ── -->
+  <div class="section-heading">Đơn hàng gần đây</div>
+
+  <div class="dash-card" style="margin-bottom:32px;">
+    <div class="dash-card-header">
+      <span class="dash-card-title">8 đơn hàng mới nhất</span>
+      <a href="{% url 'admin:cart_order_changelist' %}" style="font-size:12px; color:#8b0000; text-decoration:none; font-weight:600;">
+        Xem tất cả →
+      </a>
+    </div>
+    <table class="orders-table">
+      <thead>
+        <tr>
+          <th>Mã đơn</th>
+          <th>Khách hàng</th>
+          <th>Phương thức</th>
+          <th>Trạng thái</th>
+          <th style="text-align:right;">Tổng tiền</th>
+          <th>Thời gian</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in recent_orders %}
+        <tr>
+          <td>
+            <a href="{% url 'admin:cart_order_change' order.pk %}" style="color:#8b0000; font-weight:600; text-decoration:none;">
+              #{{ order.code|slice:":12" }}
+            </a>
+          </td>
+          <td>{{ order.full_name|default:order.email|default:"—" }}</td>
+          <td>{{ order.get_payment_method_display }}</td>
+          <td>
+            <span class="badge badge-{{ order.status }}">
+              {% if order.status == 'paid' %}✓{% elif order.status == 'pending' %}⏳{% elif order.status == 'failed' %}✗{% else %}—{% endif %}
+              {{ order.get_status_display }}
+            </span>
+          </td>
+          <td style="text-align:right; font-weight:600;">
+            {{ order.total_amount|floatformat:0 }}₫
+          </td>
+          <td style="color:#9ca3af;">{{ order.created_at|date:"d/m H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center; padding:32px; color:#9ca3af;">Chưa có đơn hàng</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// ── Data từ Django ────────────────────────────────────────────
+const dataRev30d     = {{ chart_revenue_30d|safe }};
+const dataOrders30d  = {{ chart_orders_30d|safe }};
+const dataRev12m     = {{ chart_revenue_12m|safe }};
+const dataStatus     = {{ chart_status|safe }};
+const dataTopProd    = {{ chart_top_products|safe }};
+
+// ── Defaults ──────────────────────────────────────────────────
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.color = '#6b7280';
+
+// ── Revenue 30d line ──────────────────────────────────────────
+new Chart(document.getElementById('chartRev30d'), {
+    type: 'line',
+    data: dataRev30d,
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
+            y: { grid: { color: 'rgba(0,0,0,0.05)' }, beginAtZero: true,
+                 ticks: { callback: v => v.toLocaleString('vi') + 'K' } }
+        }
+    }
+});
+
+// ── Orders 30d bar ────────────────────────────────────────────
+new Chart(document.getElementById('chartOrders30d'), {
+    type: 'bar',
+    data: dataOrders30d,
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
+            y: { grid: { color: 'rgba(0,0,0,0.05)' }, beginAtZero: true,
+                 ticks: { stepSize: 1 } }
+        }
+    }
+});
+
+// ── Revenue 12m bar+line ──────────────────────────────────────
+new Chart(document.getElementById('chartRev12m'), {
+    type: 'bar',
+    data: dataRev12m,
+    options: {
+        responsive: true,
+        plugins: { legend: { position: 'top' } },
+        scales: {
+            x: { grid: { display: false } },
+            y: { grid: { color: 'rgba(0,0,0,0.05)' }, beginAtZero: true,
+                 ticks: { callback: v => v.toLocaleString('vi') + 'K' } }
+        }
+    }
+});
+
+// ── Order status doughnut ─────────────────────────────────────
+new Chart(document.getElementById('chartStatus'), {
+    type: 'doughnut',
+    data: dataStatus,
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { position: 'bottom' },
+        },
+        cutout: '65%',
+    }
+});
+
+// ── Top products bar ──────────────────────────────────────────
+new Chart(document.getElementById('chartTopProducts'), {
+    type: 'bar',
+    data: dataTopProd,
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { color: 'rgba(0,0,0,0.05)' }, beginAtZero: true,
+                 ticks: { stepSize: 1 } },
+            y: { grid: { display: false } }
+        }
+    }
+});
+</script>
+{% endblock %}
