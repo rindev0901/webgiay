@@ -594,23 +594,117 @@
 			display: none;
 		}
 
+		/* Mobile search button — hidden on desktop */
+		.mobile-search-btn {
+			display: none;
+		}
+
 		@media (max-width: 1024px) {
+			/* Show hamburger */
 			.mobile-toggle {
-				display: block;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				order: 3;
 			}
 
+			/* Header row: logo | search | actions | hamburger */
+			.site-header > div {
+				flex-wrap: nowrap;
+				gap: 10px;
+			}
+
+			/* Shrink search on tablet */
 			.header-center {
 				flex: 1;
+				min-width: 0;
 			}
 
+			.search-bar {
+				max-width: 100%;
+			}
+
+			/* Hide text labels on util links */
 			.header-util .util-link span {
 				display: none;
 			}
-
 			.header-util .util-link i {
 				font-size: 20px;
 			}
 
+			/* Hide "X Giỏ hàng" text on cart link */
+			.cart-link > span:last-child {
+				display: none;
+			}
+
+			/* Reduce gap */
+			.header-util {
+				gap: 12px;
+			}
+		}
+
+		@media (max-width: 640px) {
+			/* On small phones: hide search bar, show icon instead */
+			.header-center {
+				display: none !important;
+			}
+
+			/* Tighter padding */
+			.site-header > div {
+				padding: 8px 12px !important;
+				gap: 8px;
+			}
+
+			/* Show mobile search trigger */
+			.mobile-search-btn {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				color: white;
+				background: none;
+				border: none;
+				font-size: 20px;
+				cursor: pointer;
+				padding: 0;
+			}
+
+			/* Mobile search bar — hidden by default, toggled via JS */
+			.mobile-search-overlay {
+				display: none;
+				position: absolute;
+				top: 100%;
+				left: 0; right: 0;
+				background: #222;
+				padding: 10px 12px;
+				z-index: 150;
+			}
+			.mobile-search-overlay.open {
+				display: flex;
+			}
+			.mobile-search-overlay form {
+				display: flex;
+				flex: 1;
+			}
+			.mobile-search-overlay input {
+				flex: 1;
+				padding: 8px 12px;
+				border: none;
+				outline: none;
+				font-size: 14px;
+				background: white;
+			}
+			.mobile-search-overlay button {
+				background: var(--dee-red);
+				color: white;
+				border: none;
+				padding: 0 16px;
+				font-size: 15px;
+				cursor: pointer;
+			}
+		}
+
+		/* ===== MOBILE NAV ===== */
+		@media (max-width: 1024px) {
 			.nav-list {
 				display: none;
 			}
@@ -619,11 +713,13 @@
 				display: flex;
 				flex-direction: column;
 				align-items: stretch;
+				background: white;
 			}
 
-			.nav-list.mobile-open>li>a {
+			.nav-list.mobile-open > li > a {
 				border-bottom: 1px solid #f3f4f6;
-				padding: 12px 16px;
+				padding: 13px 16px;
+				font-size: 14px;
 			}
 
 			.nav-list.mobile-open .nav-dropdown {
@@ -631,7 +727,14 @@
 				box-shadow: none;
 				border-top: none;
 				border-left: 3px solid var(--dee-red);
-				margin-left: 16px;
+				margin-left: 20px;
+				display: block;
+			}
+
+			.nav-list.mobile-open .nav-dropdown li a {
+				padding: 10px 16px;
+				font-size: 13px;
+				color: #555;
 			}
 		}
 
@@ -776,27 +879,32 @@
 	<!-- ============================================================
 		     HEADER - Logo, Tìm kiếm, Utility links
 		     ============================================================ -->
-	<header class="site-header">
+	<header class="site-header" style="position:sticky; top:0; z-index:100;">
 		<div style="max-width:1200px; margin:0 auto; padding:10px 16px; display:flex; align-items:center; gap:16px;">
 
-			<!-- Logo Dat Shoes dạng box viền -->
-			<a href="{% url 'landing' %}" class="logo-box">
+			<!-- Logo -->
+			<a href="{% url 'landing' %}" class="logo-box" style="flex-shrink:0;">
 				<span class="logo-icon"><i class="fas fa-shoe-prints"></i></span>
 			</a>
 
-			<!-- Thanh tìm kiếm trung tâm -->
+			<!-- Thanh tìm kiếm (ẩn trên mobile nhỏ, hiện qua nút) -->
 			<div class="header-center" style="flex:1; display:flex; justify-content:center;">
 				<form class="search-bar" method="get" action="{% url 'products:product_list' %}">
-					<input type="text" name="q" placeholder="Nước Hoa" value="{{ request.GET.q }}"
+					<input type="text" name="q" placeholder="Tìm kiếm giày..." value="{{ request.GET.q }}"
 						aria-label="Tìm kiếm sản phẩm" />
 					<button type="submit" aria-label="Tìm kiếm"><i class="fas fa-search"></i></button>
 				</form>
 			</div>
 
-			<!-- Utility links bên phải -->
-			<div class="header-util">
+			<!-- Utility links -->
+			<div class="header-util" style="flex-shrink:0;">
 
-					<!-- Giỏ hàng -->
+				<!-- Nút tìm kiếm trên mobile nhỏ -->
+				<button class="mobile-search-btn" id="mobileSearchBtn" aria-label="Tìm kiếm">
+					<i class="fas fa-search"></i>
+				</button>
+
+				<!-- Giỏ hàng -->
 				<a href="{% url 'cart:cart_detail' %}" class="cart-link">
 					<div class="cart-icon">
 						<i class="fas fa-shopping-cart"></i>
@@ -821,30 +929,33 @@
 					<span>Đăng ký</span>
 				</a>
 				{% endif %}
-
-
 			</div>
 
-			<!-- Nút toggle mobile -->
+			<!-- Hamburger -->
 			<button class="mobile-toggle" id="mobileToggleBtn"
-				style="background:none; border:none; color:white; font-size:22px; cursor:pointer;" aria-label="Menu">
+				style="background:none; border:none; color:white; font-size:22px; cursor:pointer; flex-shrink:0;" aria-label="Menu">
 				<i class="fas fa-bars"></i>
 			</button>
 		</div>
 
-		<!-- ============================================================
-			     NAVIGATION BAR - Menu điều hướng chính
-			     ============================================================ -->
+		<!-- Mobile search overlay (chỉ hiện khi bấm icon tìm kiếm trên mobile nhỏ) -->
+		<div class="mobile-search-overlay" id="mobileSearchOverlay">
+			<form method="get" action="{% url 'products:product_list' %}">
+				<input type="text" name="q" placeholder="Tìm kiếm giày..." value="{{ request.GET.q }}"
+					autofocus aria-label="Tìm kiếm" />
+				<button type="submit"><i class="fas fa-search"></i></button>
+			</form>
+		</div>
+
+		<!-- Navigation -->
 		<nav class="site-nav">
 			<div style="max-width:1200px; margin:0 auto; padding:0 16px;">
 				<ul class="nav-list" id="mainNavList">
 
-					<!-- Trang chủ -->
 					<li class="active">
 						<a href="{% url 'landing' %}">Trang chủ</a>
 					</li>
 
-					<!-- Danh mục sản phẩm (lấy từ categories) -->
 					{% for category in categories %}
 					<li>
 						<a href="{% url 'products:category_detail' category.slug %}">
@@ -853,19 +964,14 @@
 					</li>
 					{% endfor %}
 
-					<!-- Hàng Order -->
 					<li><a href="#">Hàng Order</a></li>
-
-					<!-- Blog -->
 					<li><a href="#">Blog</a></li>
 
 					{% if user.is_authenticated %}
-					<!-- Đơn hàng (chỉ hiện khi đã đăng nhập) -->
 					<li><a href="{% url 'cart:orders_list' %}">Đơn hàng</a></li>
 					{% endif %}
 
 					{% if user.is_staff %}
-					<!-- Admin (chỉ hiện cho staff) -->
 					<li>
 						<a href="{% url 'admin:index' %}" style="color: var(--dee-red);">
 							<i class="fas fa-cog"></i> Admin
@@ -1030,22 +1136,43 @@
 		     JAVASCRIPT - Mobile menu toggle
 		     ============================================================ -->
 	<script>
-		// Toggle mobile navigation
+		// ── Hamburger menu toggle ──────────────────────────────
 		const mobileToggleBtn = document.getElementById('mobileToggleBtn');
 		const mainNavList = document.getElementById('mainNavList');
 
 		if (mobileToggleBtn && mainNavList) {
-			mobileToggleBtn.addEventListener('click', () => {
+			mobileToggleBtn.addEventListener('click', (e) => {
+				e.stopPropagation();
 				mainNavList.classList.toggle('mobile-open');
+				// Close search if open
+				document.getElementById('mobileSearchOverlay')?.classList.remove('open');
 			});
 		}
 
-		// Đóng nav khi click ra ngoài (mobile)
+		// Close nav when clicking outside
 		document.addEventListener('click', (e) => {
 			if (!e.target.closest('header')) {
 				mainNavList && mainNavList.classList.remove('mobile-open');
+				document.getElementById('mobileSearchOverlay')?.classList.remove('open');
 			}
 		});
+
+		// ── Mobile search toggle (small screens) ───────────────
+		const mobileSearchBtn = document.getElementById('mobileSearchBtn');
+		const mobileSearchOverlay = document.getElementById('mobileSearchOverlay');
+
+		if (mobileSearchBtn && mobileSearchOverlay) {
+			mobileSearchBtn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				mobileSearchOverlay.classList.toggle('open');
+				// Close nav if open
+				mainNavList && mainNavList.classList.remove('mobile-open');
+				// Focus input
+				if (mobileSearchOverlay.classList.contains('open')) {
+					mobileSearchOverlay.querySelector('input')?.focus();
+				}
+			});
+		}
 	</script>
 
 	{% block extra_js %}{% endblock %}
