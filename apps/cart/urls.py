@@ -25,4 +25,5 @@ urlpatterns = [
     path('orders/', views.orders_list, name='orders_list'),
     path('orders/<str:code>/', views.order_detail, name='order_detail'),
     path('orders/<str:code>/retry/', views.order_retry, name='order_retry'),
+    path('orders/<str:code>/confirm-delivery/', views.order_qr_confirm, name='order_qr_confirm'),
 ]

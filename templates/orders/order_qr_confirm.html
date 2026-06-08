@@ -1,0 +1,331 @@
+{% load static %}
+{% load format_money %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Xác nhận nhận hàng - Đơn #{{ order.code }}</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+.page { max-width: 520px; margin: 0 auto; padding: 16px; }
+
+/* Header */
+.header { text-align: center; padding: 24px 0 16px; }
+.header .logo { font-size: 22px; font-weight: 900; color: #8b0000; letter-spacing: 2px; }
+.header .logo span { color: #f59e0b; }
+.header .sub { font-size: 12px; color: #999; margin-top: 4px; letter-spacing: 1px; }
+
+/* Status banner */
+.status-banner {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px;
+    border-radius: 8px; margin-bottom: 16px;
+    border: 2px solid;
+}
+.status-banner.delivered { background: #f0fdf4; border-color: #86efac; }
+.status-banner.pending   { background: #fff7ed; border-color: #fed7aa; }
+.status-banner.shipped   { background: #f5f3ff; border-color: #c4b5fd; }
+.status-banner .icon { font-size: 28px; }
+.status-banner .text { font-size: 13px; color: #444; line-height: 1.5; }
+.status-banner .text strong { display: block; font-size: 15px; margin-bottom: 2px; }
+.status-banner.delivered .text strong { color: #16a34a; }
+.status-banner.shipped .text strong   { color: #7c3aed; }
+.status-banner.pending .text strong   { color: #c2410c; }
+
+/* Card */
+.card {
+    background: white; border: 1px solid #e5e7eb;
+    border-radius: 8px; margin-bottom: 12px; overflow: hidden;
+}
+.card-header {
+    padding: 12px 16px; border-bottom: 1px solid #f3f4f6;
+    font-size: 12px; font-weight: 700; color: #888;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    display: flex; align-items: center; gap: 8px;
+}
+.card-header i { color: #8b0000; }
+.card-body { padding: 14px 16px; }
+
+/* Info rows */
+.info-row {
+    display: flex; gap: 10px; margin-bottom: 8px; font-size: 13px;
+}
+.info-row:last-child { margin-bottom: 0; }
+.info-label { color: #999; min-width: 80px; flex-shrink: 0; }
+.info-value { color: #111; font-weight: 500; }
+
+/* Items */
+.item-row {
+    display: flex; gap: 10px; padding: 10px 0;
+    border-bottom: 1px solid #f9fafb; align-items: flex-start;
+}
+.item-row:last-child { border-bottom: none; padding-bottom: 0; }
+.item-img {
+    width: 50px; height: 50px; object-fit: contain;
+    background: #f8f8f8; border: 1px solid #eee; padding: 3px;
+    flex-shrink: 0; border-radius: 4px;
+}
+.item-info { flex: 1; }
+.item-name { font-size: 13px; font-weight: 600; color: #111; margin-bottom: 2px; }
+.item-meta { font-size: 11px; color: #999; }
+.item-price { text-align: right; flex-shrink: 0; }
+.item-price .sub  { font-size: 13px; font-weight: 700; color: #111; }
+.item-price .unit { font-size: 11px; color: #888; }
+
+/* Total */
+.total-row {
+    display: flex; justify-content: space-between;
+    font-size: 13px; padding: 6px 0; border-bottom: 1px solid #f9fafb;
+}
+.total-row:last-child { border: none; }
+.total-row.grand {
+    font-size: 16px; font-weight: 800; color: #8b0000;
+    border-top: 2px solid #f0f0f0; padding-top: 10px; margin-top: 4px;
+}
+
+/* Timeline */
+.timeline { position: relative; padding-left: 24px; }
+.timeline::before {
+    content: ''; position: absolute; left: 7px; top: 8px; bottom: 8px;
+    width: 2px; background: #e5e7eb;
+}
+.tl-item { position: relative; margin-bottom: 14px; }
+.tl-item:last-child { margin-bottom: 0; }
+.tl-dot {
+    position: absolute; left: -20px; top: 3px;
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 0 2px #8b0000;
+    background: #8b0000;
+}
+.tl-item.done .tl-dot { background: #16a34a; box-shadow: 0 0 0 2px #16a34a; }
+.tl-item.future .tl-dot { background: white; box-shadow: 0 0 0 2px #d1d5db; }
+.tl-time { font-size: 11px; color: #999; margin-bottom: 2px; }
+.tl-label { font-size: 13px; font-weight: 600; color: #111; }
+.tl-item.future .tl-label { color: #9ca3af; font-weight: 400; }
+.tl-note { font-size: 11px; color: #888; margin-top: 2px; }
+
+/* Confirm button */
+.confirm-section { padding: 20px 0 32px; }
+.btn-confirm {
+    width: 100%; padding: 16px;
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: white; font-size: 16px; font-weight: 700;
+    border: none; border-radius: 8px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    box-shadow: 0 4px 12px rgba(22,163,74,0.3);
+    transition: opacity 0.2s;
+}
+.btn-confirm:hover { opacity: 0.9; }
+.btn-confirm:active { transform: scale(0.99); }
+
+.confirm-warning {
+    margin-top: 10px; padding: 10px 14px;
+    background: #fffbeb; border: 1px solid #fde68a;
+    border-radius: 6px; font-size: 12px; color: #92400e;
+    text-align: center;
+}
+
+.confirmed-box {
+    text-align: center; padding: 24px;
+    background: #f0fdf4; border: 2px solid #86efac;
+    border-radius: 8px;
+}
+.confirmed-box .big-icon { font-size: 56px; margin-bottom: 12px; }
+.confirmed-box h2 { font-size: 20px; font-weight: 800; color: #16a34a; margin-bottom: 6px; }
+.confirmed-box p { font-size: 13px; color: #555; }
+
+/* Messages */
+.msg { padding: 10px 14px; border-radius: 6px; margin-bottom: 12px; font-size: 13px; }
+.msg-success { background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
+.msg-error   { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">DAT<span>SHOES</span></div>
+    <div class="sub">XÁC NHẬN GIAO HÀNG</div>
+  </div>
+
+  <!-- Messages -->
+  {% if messages %}
+  {% for msg in messages %}
+  <div class="msg {% if msg.tags == 'success' %}msg-success{% else %}msg-error{% endif %}">
+    {{ msg }}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <!-- Status Banner -->
+  {% if already_confirmed %}
+  <div class="status-banner delivered">
+    <div class="icon">✅</div>
+    <div class="text">
+      <strong>Đã xác nhận nhận hàng</strong>
+      {% if order.delivered_at %}{{ order.delivered_at|date:"d/m/Y H:i" }}{% endif %}
+    </div>
+  </div>
+  {% elif order.status == 'shipped' %}
+  <div class="status-banner shipped">
+    <div class="icon">🚚</div>
+    <div class="text">
+      <strong>Đơn hàng đang được giao</strong>
+      Vui lòng xác nhận khi nhận được hàng
+    </div>
+  </div>
+  {% elif order.status == 'processing' or order.status == 'paid' %}
+  <div class="status-banner pending">
+    <div class="icon">⚙️</div>
+    <div class="text">
+      <strong>{{ order.get_status_display }}</strong>
+      Đơn hàng đang được xử lý
+    </div>
+  </div>
+  {% else %}
+  <div class="status-banner pending">
+    <div class="icon">📦</div>
+    <div class="text">
+      <strong>{{ order.get_status_display }}</strong>
+      Đơn hàng #{{ order.code }}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Order info -->
+  <div class="card">
+    <div class="card-header"><i class="fas fa-receipt"></i> Thông tin đơn hàng</div>
+    <div class="card-body">
+      <div class="info-row">
+        <span class="info-label">Mã đơn</span>
+        <span class="info-value" style="font-family:monospace; color:#8b0000;">#{{ order.code }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Ngày đặt</span>
+        <span class="info-value">{{ order.created_at|date:"d/m/Y H:i" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Người nhận</span>
+        <span class="info-value">{{ order.full_name }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">SĐT</span>
+        <span class="info-value">{{ order.phone }}</span>
+      </div>
+      {% if order.address %}
+      <div class="info-row">
+        <span class="info-label">Địa chỉ</span>
+        <span class="info-value">{{ order.address }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Items -->
+  <div class="card">
+    <div class="card-header"><i class="fas fa-box-open"></i> Sản phẩm</div>
+    <div class="card-body" style="padding-top:6px; padding-bottom:6px;">
+      {% for item in order.items.all %}
+      <div class="item-row">
+        {% if item.product and item.product.images.first %}
+        <img class="item-img" src="{{ item.product.images.first.image.url }}" alt="{{ item.product_name }}">
+        {% else %}
+        <img class="item-img" src="{% static 'images/no-image.jpg' %}" alt="{{ item.product_name }}">
+        {% endif %}
+        <div class="item-info">
+          <div class="item-name">{{ item.product_name }}</div>
+          {% if item.variant %}
+          <div class="item-meta">
+            {% if item.variant.size %}Size {{ item.variant.size.name }}{% endif %}
+            {% if item.variant.color %} · {{ item.variant.color.name }}{% endif %}
+          </div>
+          {% endif %}
+        </div>
+        <div class="item-price">
+          <div class="unit">{{ item.price|vnd }} × {{ item.quantity }}</div>
+          <div class="sub">{{ item.subtotal|vnd }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Total -->
+  <div class="card">
+    <div class="card-body">
+      <div class="total-row">
+        <span>Tạm tính</span>
+        <span>{{ order.total_amount|vnd }}</span>
+      </div>
+      {% if order.discount_amount > 0 %}
+      <div class="total-row" style="color:#16a34a;">
+        <span>Giảm giá</span>
+        <span>-{{ order.discount_amount|vnd }}</span>
+      </div>
+      {% endif %}
+      <div class="total-row">
+        <span>Phí vận chuyển</span>
+        <span style="color:#16a34a; font-weight:600;">Miễn phí</span>
+      </div>
+      <div class="total-row grand">
+        <span>TỔNG CỘNG</span>
+        <span>{{ order.total_amount|vnd }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  {% if order.status_logs.exists %}
+  <div class="card">
+    <div class="card-header"><i class="fas fa-history"></i> Lịch sử đơn hàng</div>
+    <div class="card-body">
+      <div class="timeline">
+        {% for log in order.status_logs.all %}
+        <div class="tl-item done">
+          <div class="tl-dot"></div>
+          <div class="tl-time">{{ log.created_at|date:"d/m/Y H:i" }}</div>
+          <div class="tl-label">{{ log.get_status_display }}</div>
+          {% if log.note %}<div class="tl-note">{{ log.note }}</div>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Confirm delivery section -->
+  <div class="confirm-section">
+    {% if already_confirmed %}
+    <div class="confirmed-box">
+      <div class="big-icon">🎉</div>
+      <h2>Đã xác nhận nhận hàng!</h2>
+      <p>Cảm ơn bạn đã mua sắm tại Dat Shoes.<br>
+      {% if order.delivered_at %}Xác nhận lúc: {{ order.delivered_at|date:"d/m/Y H:i" }}{% endif %}</p>
+    </div>
+    {% elif order.status == 'shipped' or order.status == 'processing' or order.status == 'paid' %}
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn-confirm">
+        <i class="fas fa-check-circle" style="font-size:20px;"></i>
+        Đã nhận được hàng
+      </button>
+    </form>
+    <div class="confirm-warning">
+      ⚠️ Chỉ bấm khi bạn đã <strong>nhận được hàng</strong>. Hành động này không thể hoàn tác.
+    </div>
+    {% else %}
+    <div class="confirm-warning">
+      Đơn hàng chưa ở trạng thái có thể xác nhận giao hàng ({{ order.get_status_display }}).
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+</body>
+</html>

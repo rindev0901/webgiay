@@ -223,6 +223,15 @@ def create_order_from_cart(user, session, customer_info=None, voucher=None):
             for product, variant, quantity, price in order_items_to_create
         ])
 
+        # Ghi log trạng thái ban đầu
+        from .models import OrderStatusLog
+        OrderStatusLog.objects.create(
+            order=order,
+            status=Order.Status.PENDING,
+            note='Đơn hàng được tạo',
+            created_by='customer',
+        )
+
         # Tăng used_count sau khi order được tạo thành công
         if voucher and discount_amount > 0:
             Voucher = voucher.__class__

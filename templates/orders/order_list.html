@@ -133,6 +133,9 @@
       <!-- Right: status + actions -->
       <div class="ol-actions">
         <span class="ol-status {{ order.status }}">{{ order.get_status_display }}</span>
+        {% if order.delivery_confirmed %}
+        <span style="font-size:11px; color:#16a34a; font-weight:600;">✓ Đã nhận hàng</span>
+        {% endif %}
         <a href="{% url 'cart:order_detail' order.code %}" class="btn-ol-detail">
           <i class="fas fa-eye" style="font-size:11px;"></i> Chi tiết
         </a>

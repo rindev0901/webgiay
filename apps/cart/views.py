@@ -456,6 +456,11 @@ def momo_return(request):
         order.save(update_fields=['status', 'momo_trans_id', 'momo_result_code', 'momo_message', 'updated_at'])
         # Trừ tồn kho
         deduct_stock(order, actor='momo_return')
+        # Log status
+        order.log_status(Order.Status.PAID, note='Thanh toán MoMo thành công', actor='momo_return')
+        order.log_status(Order.Status.PROCESSING, note='Đơn hàng đang được xử lý', actor='system')
+        order.status = Order.Status.PROCESSING
+        order.save(update_fields=['status', 'updated_at'])
         clear_session_cart(request.session)
         if request.user.is_authenticated:
             clear_user_cart(request.user)
@@ -491,6 +496,10 @@ def momo_ipn(request):
         order.momo_message = payload.get('message', '')
         order.save(update_fields=['status', 'momo_trans_id', 'momo_result_code', 'momo_message', 'updated_at'])
         deduct_stock(order, actor='momo_ipn')
+        order.log_status(Order.Status.PAID, note='Thanh toán MoMo (IPN)', actor='momo_ipn')
+        order.log_status(Order.Status.PROCESSING, note='Đơn hàng đang được xử lý', actor='system')
+        order.status = Order.Status.PROCESSING
+        order.save(update_fields=['status', 'updated_at'])
         clear_session_cart(request.session)
         if request.user.is_authenticated:
             clear_user_cart(request.user)
@@ -518,7 +527,72 @@ def order_detail(request, code):
     order = get_object_or_404(Order, code=code)
     if order.user and request.user != order.user and not request.user.is_staff:
         return HttpResponseBadRequest('Bạn không có quyền xem đơn hàng này.')
-    return render(request, 'orders/order_detail.html', {'order': order})
+
+    # Generate QR code as base64 for display in template
+    qr_base64 = _generate_qr_base64(request, order)
+    status_logs = order.status_logs.all().order_by('created_at')
+
+    return render(request, 'orders/order_detail.html', {
+        'order': order,
+        'qr_base64': qr_base64,
+        'status_logs': status_logs,
+    })
+
+
+def order_qr_confirm(request, code):
+    """
+    Public page shown when QR code is scanned.
+    Shows full order info + 'Đã nhận hàng' button.
+    No login required — shipper/anyone can scan.
+    """
+    order = get_object_or_404(Order, code=code)
+
+    # Already confirmed — show read-only info
+    already_confirmed = order.delivery_confirmed
+
+    if request.method == 'POST' and not already_confirmed:
+        # Validate: can only confirm if status is SHIPPED or PAID
+        if order.status in (Order.Status.SHIPPED, Order.Status.PAID, Order.Status.PROCESSING):
+            from django.utils import timezone
+            order.status = Order.Status.DELIVERED
+            order.delivered_at = timezone.now()
+            order.delivery_confirmed = True
+            order.save(update_fields=['status', 'delivered_at', 'delivery_confirmed', 'updated_at'])
+            order.log_status(
+                Order.Status.DELIVERED,
+                note='Khách hàng xác nhận đã nhận hàng qua QR',
+                actor='customer_qr'
+            )
+            messages.success(request, 'Xác nhận nhận hàng thành công!')
+        else:
+            messages.error(request, 'Đơn hàng chưa ở trạng thái có thể xác nhận.')
+        return redirect('cart:order_qr_confirm', code=code)
+
+    return render(request, 'orders/order_qr_confirm.html', {
+        'order': order,
+        'already_confirmed': already_confirmed,
+    })
+
+
+def _generate_qr_base64(request, order):
+    """Generate QR code PNG as base64 string."""
+    try:
+        import qrcode
+        import io
+        import base64
+
+        confirm_url = request.build_absolute_uri(
+            reverse('cart:order_qr_confirm', kwargs={'code': order.code})
+        )
+        qr = qrcode.QRCode(version=1, box_size=8, border=2)
+        qr.add_data(confirm_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color='black', back_color='white')
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        return base64.b64encode(buf.getvalue()).decode('utf-8')
+    except Exception:
+        return None
 
 
 @require_POST
@@ -765,6 +839,10 @@ def sepay_ipn(request):
             'sepay_ipn_payload', 'updated_at',
         ])
         deduct_stock(order, actor='sepay_ipn')
+        order.log_status(Order.Status.PAID, note='Thanh toán SePay (IPN)', actor='sepay_ipn')
+        order.log_status(Order.Status.PROCESSING, note='Đơn hàng đang được xử lý', actor='system')
+        order.status = Order.Status.PROCESSING
+        order.save(update_fields=['status', 'updated_at'])
         clear_session_cart(request.session)
         if order.user:
             clear_user_cart(order.user)

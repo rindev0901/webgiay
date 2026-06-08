@@ -30,10 +30,13 @@
 }
 .od-status-badge.pending   { background:#fef3c7; color:#92400e; }
 .od-status-badge.paid      { background:#d1fae5; color:#065f46; }
+.od-status-badge.processing{ background:#dbeafe; color:#1d4ed8; }
+.od-status-badge.shipped   { background:#ede9fe; color:#6d28d9; }
+.od-status-badge.delivered { background:#d1fae5; color:#065f46; }
 .od-status-badge.failed    { background:#fee2e2; color:#991b1b; }
 .od-status-badge.cancelled { background:#f3f4f6; color:#6b7280; }
 
-/* 2-col layout */
+/* Layout */
 .od-layout {
   display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;
 }
@@ -47,17 +50,15 @@
   text-transform:uppercase; letter-spacing:.5px;
   margin-bottom:12px; padding-bottom:8px;
   border-bottom:1px solid #f0f0f0;
+  display:flex; align-items:center; gap:6px;
 }
-.od-info-row {
-  display:flex; gap:8px; font-size:13px; margin-bottom:6px;
-}
+.od-card-title i { color:var(--dee-red); }
+.od-info-row { display:flex; gap:8px; font-size:13px; margin-bottom:6px; }
 .od-info-row .label { color:#888; min-width:80px; flex-shrink:0; }
 .od-info-row .value { color:#333; font-weight:500; word-break:break-all; }
 
 /* Items */
-.od-items-card {
-  background:white; border:1px solid #e5e7eb; padding:16px; margin-bottom:12px;
-}
+.od-items-card { background:white; border:1px solid #e5e7eb; padding:16px; margin-bottom:12px; }
 .od-item-row {
   display:flex; align-items:center; gap:12px;
   padding:10px 0; border-bottom:1px solid #f3f4f6;
@@ -74,30 +75,61 @@
 .od-item-price .sub  { font-size:13px; font-weight:700; color:#111; }
 
 /* Summary */
-.od-summary-card {
-  background:white; border:1px solid #e5e7eb; padding:16px; margin-bottom:12px;
-}
-.od-summary-row {
-  display:flex; justify-content:space-between;
-  font-size:13px; color:#555; margin-bottom:8px;
-}
+.od-summary-card { background:white; border:1px solid #e5e7eb; padding:16px; margin-bottom:12px; }
+.od-summary-row { display:flex; justify-content:space-between; font-size:13px; color:#555; margin-bottom:8px; }
 .od-summary-row.total {
   font-size:15px; font-weight:700; color:#111;
   border-top:1px solid #f0f0f0; padding-top:10px; margin-top:4px;
 }
 .od-summary-row.total span:last-child { color:var(--dee-red); }
 
-/* Action buttons */
-.od-actions { display:flex; gap:10px; flex-wrap:wrap; }
+/* ── Timeline ── */
+.od-timeline-card { background:white; border:1px solid #e5e7eb; padding:16px; margin-bottom:12px; }
 
+.timeline { position:relative; padding-left:28px; }
+.timeline::before {
+  content:''; position:absolute; left:8px; top:10px; bottom:10px;
+  width:2px; background:#e5e7eb;
+}
+.tl-item { position:relative; margin-bottom:16px; }
+.tl-item:last-child { margin-bottom:0; }
+.tl-dot {
+  position:absolute; left:-22px; top:3px;
+  width:16px; height:16px; border-radius:50%;
+  border:3px solid white; background:var(--dee-red);
+  box-shadow:0 0 0 2px var(--dee-red);
+}
+.tl-item.done .tl-dot  { background:#16a34a; box-shadow:0 0 0 2px #16a34a; }
+.tl-item.active .tl-dot { background:var(--dee-red); box-shadow:0 0 0 3px rgba(139,0,0,.2); animation:pulse 1.5s infinite; }
+.tl-item.future .tl-dot { background:white; box-shadow:0 0 0 2px #d1d5db; }
+@keyframes pulse {
+  0%,100%{ box-shadow:0 0 0 3px rgba(139,0,0,.2); }
+  50%{ box-shadow:0 0 0 6px rgba(139,0,0,.05); }
+}
+.tl-time { font-size:11px; color:#999; margin-bottom:2px; }
+.tl-label { font-size:13px; font-weight:600; color:#111; }
+.tl-item.future .tl-label { color:#d1d5db; font-weight:400; }
+.tl-note { font-size:11px; color:#888; margin-top:2px; }
+
+/* ── QR card ── */
+.od-qr-card {
+  background:white; border:1px solid #e5e7eb; padding:20px;
+  margin-bottom:12px; text-align:center;
+}
+.od-qr-img {
+  width:160px; height:160px; display:block;
+  margin:0 auto 12px; border:4px solid var(--dee-red); border-radius:8px; padding:4px;
+}
+.od-qr-label { font-size:12px; color:#888; line-height:1.6; }
+
+/* Actions */
+.od-actions { display:flex; gap:10px; flex-wrap:wrap; }
 .btn-od-back {
   padding:10px 20px; border:1.5px solid #ddd; background:white;
   color:#555; font-size:13px; font-weight:600; text-decoration:none;
-  border-radius:2px; display:inline-flex; align-items:center; gap:6px;
-  transition:all .15s;
+  border-radius:2px; display:inline-flex; align-items:center; gap:6px; transition:all .15s;
 }
 .btn-od-back:hover { border-color:#333; color:#111; }
-
 .btn-od-retry {
   padding:11px 24px; background:var(--dee-red); color:white;
   border:none; font-size:13px; font-weight:700;
@@ -105,14 +137,6 @@
   display:inline-flex; align-items:center; gap:6px;
 }
 .btn-od-retry:hover { background:var(--dee-red-dark); }
-
-.btn-od-momo {
-  padding:10px 20px; background:#a50064; color:white;
-  border:none; font-size:13px; font-weight:600; text-decoration:none;
-  border-radius:2px; display:inline-flex; align-items:center; gap:6px;
-  transition:opacity .2s;
-}
-.btn-od-momo:hover { opacity:.85; color:white; }
 </style>
 {% endblock %}
 
@@ -138,12 +162,52 @@
     <span class="od-status-badge {{ order.status }}">{{ order.get_status_display }}</span>
   </div>
 
+  <!-- ── Timeline ── -->
+  <div class="od-timeline-card">
+    <div class="od-card-title"><i class="fas fa-history"></i> Lịch sử đơn hàng</div>
+    {% with all_statuses="pending,paid,processing,shipped,delivered" %}
+    <div class="timeline">
+      {% for log in status_logs %}
+      <div class="tl-item {% if log.status == order.status %}active{% else %}done{% endif %}">
+        <div class="tl-dot"></div>
+        <div class="tl-time">{{ log.created_at|date:"d/m/Y H:i" }}</div>
+        <div class="tl-label">{{ log.get_status_display }}</div>
+        {% if log.note %}<div class="tl-note">{{ log.note }}</div>{% endif %}
+      </div>
+      {% empty %}
+      <!-- No logs yet — show current status -->
+      <div class="tl-item active">
+        <div class="tl-dot"></div>
+        <div class="tl-time">{{ order.created_at|date:"d/m/Y H:i" }}</div>
+        <div class="tl-label">{{ order.get_status_display }}</div>
+      </div>
+      {% endfor %}
+      <!-- Future steps -->
+      {% if order.status == 'pending' %}
+      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đã thanh toán</div></div>
+      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đang xử lý</div></div>
+      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đang giao hàng</div></div>
+      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đã giao hàng</div></div>
+      {% elif order.status == 'paid' %}
+      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đang xử lý</div></div>
+      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đang giao hàng</div></div>
+      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đã giao hàng</div></div>
+      {% elif order.status == 'processing' %}
+      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đang giao hàng</div></div>
+      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đã giao hàng</div></div>
+      {% elif order.status == 'shipped' %}
+      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đã giao hàng</div></div>
+      {% endif %}
+    </div>
+    {% endwith %}
+  </div>
+
   <!-- Info 2-col -->
   <div class="od-layout">
 
     <!-- Thông tin giao hàng -->
     <div class="od-card">
-      <div class="od-card-title">Thông tin giao hàng</div>
+      <div class="od-card-title"><i class="fas fa-map-marker-alt"></i> Giao hàng</div>
       <div class="od-info-row">
         <span class="label">Người nhận</span>
         <span class="value">{{ order.full_name|default:"—" }}</span>
@@ -170,30 +234,26 @@
 
     <!-- Thanh toán -->
     <div class="od-card">
-      <div class="od-card-title">Thanh toán</div>
+      <div class="od-card-title"><i class="fas fa-credit-card"></i> Thanh toán</div>
       <div class="od-info-row">
         <span class="label">Phương thức</span>
         <span class="value">
-          {% if order.payment_method == 'sepay' %}
-            <i class="fas fa-credit-card"></i> SePay
-          {% elif order.payment_method == 'momo' %}
-            <i class="fas fa-wallet"></i> MoMo
-          {% else %}
-            {{ order.get_payment_method_display }}
-          {% endif %}
+          {% if order.payment_method == 'sepay' %}<i class="fas fa-credit-card"></i> SePay
+          {% elif order.payment_method == 'momo' %}<i class="fas fa-wallet"></i> MoMo
+          {% else %}{{ order.get_payment_method_display }}{% endif %}
         </span>
       </div>
       <div class="od-info-row">
         <span class="label">Trạng thái</span>
         <span class="value">{{ order.get_status_display }}</span>
       </div>
-      {% if order.payment_method == 'sepay' and order.sepay_transaction_id %}
+      {% if order.sepay_transaction_id %}
       <div class="od-info-row">
         <span class="label">Mã GD</span>
         <span class="value">{{ order.sepay_transaction_id }}</span>
       </div>
       {% endif %}
-      {% if order.payment_method == 'momo' and order.momo_trans_id %}
+      {% if order.momo_trans_id %}
       <div class="od-info-row">
         <span class="label">Mã GD</span>
         <span class="value">{{ order.momo_trans_id }}</span>
@@ -205,13 +265,44 @@
         <span class="value" style="color:var(--dee-red);">{{ order.voucher_code }}</span>
       </div>
       {% endif %}
+      {% if order.delivery_confirmed %}
+      <div class="od-info-row">
+        <span class="label">Nhận hàng</span>
+        <span class="value" style="color:#16a34a; font-weight:700;">
+          ✓ {{ order.delivered_at|date:"d/m/Y H:i" }}
+        </span>
+      </div>
+      {% endif %}
     </div>
 
   </div>
 
+  <!-- QR Code (show when paid/processing/shipped) -->
+  {% if qr_base64 %}
+  {% if order.status == 'paid' or order.status == 'processing' or order.status == 'shipped' or order.status == 'delivered' %}
+  <div class="od-qr-card">
+    <div class="od-card-title" style="justify-content:center;">
+      <i class="fas fa-qrcode"></i>
+      {% if order.delivery_confirmed %}QR đã sử dụng{% else %}QR Xác nhận nhận hàng{% endif %}
+    </div>
+    <img class="od-qr-img" src="data:image/png;base64,{{ qr_base64 }}" alt="QR giao hàng" />
+    {% if order.delivery_confirmed %}
+    <div class="od-qr-label" style="color:#16a34a; font-weight:700;">
+      ✓ Đã xác nhận nhận hàng lúc {{ order.delivered_at|date:"d/m/Y H:i" }}
+    </div>
+    {% else %}
+    <div class="od-qr-label">
+      Đưa mã QR này cho shipper hoặc tự quét để<br>
+      <strong>xác nhận đã nhận hàng</strong>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% endif %}
+
   <!-- Sản phẩm -->
   <div class="od-items-card">
-    <div class="od-card-title">Sản phẩm đã đặt</div>
+    <div class="od-card-title"><i class="fas fa-box-open"></i> Sản phẩm đã đặt</div>
     {% for item in order.items.all %}
     <div class="od-item-row">
       {% if item.product and item.product.images.first %}
@@ -248,6 +339,10 @@
       <span>-{{ order.discount_amount|vnd }}</span>
     </div>
     {% endif %}
+    <div class="od-summary-row">
+      <span>Phí vận chuyển</span>
+      <span style="color:#16a34a; font-weight:600;">Miễn phí</span>
+    </div>
     <div class="od-summary-row total">
       <span>Tổng cộng</span>
       <span>{{ order.total_amount|vnd }}</span>
@@ -261,9 +356,8 @@
     </a>
 
     {% if order.status == 'pending' or order.status == 'failed' %}
-
       {% if order.payment_method == 'momo' and order.momo_pay_url %}
-      <a href="{{ order.momo_pay_url }}" class="btn-od-momo">
+      <a href="{{ order.momo_pay_url }}" style="padding:10px 20px; background:#a50064; color:white; border:none; font-size:13px; font-weight:600; text-decoration:none; border-radius:2px; display:inline-flex; align-items:center; gap:6px;">
         <i class="fas fa-wallet"></i> Tiếp tục thanh toán MoMo
       </a>
       {% endif %}
@@ -273,12 +367,9 @@
         <button type="submit" class="btn-od-retry">
           <i class="fas fa-redo" style="font-size:11px;"></i>
           Thanh toán lại
-          {% if order.payment_method == 'sepay' %}(SePay)
-          {% elif order.payment_method == 'momo' %}(MoMo)
-          {% endif %}
+          {% if order.payment_method == 'sepay' %}(SePay){% elif order.payment_method == 'momo' %}(MoMo){% endif %}
         </button>
       </form>
-
     {% endif %}
   </div>
 
