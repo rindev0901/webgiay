@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 import sys
+from django.templatetags.static import static
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -20,6 +21,8 @@ ALLOWED_HOSTS = [
 
 # ====================== APPLICATIONS ======================
 INSTALLED_APPS = [
+    'unfold',  # DefaultAppConfig — replaces admin.site with UnfoldAdminSite
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -43,7 +46,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',          # phải trước CommonMiddleware
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -64,11 +67,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-
-                # custom cart
                 'apps.cart.context_processors.cart_count',
-
-                # navigation data (categories & brands)
                 'apps.products.context_processors.navigation_data',
             ],
         },
@@ -140,6 +139,18 @@ MOMO_ENDPOINT = os.getenv('MOMO_ENDPOINT', 'https://test-payment.momo.vn/v2/gate
 MOMO_RETURN_URL = os.getenv('MOMO_RETURN_URL', 'http://127.0.0.1:8000/cart/momo/return/')
 MOMO_IPN_URL = os.getenv('MOMO_IPN_URL', 'http://127.0.0.1:8000/cart/momo/ipn/')
 MOMO_REQUEST_TYPE = os.getenv('MOMO_REQUEST_TYPE', 'captureWallet')
+
+# ====================== UNFOLD ADMIN ======================
+UNFOLD = {
+    "SITE_TITLE": "Quản trị Dat Shoes",
+    "SITE_HEADER": "Dat Shoes Admin",
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": True,
+
+    "STYLES": [
+        lambda request: static("css/main.css"),
+    ],
+}
 
 # ====================== CORS ======================
 CORS_ALLOW_ALL_ORIGINS = True
