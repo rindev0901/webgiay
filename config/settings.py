@@ -188,18 +188,38 @@ REST_FRAMEWORK = {
 
 # ====================== LOGGING ======================
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
+    "version": 1,
+    "disable_existing_loggers": False,
+
+    "formatters": {
+        "verbose": {
+            "format": "[{asctime}] {levelname} {name} {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname} {name} {message}",
+            "style": "{",
         },
     },
-    'loggers': {
-        'apps.cart.sepay': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': False,
+
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+        },
+        "email_file": {
+            "class": "logging.FileHandler",
+            "filename": LOG_DIR / "email.log",
+            "formatter": "verbose",
+            "encoding": "utf-8",
+        },
+    },
+
+    "loggers": {
+        "apps.cart.email_service": {
+            "handlers": ["console", "email_file"],
+            "level": "DEBUG",
+            "propagate": False,
         },
     },
 }
