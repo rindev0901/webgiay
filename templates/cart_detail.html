@@ -262,7 +262,14 @@
               {% elif it.stock == 0 %}
               <span style="font-size:10px;color:#dc2626;font-weight:600;">Hết hàng</span>
               {% endif %}
-              <button type="submit" class="btn-remove-item" onclick="this.form.querySelector('[name=quantity]').value=0">Xóa</button>
+              <button
+  type="submit"
+  class="btn-remove-item"
+  formaction="{% url 'cart:remove_from_cart' it.product.id %}"
+  formmethod="post"
+  formnovalidate>
+  Xóa
+</button>
             </div>
           </form>
 
@@ -406,23 +413,33 @@ function showCartToast(msg, type) {
 
 /* Qty +/- trong cart item */
 function ciQty(btn, delta) {
-  const input = btn.closest('.ci-qty-wrap').querySelector('.ci-qty-num');
+  const form = btn.closest('form');
+  const input = form.querySelector('.ci-qty-num');
   const stock = parseInt(input.dataset.stock) || 0;
   const current = parseInt(input.value) || 1;
   const next = current + delta;
 
-  if (next < 1) return; // đừng submit nếu đang muốn xóa bằng nút −
+  // Nếu số lượng đang là 1 mà bấm dấu trừ thì xóa sản phẩm khỏi giỏ
+  if (next < 1) {
+    const removeBtn = form.querySelector('.btn-remove-item');
+    if (removeBtn) {
+      removeBtn.click();
+    }
+    return;
+  }
 
   if (stock > 0 && next > stock) {
     showCartToast(`Chỉ còn ${stock} sản phẩm trong kho.`, 'error');
     input.value = stock;
-    // vẫn submit để đồng bộ nếu giá trị thực sự thay đổi
-    if (current !== stock) input.closest('form').submit();
+
+    if (current !== stock) {
+      form.submit();
+    }
     return;
   }
 
   input.value = next;
-  input.closest('form').submit();
+  form.submit();
 }
 
 /* Submit khi user gõ tay rồi blur/Enter */

@@ -159,47 +159,54 @@
       <div class="od-code">#{{ order.code }}</div>
       <div class="od-date">{{ order.created_at|date:"d/m/Y H:i" }}</div>
     </div>
-    <span class="od-status-badge {{ order.status }}">{{ order.get_status_display }}</span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      {# Payment status badge #}
+      {% if order.payment_status == 'paid' %}
+        <span class="od-status-badge paid">✓ Đã thanh toán</span>
+      {% elif order.payment_status == 'failed' %}
+        <span class="od-status-badge failed">✗ Thanh toán thất bại</span>
+      {% else %}
+        <span class="od-status-badge pending">⏳ Chờ thanh toán</span>
+      {% endif %}
+
+      {# Order status badge #}
+      {% if order.order_status == 'new' %}
+        <span class="od-status-badge pending">Mới tạo</span>
+      {% elif order.order_status == 'processing' %}
+        <span class="od-status-badge processing">⚙ Đang xử lý</span>
+      {% elif order.order_status == 'shipped' %}
+        <span class="od-status-badge shipped">🚚 Đang giao hàng</span>
+      {% elif order.order_status == 'delivered' %}
+        <span class="od-status-badge delivered">✓ Đã giao hàng</span>
+      {% elif order.order_status == 'cancelled' %}
+        <span class="od-status-badge cancelled">✗ Đã hủy</span>
+      {% endif %}
+    </div>
   </div>
 
   <!-- ── Timeline ── -->
   <div class="od-timeline-card">
-    <div class="od-card-title"><i class="fas fa-history"></i> Lịch sử đơn hàng</div>
-    {% with all_statuses="pending,paid,processing,shipped,delivered" %}
+    <div class="od-card-title">
+      <i class="fas fa-history"></i> Lịch sử đơn hàng
+    </div>
+
     <div class="timeline">
-      {% for log in status_logs %}
-      <div class="tl-item {% if log.status == order.status %}active{% else %}done{% endif %}">
+      {% for step in tracking_steps %}
+      <div class="tl-item {{ step.state }}">
         <div class="tl-dot"></div>
-        <div class="tl-time">{{ log.created_at|date:"d/m/Y H:i" }}</div>
-        <div class="tl-label">{{ log.get_status_display }}</div>
-        {% if log.note %}<div class="tl-note">{{ log.note }}</div>{% endif %}
-      </div>
-      {% empty %}
-      <!-- No logs yet — show current status -->
-      <div class="tl-item active">
-        <div class="tl-dot"></div>
-        <div class="tl-time">{{ order.created_at|date:"d/m/Y H:i" }}</div>
-        <div class="tl-label">{{ order.get_status_display }}</div>
+
+        {% if step.created_at %}
+        <div class="tl-time">{{ step.created_at|date:"d/m/Y H:i" }}</div>
+        {% endif %}
+
+        <div class="tl-label">{{ step.label }}</div>
+
+        {% if step.note and step.state != 'future' %}
+        <div class="tl-note">{{ step.note }}</div>
+        {% endif %}
       </div>
       {% endfor %}
-      <!-- Future steps -->
-      {% if order.status == 'pending' %}
-      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đã thanh toán</div></div>
-      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đang xử lý</div></div>
-      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đang giao hàng</div></div>
-      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đã giao hàng</div></div>
-      {% elif order.status == 'paid' %}
-      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đang xử lý</div></div>
-      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đang giao hàng</div></div>
-      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đã giao hàng</div></div>
-      {% elif order.status == 'processing' %}
-      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đang giao hàng</div></div>
-      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đã giao hàng</div></div>
-      {% elif order.status == 'shipped' %}
-      <div class="tl-item future"><div class="tl-dot"></div><div class="tl-label">Đã giao hàng</div></div>
-      {% endif %}
     </div>
-    {% endwith %}
   </div>
 
   <!-- Info 2-col -->
@@ -238,14 +245,18 @@
       <div class="od-info-row">
         <span class="label">Phương thức</span>
         <span class="value">
-          {% if order.payment_method == 'sepay' %}<i class="fas fa-credit-card"></i> SePay
-          {% elif order.payment_method == 'momo' %}<i class="fas fa-wallet"></i> MoMo
-          {% else %}{{ order.get_payment_method_display }}{% endif %}
+          {% if order.payment_method == 'sepay' %}
+            <i class="fas fa-credit-card"></i> SePay
+          {% elif order.payment_method == 'momo' %}
+            <i class="fas fa-wallet"></i> MoMo
+          {% else %}
+            {{ order.get_payment_method_display }}
+          {% endif %}
         </span>
       </div>
       <div class="od-info-row">
         <span class="label">Trạng thái</span>
-        <span class="value">{{ order.get_status_display }}</span>
+        <span class="value">{{ order.get_payment_status_display }}</span>
       </div>
       {% if order.sepay_transaction_id %}
       <div class="od-info-row">
@@ -277,27 +288,27 @@
 
   </div>
 
-  <!-- QR Code (show when paid/processing/shipped) -->
+  <!-- QR Code -->
   {% if qr_base64 %}
-  {% if order.status == 'paid' or order.status == 'processing' or order.status == 'shipped' or order.status == 'delivered' %}
-  <div class="od-qr-card">
-    <div class="od-card-title" style="justify-content:center;">
-      <i class="fas fa-qrcode"></i>
-      {% if order.delivery_confirmed %}QR đã sử dụng{% else %}QR Xác nhận nhận hàng{% endif %}
-    </div>
-    <img class="od-qr-img" src="data:image/png;base64,{{ qr_base64 }}" alt="QR giao hàng" />
-    {% if order.delivery_confirmed %}
-    <div class="od-qr-label" style="color:#16a34a; font-weight:700;">
-      ✓ Đã xác nhận nhận hàng lúc {{ order.delivered_at|date:"d/m/Y H:i" }}
-    </div>
-    {% else %}
-    <div class="od-qr-label">
-      Đưa mã QR này cho shipper hoặc tự quét để<br>
-      <strong>xác nhận đã nhận hàng</strong>
+    {% if order.order_status == 'shipped' or order.order_status == 'delivered' %}
+    <div class="od-qr-card">
+      <div class="od-card-title" style="justify-content:center;">
+        <i class="fas fa-qrcode"></i>
+        {% if order.delivery_confirmed %}QR đã sử dụng{% else %}QR Xác nhận nhận hàng{% endif %}
+      </div>
+      <img class="od-qr-img" src="data:image/png;base64,{{ qr_base64 }}" alt="QR giao hàng" />
+      {% if order.delivery_confirmed %}
+      <div class="od-qr-label" style="color:#16a34a; font-weight:700;">
+        ✓ Đã xác nhận nhận hàng lúc {{ order.delivered_at|date:"d/m/Y H:i" }}
+      </div>
+      {% else %}
+      <div class="od-qr-label">
+        Đưa mã QR này cho shipper hoặc tự quét để<br>
+        <strong>xác nhận đã nhận hàng</strong>
+      </div>
+      {% endif %}
     </div>
     {% endif %}
-  </div>
-  {% endif %}
   {% endif %}
 
   <!-- Sản phẩm -->
@@ -355,21 +366,23 @@
       <i class="fas fa-arrow-left" style="font-size:11px;"></i> Danh sách đơn hàng
     </a>
 
-    {% if order.status == 'pending' or order.status == 'failed' %}
-      {% if order.payment_method == 'momo' and order.momo_pay_url %}
-      <a href="{{ order.momo_pay_url }}" style="padding:10px 20px; background:#a50064; color:white; border:none; font-size:13px; font-weight:600; text-decoration:none; border-radius:2px; display:inline-flex; align-items:center; gap:6px;">
-        <i class="fas fa-wallet"></i> Tiếp tục thanh toán MoMo
-      </a>
-      {% endif %}
+    {% if order.payment_method != 'cod' %}
+      {% if order.payment_status == 'pending' or order.payment_status == 'failed' %}
+        {% if order.payment_method == 'momo' and order.momo_pay_url %}
+        <a href="{{ order.momo_pay_url }}" style="padding:10px 20px; background:#a50064; color:white; border:none; font-size:13px; font-weight:600; text-decoration:none; border-radius:2px; display:inline-flex; align-items:center; gap:6px;">
+          <i class="fas fa-wallet"></i> Tiếp tục thanh toán MoMo
+        </a>
+        {% endif %}
 
-      <form action="{% url 'cart:order_retry' order.code %}" method="post" style="display:inline;">
-        {% csrf_token %}
-        <button type="submit" class="btn-od-retry">
-          <i class="fas fa-redo" style="font-size:11px;"></i>
-          Thanh toán lại
-          {% if order.payment_method == 'sepay' %}(SePay){% elif order.payment_method == 'momo' %}(MoMo){% endif %}
-        </button>
-      </form>
+        <form action="{% url 'cart:order_retry' order.code %}" method="post" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn-od-retry">
+            <i class="fas fa-redo" style="font-size:11px;"></i>
+            Thanh toán lại
+            {% if order.payment_method == 'sepay' %}(SePay){% elif order.payment_method == 'momo' %}(MoMo){% endif %}
+          </button>
+        </form>
+      {% endif %}
     {% endif %}
   </div>
 

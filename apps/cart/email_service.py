@@ -1,6 +1,9 @@
 """
 email_service.py — Gửi email xác nhận đơn hàng qua SMTP của Django.
-Dùng cho chức năng: đặt hàng thành công -> gửi email xác nhận cho khách hàng.
+
+Hỗ trợ 2 loại đơn:
+  - Đơn online (MoMo / SePay): đã thanh toán → template "order_confirmation.html"
+  - Đơn COD: chưa thanh toán    → template "order_confirmation_cod.html"
 """
 
 from __future__ import annotations
@@ -16,6 +19,15 @@ from django.urls import reverse
 logger = logging.getLogger(__name__)
 
 
+def _is_cod(order) -> bool:
+    """Trả True nếu đơn hàng dùng COD."""
+    try:
+        from .models import Order
+        return order.payment_method == Order.PaymentMethod.COD
+    except Exception:
+        return False
+
+
 def _send_in_thread(order, order_detail_url: str) -> None:
     """
     Hàm này chạy trong background thread.
@@ -23,35 +35,46 @@ def _send_in_thread(order, order_detail_url: str) -> None:
     """
 
     recipient = order.email
+    cod = _is_cod(order)
 
     try:
-        # 1. Render file HTML email
+        # 1. Render file HTML email theo loại đơn
         context = {
             "order": order,
             "order_detail_url": order_detail_url,
         }
 
-        html_content = render_to_string(
-            "emails/order_confirmation.html",
-            context
-        )
+        template = "emails/order_confirmation_cod.html" if cod else "emails/order_confirmation.html"
+        html_content = render_to_string(template, context)
 
         # 2. Nội dung text dự phòng nếu email client không đọc HTML
-        text_content = (
-            f"Xác nhận đơn hàng #{order.code}\n\n"
-            f"Xin chào {order.full_name},\n"
-            f"Đơn hàng #{order.code} đã được thanh toán thành công.\n\n"
-            f"Tổng tiền: {int(order.total_amount):,}₫\n"
-            f"Phương thức: {order.get_payment_method_display()}\n\n"
-            f"Xem chi tiết: {order_detail_url}\n\n"
-            f"Cảm ơn bạn đã mua sắm tại Dat Shoes!\n"
-            f"Hotline: 0987 654 321"
-        )
+        if cod:
+            text_content = (
+                f"Xác nhận đặt hàng COD #{order.code}\n\n"
+                f"Xin chào {order.full_name},\n"
+                f"Đơn hàng #{order.code} đã được đặt thành công.\n\n"
+                f"Tổng tiền: {int(order.total_amount):,}₫\n"
+                f"Phương thức: Thanh toán khi nhận hàng (COD)\n\n"
+                f"Bạn sẽ thanh toán {int(order.total_amount):,}₫ cho shipper khi nhận hàng.\n\n"
+                f"Xem chi tiết: {order_detail_url}\n\n"
+                f"Cảm ơn bạn đã mua sắm tại Dat Shoes!\n"
+                f"Hotline: 0987 654 321"
+            )
+            subject = f"[Dat Shoes] Xác nhận đặt hàng COD #{order.code}"
+        else:
+            text_content = (
+                f"Xác nhận đơn hàng #{order.code}\n\n"
+                f"Xin chào {order.full_name},\n"
+                f"Đơn hàng #{order.code} đã được thanh toán thành công.\n\n"
+                f"Tổng tiền: {int(order.total_amount):,}₫\n"
+                f"Phương thức: {order.get_payment_method_display()}\n\n"
+                f"Xem chi tiết: {order_detail_url}\n\n"
+                f"Cảm ơn bạn đã mua sắm tại Dat Shoes!\n"
+                f"Hotline: 0987 654 321"
+            )
+            subject = f"[Dat Shoes] Xác nhận đơn hàng #{order.code} - Thanh toán thành công"
 
-        # 3. Tiêu đề email
-        subject = f"[Dat Shoes] Xác nhận đơn hàng #{order.code} - Thanh toán thành công"
-
-        # 4. Tạo email bằng SMTP backend của Django
+        # 3. Tạo email bằng SMTP backend của Django
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
@@ -59,13 +82,13 @@ def _send_in_thread(order, order_detail_url: str) -> None:
             to=[recipient],
         )
 
-        # 5. Gắn thêm bản HTML
+        # 4. Gắn thêm bản HTML
         email.attach_alternative(html_content, "text/html")
 
-        # 6. Gửi email
+        # 5. Gửi email
         email.send(fail_silently=False)
 
-        logger.info(f"[email] Sent to {recipient} for order {order.code}")
+        logger.info(f"[email] Sent to {recipient} for order {order.code} (cod={cod})")
 
     except Exception as exc:
         logger.error(f"[email] Failed for order {order.code}: {exc}")
@@ -115,8 +138,7 @@ def send_order_confirmation(order, request=None) -> None:
 def _build_url(order) -> str:
     """
     Tạo link chi tiết đơn hàng khi không có request.
-    Ví dụ:
-    http://localhost:8000/cart/orders/OD123/
+    Ví dụ: http://localhost:8000/cart/orders/OD123/
     """
 
     base_url = getattr(settings, "SITE_URL", "http://localhost:8000").rstrip("/")

@@ -938,15 +938,6 @@
 			</button>
 		</div>
 
-		<!-- Mobile search overlay (chỉ hiện khi bấm icon tìm kiếm trên mobile nhỏ) -->
-		<div class="mobile-search-overlay" id="mobileSearchOverlay">
-			<form method="get" action="{% url 'products:product_list' %}">
-				<input type="text" name="q" placeholder="Tìm kiếm giày..." value="{{ request.GET.q }}"
-					autofocus aria-label="Tìm kiếm" />
-				<button type="submit"><i class="fas fa-search"></i></button>
-			</form>
-		</div>
-
 		<!-- Navigation -->
 		<nav class="site-nav">
 			<div style="max-width:1200px; margin:0 auto; padding:0 16px;">

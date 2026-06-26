@@ -1,0 +1,246 @@
+{% load format_money %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Xác nhận đặt hàng COD {{ order.code }}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f3f4f6; font-family: 'Segoe UI', Arial, sans-serif; color: #222; }
+  .wrapper { max-width: 620px; margin: 32px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.10); }
+
+  /* Header */
+  .header { background: #8b0000; padding: 28px 32px; text-align: center; }
+  .header .logo { font-size: 30px; font-weight: 900; color: white; letter-spacing: 3px; }
+  .header .logo span { color: #fbbf24; }
+  .header .tagline { color: rgba(255,255,255,0.75); font-size: 11px; margin-top: 6px; letter-spacing: 2px; text-transform: uppercase; }
+
+  /* Hero — màu xanh lá cho COD */
+  .hero { background: #f0fdf4; border-bottom: 3px solid #16a34a; padding: 28px 32px; text-align: center; }
+  .hero .icon { font-size: 44px; margin-bottom: 10px; }
+  .hero h1 { font-size: 22px; color: #15803d; font-weight: 700; margin-bottom: 8px; }
+  .hero p { font-size: 14px; color: #555; line-height: 1.7; }
+
+  /* Body */
+  .body { padding: 28px 32px; }
+
+  /* Order info box */
+  .order-info { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 18px 20px; margin-bottom: 24px; }
+  .order-info h2 { font-size: 11px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
+  .info-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+  .info-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .info-label { color: #666; flex-shrink: 0; margin-right: 16px; }
+  .info-value { font-weight: 600; color: #222; text-align: right; }
+  .status-badge-cod { display: inline-block; background: #fef9c3; color: #854d0e; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+
+  /* Section title */
+  .section-title { font-size: 15px; font-weight: 700; color: #222; margin-bottom: 14px; padding-left: 12px; border-left: 4px solid #8b0000; }
+
+  /* Product table */
+  .products-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  .products-table th { background: #8b0000; color: white; padding: 11px 14px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .products-table td { padding: 14px; border-bottom: 1px solid #f0f0f0; font-size: 13px; vertical-align: middle; }
+  .products-table tr:last-child td { border-bottom: none; }
+  .product-name { font-weight: 600; color: #222; margin-bottom: 3px; }
+  .product-meta { color: #999; font-size: 11px; }
+
+  /* Total box */
+  .total-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px 20px; margin-bottom: 24px; }
+  .total-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 7px 0; border-bottom: 1px solid #f0f0f0; }
+  .total-row:last-child { border-bottom: none; }
+  .total-row.discount { color: #16a34a; }
+  .total-row.grand-total { font-size: 16px; font-weight: 800; color: #8b0000; border-top: 2px solid #e5e7eb; border-bottom: none; margin-top: 4px; padding-top: 14px; }
+
+  /* COD payment notice — nổi bật */
+  .cod-notice { background: #fefce8; border: 2px solid #fbbf24; border-radius: 6px; padding: 18px 20px; margin-bottom: 24px; }
+  .cod-notice .cod-title { font-size: 14px; font-weight: 700; color: #92400e; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .cod-notice p { font-size: 13px; color: #78350f; line-height: 1.8; }
+  .cod-amount { font-size: 22px; font-weight: 900; color: #8b0000; display: block; margin: 8px 0 4px; }
+
+  /* Delivery info */
+  .delivery-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 18px 20px; margin-bottom: 24px; }
+  .delivery-box h3 { font-size: 13px; color: #0369a1; font-weight: 700; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .delivery-row { display: flex; gap: 8px; font-size: 13px; color: #444; margin-bottom: 7px; line-height: 1.5; }
+  .delivery-row:last-child { margin-bottom: 0; }
+  .delivery-label { color: #888; flex-shrink: 0; min-width: 90px; }
+  .delivery-value { color: #222; font-weight: 500; }
+
+  /* Notice */
+  .notice { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 14px 18px; margin-bottom: 24px; font-size: 13px; color: #92400e; line-height: 1.7; }
+  .notice .notice-title { font-weight: 700; margin-bottom: 6px; }
+
+  /* CTA button */
+  .cta { text-align: center; margin-bottom: 28px; }
+  .cta a { display: inline-block; background: #8b0000; color: white !important; text-decoration: none; padding: 14px 40px; border-radius: 4px; font-weight: 700; font-size: 14px; letter-spacing: 0.5px; }
+
+  /* Footer */
+  .footer { background: #1c1c1c; padding: 24px 32px; text-align: center; }
+  .footer p { color: #888; font-size: 11px; line-height: 1.8; }
+  .footer a { color: #bbb; text-decoration: none; }
+  .footer .footer-brand { color: white; font-weight: 700; font-size: 13px; letter-spacing: 1px; display: block; margin-bottom: 8px; }
+
+  @media (max-width: 620px) {
+    .wrapper { margin: 0; border-radius: 0; }
+    .body, .header, .hero, .footer { padding: 20px 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">DAT<span>SHOES</span></div>
+    <div class="tagline">Giày Chính Hãng &bull; Authentic</div>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="icon">📦</div>
+    <h1>Đặt hàng thành công!</h1>
+    <p>Xin chào <strong>{{ order.full_name }}</strong>,<br>
+    cảm ơn bạn đã đặt hàng tại Dat Shoes.<br>
+    Đơn hàng của bạn đang được xử lý và sẽ được giao sớm nhất có thể.</p>
+  </div>
+
+  <!-- Body -->
+  <div class="body">
+
+    <!-- Order info -->
+    <div class="order-info">
+      <h2>Thông tin đơn hàng</h2>
+      <div class="info-row">
+        <span class="info-label">Mã đơn hàng</span>
+        <span class="info-value">#{{ order.code }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Ngày đặt</span>
+        <span class="info-value">{{ order.created_at|date:"d/m/Y H:i" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Trạng thái</span>
+        <span class="info-value"><span class="status-badge-cod">⏳ Chờ giao hàng</span></span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Phương thức</span>
+        <span class="info-value">COD - Thanh toán khi nhận hàng</span>
+      </div>
+    </div>
+
+    <!-- COD payment notice -->
+    <div class="cod-notice">
+      <div class="cod-title">💵 &nbsp;Thanh toán khi nhận hàng (COD)</div>
+      <p>
+        Vui lòng chuẩn bị đúng số tiền để thanh toán cho shipper khi nhận hàng:<br>
+        <span class="cod-amount">{{ order.total_amount|vnd }}</span>
+        Shipper sẽ không thối tiền lẻ — hãy chuẩn bị tiền mặt đúng mệnh giá.
+      </p>
+    </div>
+
+    <!-- Products -->
+    <p class="section-title">Sản phẩm đã đặt</p>
+    <table class="products-table">
+      <thead>
+        <tr>
+          <th>Sản phẩm</th>
+          <th style="text-align:center; width:48px;">SL</th>
+          <th style="text-align:right;">Đơn giá</th>
+          <th style="text-align:right;">Thành tiền</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in order.items.all %}
+        <tr>
+          <td>
+            <div class="product-name">{{ item.product_name }}</div>
+            {% if item.variant %}
+            <div class="product-meta">
+              Size {{ item.variant.size.name }}{% if item.variant.color %} &middot; {{ item.variant.color.name }}{% endif %}
+            </div>
+            {% endif %}
+          </td>
+          <td style="text-align:center;">{{ item.quantity }}</td>
+          <td style="text-align:right; white-space:nowrap;">{{ item.price|vnd }}</td>
+          <td style="text-align:right; font-weight:700; white-space:nowrap;">{{ item.subtotal|vnd }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Totals -->
+    <div class="total-box">
+      <div class="total-row">
+        <span>Tạm tính</span>
+        <span>{{ order.total_amount|vnd }}</span>
+      </div>
+      {% if order.discount_amount > 0 %}
+      <div class="total-row discount">
+        <span>Giảm giá{% if order.voucher_code %} &nbsp;<strong>({{ order.voucher_code }})</strong>{% endif %}</span>
+        <span>-{{ order.discount_amount|vnd }}</span>
+      </div>
+      {% endif %}
+      <div class="total-row">
+        <span>Phí vận chuyển</span>
+        <span style="color:#16a34a; font-weight:600;">Miễn phí</span>
+      </div>
+      <div class="total-row grand-total">
+        <span>SỐ TIỀN CẦN THANH TOÁN</span>
+        <span>{{ order.total_amount|vnd }}</span>
+      </div>
+    </div>
+
+    <!-- Delivery info -->
+    <div class="delivery-box">
+      <h3>📦 &nbsp;Thông tin giao hàng</h3>
+      <div class="delivery-row">
+        <span class="delivery-label">Người nhận</span>
+        <span class="delivery-value">{{ order.full_name }}</span>
+      </div>
+      <div class="delivery-row">
+        <span class="delivery-label">Điện thoại</span>
+        <span class="delivery-value">{{ order.phone }}</span>
+      </div>
+      {% if order.address %}
+      <div class="delivery-row">
+        <span class="delivery-label">Địa chỉ</span>
+        <span class="delivery-value">{{ order.address }}</span>
+      </div>
+      {% endif %}
+      {% if order.note %}
+      <div class="delivery-row">
+        <span class="delivery-label">Ghi chú</span>
+        <span class="delivery-value">{{ order.note }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Notice -->
+    <div class="notice">
+      <div class="notice-title">📌 Lưu ý quan trọng</div>
+      &bull; Đơn hàng sẽ được giao trong <strong>2 – 5 ngày làm việc</strong>.<br>
+      &bull; Vui lòng giữ điện thoại thông để chúng tôi xác nhận đơn hàng.<br>
+      &bull; Kiểm tra hàng trước khi thanh toán cho shipper.<br>
+      &bull; Mọi thắc mắc vui lòng liên hệ hotline: <strong>0987 654 321</strong>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta">
+      <a href="{{ order_detail_url }}">Theo dõi đơn hàng &nbsp;&rarr;</a>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span class="footer-brand">DAT SHOES</span>
+    <p>
+      941 Trần Xuân Soạn, Phường Tân Hưng, Quận 7<br>
+      <a href="mailto:bydatshoes@gmail.com">bydatshoes@gmail.com</a> &nbsp;&bull;&nbsp; 0987 654 321<br><br>
+      <span style="color:#666;">Bạn nhận được email này vì đã đặt hàng tại Dat Shoes.<br>Đây là email tự động, vui lòng không trả lời.</span>
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

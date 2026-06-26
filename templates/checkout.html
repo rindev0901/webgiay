@@ -370,6 +370,15 @@ select.co-input {
         <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:10px;">Phương thức thanh toán</div>
         <div style="display:flex;flex-direction:column;gap:8px;">
 
+          <!-- COD  -->
+          <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #8b0000;border-radius:4px;cursor:pointer;transition:border-color .15s;background:#fff5f5;"
+                id="lbl-cod"
+                onclick="selectPayment('cod')">
+            <input type="radio" name="payment_choice" value="cod" id="pay-cod" checked style="accent-color:var(--dee-red);">
+            <span style="font-size:13px;font-weight:600;color:#111;">COD - Thanh toán khi nhận hàng</span>
+            <span style="font-size:11px;color:#666;">(Trả tiền mặt cho shipper)</span>
+           </label>
+
           <!-- SePay -->
           <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:4px;cursor:pointer;transition:border-color .15s;"
                  id="lbl-sepay"
@@ -530,13 +539,17 @@ document.getElementById('couponInput') &&
   });
 
 /* ── Payment method selection ── */
-const SEPAY_CHECKOUT_URL = "{% url 'cart:sepay_checkout' %}";
-const MOMO_CHECKOUT_URL  = "{% url 'cart:checkout' %}";
+const PAYMENT_URLS = {
+  cod:   "{% url 'cart:cod_checkout' %}",
+  sepay: "{% url 'cart:sepay_checkout' %}",
+  momo:  "{% url 'cart:checkout' %}",
+};
 
 function selectPayment(method) {
-  ['sepay', 'momo'].forEach(m => {
+  ['cod', 'sepay', 'momo'].forEach(m => {
     const lbl = document.getElementById('lbl-' + m);
     if (lbl) lbl.style.borderColor = m === method ? 'var(--dee-red)' : '#e5e7eb';
+    if (lbl) lbl.style.background  = m === method ? '#fff5f5' : '';
   });
   const radio = document.getElementById('pay-' + method);
   if (radio) radio.checked = true;
@@ -565,13 +578,12 @@ function submitPayment() {
   });
 
   if (!valid) {
-    // Scroll lên form
     form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     return;
   }
 
   // Set action theo phương thức đã chọn
-  form.action = selected.value === 'sepay' ? SEPAY_CHECKOUT_URL : MOMO_CHECKOUT_URL;
+  form.action = PAYMENT_URLS[selected.value] || PAYMENT_URLS.momo;
   form.submit();
 }
 
@@ -580,7 +592,7 @@ document.getElementById('checkoutForm').querySelectorAll('.co-input').forEach(el
   el.addEventListener('input', () => el.classList.remove('error'));
 });
 
-// Mặc định chọn SePay
-selectPayment('sepay');
+// Mặc định chọn COD
+selectPayment('cod');
 </script>
 {% endblock %}

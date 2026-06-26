@@ -172,7 +172,8 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; min-heig
       {% if order.delivered_at %}{{ order.delivered_at|date:"d/m/Y H:i" }}{% endif %}
     </div>
   </div>
-  {% elif order.status == 'shipped' %}
+
+  {% elif order.order_status == 'shipped' %}
   <div class="status-banner shipped">
     <div class="icon">🚚</div>
     <div class="text">
@@ -180,19 +181,21 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; min-heig
       Vui lòng xác nhận khi nhận được hàng
     </div>
   </div>
-  {% elif order.status == 'processing' or order.status == 'paid' %}
+
+  {% elif order.order_status == 'processing' %}
   <div class="status-banner pending">
     <div class="icon">⚙️</div>
     <div class="text">
-      <strong>{{ order.get_status_display }}</strong>
+      <strong>{{ order.get_order_status_display }}</strong>
       Đơn hàng đang được xử lý
     </div>
   </div>
+
   {% else %}
   <div class="status-banner pending">
     <div class="icon">📦</div>
     <div class="text">
-      <strong>{{ order.get_status_display }}</strong>
+      <strong>{{ order.get_order_status_display }}</strong>
       Đơn hàng #{{ order.code }}
     </div>
   </div>
@@ -238,6 +241,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; min-heig
         {% else %}
         <img class="item-img" src="{% static 'images/no-image.jpg' %}" alt="{{ item.product_name }}">
         {% endif %}
+
         <div class="item-info">
           <div class="item-name">{{ item.product_name }}</div>
           {% if item.variant %}
@@ -247,6 +251,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; min-heig
           </div>
           {% endif %}
         </div>
+
         <div class="item-price">
           <div class="unit">{{ item.price|vnd }} × {{ item.quantity }}</div>
           <div class="sub">{{ item.subtotal|vnd }}</div>
@@ -263,16 +268,19 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; min-heig
         <span>Tạm tính</span>
         <span>{{ order.total_amount|vnd }}</span>
       </div>
+
       {% if order.discount_amount > 0 %}
       <div class="total-row" style="color:#16a34a;">
         <span>Giảm giá</span>
         <span>-{{ order.discount_amount|vnd }}</span>
       </div>
       {% endif %}
+
       <div class="total-row">
         <span>Phí vận chuyển</span>
         <span style="color:#16a34a; font-weight:600;">Miễn phí</span>
       </div>
+
       <div class="total-row grand">
         <span>TỔNG CỘNG</span>
         <span>{{ order.total_amount|vnd }}</span>
@@ -281,23 +289,28 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; min-heig
   </div>
 
   <!-- Timeline -->
-  {% if order.status_logs.exists %}
   <div class="card">
     <div class="card-header"><i class="fas fa-history"></i> Lịch sử đơn hàng</div>
     <div class="card-body">
       <div class="timeline">
-        {% for log in order.status_logs.all %}
-        <div class="tl-item done">
+        {% for step in tracking_steps %}
+        <div class="tl-item {{ step.state }}">
           <div class="tl-dot"></div>
-          <div class="tl-time">{{ log.created_at|date:"d/m/Y H:i" }}</div>
-          <div class="tl-label">{{ log.get_status_display }}</div>
-          {% if log.note %}<div class="tl-note">{{ log.note }}</div>{% endif %}
+
+          {% if step.created_at %}
+          <div class="tl-time">{{ step.created_at|date:"d/m/Y H:i" }}</div>
+          {% endif %}
+
+          <div class="tl-label">{{ step.label }}</div>
+
+          {% if step.note and step.state != 'future' %}
+          <div class="tl-note">{{ step.note }}</div>
+          {% endif %}
         </div>
         {% endfor %}
       </div>
     </div>
   </div>
-  {% endif %}
 
   <!-- Confirm delivery section -->
   <div class="confirm-section">
@@ -305,23 +318,34 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; min-heig
     <div class="confirmed-box">
       <div class="big-icon">🎉</div>
       <h2>Đã xác nhận nhận hàng!</h2>
-      <p>Cảm ơn bạn đã mua sắm tại Dat Shoes.<br>
-      {% if order.delivered_at %}Xác nhận lúc: {{ order.delivered_at|date:"d/m/Y H:i" }}{% endif %}</p>
+      <p>
+        Cảm ơn bạn đã mua sắm tại Dat Shoes.<br>
+        {% if order.delivered_at %}
+        Xác nhận lúc: {{ order.delivered_at|date:"d/m/Y H:i" }}
+        {% endif %}
+      </p>
     </div>
 
     {% elif can_confirm %}
     <form method="post">
       {% csrf_token %}
+
       {% if is_shipper and not is_owner %}
       <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#1e40af;">
         <strong>👷 Shipper:</strong> Bạn đang xác nhận giao hàng thành công cho đơn này.
       </div>
       {% endif %}
+
       <button type="submit" class="btn-confirm">
         <i class="fas fa-check-circle" style="font-size:20px;"></i>
-        {% if is_shipper and not is_owner %}Xác nhận giao hàng thành công{% else %}Đã nhận được hàng{% endif %}
+        {% if is_shipper and not is_owner %}
+          Xác nhận giao hàng thành công
+        {% else %}
+          Đã nhận được hàng
+        {% endif %}
       </button>
     </form>
+
     <div class="confirm-warning">
       ⚠️ Chỉ bấm khi hàng đã được <strong>giao tận tay</strong>. Hành động này không thể hoàn tác.
     </div>
@@ -337,8 +361,9 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; min-heig
 
     {% elif order.user and user != order.user and not is_shipper %}
     <div class="confirm-warning" style="background:#fee2e2;border-color:#fecaca;color:#991b1b;">
-      🔒 Chỉ chủ đơn hàng hoặc shipper (có quyền xem/sửa đơn hàng) mới có thể xác nhận.
+      🔒 Chỉ chủ đơn hàng hoặc shipper có quyền xem/sửa đơn hàng mới có thể xác nhận.
     </div>
+
     {% else %}
     <div class="confirm-warning">
       Đơn hàng chưa ở trạng thái có thể xác nhận ({{ order.get_order_status_display }}).

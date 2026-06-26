@@ -272,3 +272,4 @@ class StockMovement(models.Model):
     def __str__(self):
         qty = int(self.quantity) if self.quantity is not None else 0
         return f"{self.get_movement_type_display()} | {self.variant} | {qty:+d}"
+        

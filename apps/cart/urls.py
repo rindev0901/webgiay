@@ -14,6 +14,8 @@ urlpatterns = [
     path('momo/checkout/', views.momo_checkout, name='momo_checkout'),
     path('momo/return/', views.momo_return, name='momo_return'),
     path('momo/ipn/', views.momo_ipn, name='momo_ipn'),
+    # COD
+    path('cod/checkout/', views.cod_checkout, name='cod_checkout'),
     # SePay
     path('sepay/checkout/', views.sepay_checkout, name='sepay_checkout'),
     path('sepay/return/', views.sepay_return, name='sepay_return'),
