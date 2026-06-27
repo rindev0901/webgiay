@@ -22,8 +22,7 @@
 
 <div
     style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#1d4ed8;">
-    Bạn đang nộp báo giá cho: <strong>{{ pr.code }}</strong> — Ngày tạo: <strong>{{ pr.created_at|date:"d/m/Y"
-        }}</strong>
+    Bạn đang nộp báo giá cho: <strong>{{ pr.code }}</strong> — Ngày tạo: <strong>{{ pr.created_at|date:"d/m/Y" }}</strong>
     {% if pr.deadline %} • Hạn: <strong>{{ pr.deadline|date:"d/m/Y" }}</strong>{% endif %}
 </div>
 
