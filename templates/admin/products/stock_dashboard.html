@@ -1,0 +1,262 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Biên Độ Tồn Kho{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+:root {
+  --hot-bg:#dcfce7; --hot-text:#166534; --hot-border:#86efac;
+  --slow-bg:#fef9c3; --slow-text:#854d0e; --slow-border:#fde047;
+  --low-bg:#ffedd5;  --low-text:#9a3412;  --low-border:#fb923c;
+  --out-bg:#fee2e2;  --out-text:#991b1b;  --out-border:#fca5a5;
+  --normal-bg:var(--color-base-50,#f9fafb); --normal-text:var(--color-base-700,#374151);
+}
+.page-toolbar {
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:12px; margin-bottom:20px;
+}
+.page-title { font-size:22px; font-weight:700; }
+.kpi-strip {
+  display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;
+}
+.kpi-chip {
+  padding:6px 16px; border-radius:20px; font-size:13px; font-weight:600;
+  cursor:pointer; border:2px solid transparent; text-decoration:none;
+  display:inline-flex; align-items:center; gap:6px; transition:.15s;
+}
+.kpi-chip:hover { opacity:.85; }
+.kpi-chip.hot    { background:var(--hot-bg);    color:var(--hot-text);    border-color:var(--hot-border); }
+.kpi-chip.slow   { background:var(--slow-bg);   color:var(--slow-text);   border-color:var(--slow-border); }
+.kpi-chip.low    { background:var(--low-bg);    color:var(--low-text);    border-color:var(--low-border); }
+.kpi-chip.out    { background:var(--out-bg);    color:var(--out-text);    border-color:var(--out-border); }
+.kpi-chip.all    { background:var(--color-base-100,#f3f4f6); color:var(--color-base-700,#374151); border-color:var(--color-base-300,#d1d5db); }
+.kpi-chip.active { box-shadow:0 0 0 3px rgba(0,0,0,.12); }
+
+.filter-bar {
+  display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;
+}
+.filter-bar input, .filter-bar select {
+  padding:7px 12px; border:1px solid var(--color-base-300,#d1d5db);
+  border-radius:6px; font-size:13px; background:var(--color-base-0,white);
+  color:var(--color-base-800,#1f2937);
+}
+.filter-bar button {
+  padding:7px 16px; background:#8b0000; color:white;
+  border:none; border-radius:6px; font-size:13px; cursor:pointer;
+}
+
+.stock-table { width:100%; border-collapse:collapse; }
+.stock-table thead th {
+  padding:10px 12px; text-align:left; font-size:11px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.5px;
+  border-bottom:2px solid var(--color-base-200,#e5e7eb);
+  color:var(--color-base-500,#6b7280);
+}
+.stock-table tbody tr { border-bottom:1px solid var(--color-base-100,#f3f4f6); transition:.12s; }
+.stock-table tbody tr:hover { background:var(--color-base-50,#f9fafb); }
+.stock-table td { padding:10px 12px; font-size:13px; vertical-align:middle; }
+
+.status-pill {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;
+}
+.pill-hot    { background:var(--hot-bg);  color:var(--hot-text);  }
+.pill-slow   { background:var(--slow-bg); color:var(--slow-text); }
+.pill-low    { background:var(--low-bg);  color:var(--low-text);  }
+.pill-out    { background:var(--out-bg);  color:var(--out-text);  }
+.pill-normal { background:var(--normal-bg); color:var(--normal-text); }
+
+.thumb { width:40px; height:40px; object-fit:contain; border-radius:4px; border:1px solid var(--color-base-200,#e5e7eb); }
+.size-tag { display:inline-block; padding:2px 8px; background:var(--color-base-100,#f3f4f6); border-radius:4px; font-size:12px; font-weight:600; }
+.color-dot { width:14px; height:14px; border-radius:50%; border:1px solid rgba(0,0,0,.15); display:inline-block; }
+
+.create-btn {
+  padding:10px 22px; background:#8b0000; color:white;
+  border:none; border-radius:8px; font-size:14px; font-weight:600;
+  cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+  transition:.2s; box-shadow:0 2px 8px rgba(139,0,0,.3);
+}
+.create-btn:hover { background:#6b0000; transform:translateY(-1px); }
+.create-btn:disabled { background:#9ca3af; cursor:not-allowed; transform:none; box-shadow:none; }
+
+.select-all-wrap { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:500; }
+input[type=checkbox] { width:16px; height:16px; cursor:pointer; }
+
+.dark .stock-table tbody tr:hover { background:var(--color-base-800); }
+.dark .filter-bar input, .dark .filter-bar select {
+  background:var(--color-base-900); border-color:var(--color-base-700);
+  color:var(--color-base-100);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" action="{% url 'products:purchase_request_create' %}" id="create-form">
+{% csrf_token %}
+
+<div style="max-width:1400px;margin:0 auto;padding:0 8px;">
+
+  <div class="page-toolbar">
+    <div>
+      <div class="page-title">📊 Biên Độ Tồn Kho</div>
+      <div style="font-size:12px;color:var(--color-base-400,#9ca3af);margin-top:2px;">
+        Nhìn tổng quan tình trạng hàng — chọn để tạo đơn nhập hàng
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <a href="{% url 'products:purchase_request_list' %}" style="padding:9px 18px;border:1px solid var(--color-base-300,#d1d5db);border-radius:8px;font-size:13px;text-decoration:none;color:var(--color-base-700,#374151);">
+        📋 Danh sách đợt mua
+      </a>
+      <button type="submit" class="create-btn" id="create-btn" disabled>
+        ✚ Tạo đơn nhập hàng (<span id="sel-count">0</span> đôi)
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI chips -->
+  <div class="kpi-strip">
+    <a href="?{% if brand_filter %}brand={{ brand_filter }}&{% endif %}{% if search_q %}q={{ search_q }}&{% endif %}"
+       class="kpi-chip all {% if not status_filter %}active{% endif %}">
+      Tất cả <strong>{{ counts.hot|add:counts.slow|add:counts.low|add:counts.out|add:counts.normal }}</strong>
+    </a>
+    <a href="?status=hot{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if search_q %}&q={{ search_q }}{% endif %}"
+       class="kpi-chip hot {% if status_filter == 'hot' %}active{% endif %}">
+      🔥 Bán chạy <strong>{{ counts.hot }}</strong>
+    </a>
+    <a href="?status=slow{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if search_q %}&q={{ search_q }}{% endif %}"
+       class="kpi-chip slow {% if status_filter == 'slow' %}active{% endif %}">
+      🐌 Bán ế <strong>{{ counts.slow }}</strong>
+    </a>
+    <a href="?status=low{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if search_q %}&q={{ search_q }}{% endif %}"
+       class="kpi-chip low {% if status_filter == 'low' %}active{% endif %}">
+      ⚠️ Sắp hết <strong>{{ counts.low }}</strong>
+    </a>
+    <a href="?status=out{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if search_q %}&q={{ search_q }}{% endif %}"
+       class="kpi-chip out {% if status_filter == 'out' %}active{% endif %}">
+      ❌ Hết hàng <strong>{{ counts.out }}</strong>
+    </a>
+  </div>
+
+  <!-- Filter bar -->
+  <form method="get" class="filter-bar" style="margin-bottom:16px;">
+    {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+    <input type="text" name="q" value="{{ search_q }}" placeholder="🔍 Tìm tên SP, SKU..." style="min-width:220px;">
+    <select name="brand">
+      <option value="">Tất cả thương hiệu</option>
+      {% for b in brands %}
+      <option value="{{ b.id }}" {% if brand_filter == b.id|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Lọc</button>
+    {% if search_q or brand_filter %}
+    <a href="?{% if status_filter %}status={{ status_filter }}{% endif %}" style="padding:7px 12px;color:#8b0000;text-decoration:none;font-size:13px;">✕ Xóa lọc</a>
+    {% endif %}
+  </form>
+
+  <!-- Table -->
+  <div style="background:var(--color-base-0,white);border:1px solid var(--color-base-200,#e5e7eb);border-radius:10px;overflow:hidden;">
+    <table class="stock-table">
+      <thead>
+        <tr>
+          <th style="width:40px;">
+            <div class="select-all-wrap">
+              <input type="checkbox" id="select-all" title="Chọn tất cả">
+            </div>
+          </th>
+          <th style="width:50px;">Ảnh</th>
+          <th>Sản phẩm</th>
+          <th>Size</th>
+          <th>Màu</th>
+          <th>Tồn kho</th>
+          <th>Đã bán (30 ngày)</th>
+          <th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        {% with v=row.variant cls=row.class sold=row.sold_30 %}
+        <tr class="variant-row {% if cls == 'out' %}out-row{% endif %}">
+          <td>
+            <input type="checkbox" name="variant_ids" value="{{ v.id }}"
+                   class="variant-cb" id="cb_{{ v.id }}">
+          </td>
+          <td>
+            {% with img=v.product.images.first %}
+            {% if img %}
+            <img src="{{ img.image.url }}" class="thumb">
+            {% else %}
+            <div class="thumb" style="background:var(--color-base-100,#f3f4f6);display:flex;align-items:center;justify-content:center;font-size:18px;">👟</div>
+            {% endif %}
+            {% endwith %}
+          </td>
+          <td>
+            <div style="font-weight:600;color:var(--color-base-800,#1f2937);">{{ v.product.name|truncatechars:45 }}</div>
+            <div style="font-size:11px;color:var(--color-base-400,#9ca3af);margin-top:1px;">{{ v.product.brand.name }} · {{ v.sku }}</div>
+          </td>
+          <td><span class="size-tag">{{ v.size.name }}</span></td>
+          <td>
+            {% if v.color %}
+            <div style="display:flex;align-items:center;gap:6px;">
+              {% if v.color.hex_code %}<span class="color-dot" style="background:{{ v.color.hex_code }};"></span>{% endif %}
+              <span style="font-size:13px;">{{ v.color.name }}</span>
+            </div>
+            {% else %}<span style="color:var(--color-base-400,#9ca3af);">—</span>{% endif %}
+          </td>
+          <td>
+            <span style="font-size:15px;font-weight:700;
+              {% if v.stock == 0 %}color:#dc2626;{% elif v.stock <= 5 %}color:#ea580c;{% else %}color:#16a34a;{% endif %}">
+              {{ v.stock }}
+            </span>
+            <span style="font-size:11px;color:var(--color-base-400,#9ca3af);margin-left:2px;">đôi</span>
+          </td>
+          <td>
+            <span style="font-size:14px;font-weight:600;color:var(--color-base-700,#374151);">{{ sold }}</span>
+            <span style="font-size:11px;color:var(--color-base-400,#9ca3af);margin-left:2px;">đôi</span>
+          </td>
+          <td>
+            {% if cls == 'hot' %}
+            <span class="status-pill pill-hot">🔥 Bán chạy</span>
+            {% elif cls == 'slow' %}
+            <span class="status-pill pill-slow">🐌 Bán ế</span>
+            {% elif cls == 'low' %}
+            <span class="status-pill pill-low">⚠️ Sắp hết</span>
+            {% elif cls == 'out' %}
+            <span class="status-pill pill-out">❌ Hết hàng</span>
+            {% else %}
+            <span class="status-pill pill-normal">✅ Bình thường</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endwith %}
+        {% empty %}
+        <tr><td colspan="8" style="text-align:center;padding:48px;color:var(--color-base-400,#9ca3af);">Không có sản phẩm nào.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div><!-- end max-width -->
+</form>
+
+<script>
+const cbs     = document.querySelectorAll('.variant-cb');
+const selAll  = document.getElementById('select-all');
+const selCount = document.getElementById('sel-count');
+const createBtn = document.getElementById('create-btn');
+
+function updateCount() {
+  const n = document.querySelectorAll('.variant-cb:checked').length;
+  selCount.textContent = n;
+  createBtn.disabled = n === 0;
+}
+selAll.addEventListener('change', () => {
+  cbs.forEach(cb => cb.checked = selAll.checked);
+  updateCount();
+});
+cbs.forEach(cb => cb.addEventListener('change', () => {
+  selAll.checked = [...cbs].every(c => c.checked);
+  updateCount();
+}));
+</script>
+{% endblock %}

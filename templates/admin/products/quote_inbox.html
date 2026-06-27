@@ -1,0 +1,126 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Hộp Thư Yêu Cầu Báo Giá{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+.page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+.page-title  { font-size:22px; font-weight:700; }
+.page-sub    { font-size:13px; color:var(--color-base-400,#9ca3af); margin-top:3px; }
+
+.inbox-grid  { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; }
+.inbox-card  {
+  background:var(--color-base-0,white); border:1px solid var(--color-base-200,#e5e7eb);
+  border-radius:12px; overflow:hidden; transition:.2s;
+  box-shadow:0 1px 4px rgba(0,0,0,.04);
+}
+.inbox-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.1); transform:translateY(-2px); }
+
+.card-badge {
+  height:4px;
+}
+.badge-sent    { background:linear-gradient(90deg,#3b82f6,#60a5fa); }
+.badge-quoted  { background:linear-gradient(90deg,#9333ea,#c084fc); }
+
+.card-inner    { padding:20px; }
+.card-tag      { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:700; margin-bottom:10px; }
+.tag-sent      { background:#dbeafe; color:#1d4ed8; }
+.tag-quoted    { background:#f3e8ff; color:#9333ea; }
+
+.card-code     { font-size:18px; font-weight:800; font-family:monospace; color:var(--color-base-900,#111); margin-bottom:4px; }
+.card-desc     { font-size:13px; color:var(--color-base-500,#6b7280); margin-bottom:16px; }
+.card-meta     { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+.card-meta-item { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--color-base-500,#6b7280); }
+.card-meta-val  { font-weight:600; color:var(--color-base-700,#374151); }
+
+.view-btn {
+  width:100%; padding:10px; background:#8b0000; color:white;
+  border:none; border-radius:8px; font-size:13px; font-weight:600;
+  cursor:pointer; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:7px;
+  transition:.2s;
+}
+.view-btn:hover { background:#6b0000; }
+.view-btn.blue  { background:#1d4ed8; }
+.view-btn.blue:hover { background:#1e40af; }
+
+.empty-state { text-align:center; padding:80px 20px; }
+.empty-icon  { font-size:56px; margin-bottom:16px; }
+
+.dark .inbox-card { background:var(--color-base-900); border-color:var(--color-base-700); }
+.dark .card-code  { color:var(--color-base-50); }
+.dark .card-meta-val { color:var(--color-base-200); }
+.dark .inbox-card:hover { box-shadow:0 4px 20px rgba(0,0,0,.3); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:0 8px;">
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">📬 Hộp Thư Yêu Cầu Báo Giá</div>
+      <div class="page-sub">Danh sách các đợt thu mua bổ sung tồn kho — cửa hàng trưởng gửi thì nó sẽ vào đây</div>
+    </div>
+    <a href="{% url 'products:purchase_request_list' %}" style="padding:9px 18px;border:1px solid var(--color-base-300,#d1d5db);border-radius:8px;font-size:13px;text-decoration:none;color:var(--color-base-700,#374151);display:inline-flex;align-items:center;gap:6px;">
+      ← Tất cả đợt mua
+    </a>
+  </div>
+
+  {% if pending_requests %}
+  <div class="inbox-grid">
+    {% for pr in pending_requests %}
+    <div class="inbox-card">
+      <div class="card-badge {% if pr.status == 'sent' %}badge-sent{% else %}badge-quoted{% endif %}"></div>
+      <div class="card-inner">
+        <span class="card-tag {% if pr.status == 'sent' %}tag-sent{% else %}tag-quoted{% endif %}">
+          {% if pr.status == 'sent' %}📤 Yêu cầu{% else %}💬 Đã có báo giá{% endif %}
+        </span>
+        <div class="card-code">{{ pr.code }}</div>
+        <div class="card-desc">
+          {% if pr.note %}{{ pr.note|truncatechars:80 }}{% else %}Đợt thu mua bổ sung tồn kho{% endif %}
+        </div>
+        <div class="card-meta">
+          <div class="card-meta-item">
+            📅 <span class="card-meta-val">{{ pr.created_at|date:"d/m/Y" }}</span>
+          </div>
+          <div class="card-meta-item">
+            📦 <span class="card-meta-val">{{ pr.items.count }} biến thể</span>
+          </div>
+          <div class="card-meta-item">
+            🏭 <span class="card-meta-val">{{ pr.quotes.count }} báo giá</span>
+          </div>
+        </div>
+        {% if pr.note %}
+        <div style="background:var(--color-base-50,#f9fafb);border-radius:6px;padding:10px;margin-bottom:16px;font-size:12px;color:var(--color-base-600,#4b5563);">
+          💬 {{ pr.note|truncatechars:100 }}
+        </div>
+        {% endif %}
+        <div style="display:flex;gap:8px;">
+          <a href="{% url 'products:submit_quote' pr.pk %}" class="view-btn" style="flex:1;">
+            📤 Nộp Báo Giá
+          </a>
+          <a href="{% url 'products:purchase_request_detail' pr.pk %}" class="view-btn blue" style="flex:1;">
+            👁️ Xem chi tiết
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📭</div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--color-base-700,#374151);">Hộp thư trống</div>
+    <div style="color:var(--color-base-500,#6b7280);margin-bottom:24px;">
+      Chưa có đợt mua hàng nào cần báo giá. <br>Khi cửa hàng trưởng gửi, nó sẽ xuất hiện tại đây.
+    </div>
+    <a href="{% url 'products:stock_dashboard' %}" style="padding:11px 24px;background:#8b0000;color:white;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:8px;">
+      📊 Xem biên độ tồn kho
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,232 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Nộp Hồ Sơ Báo Giá{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+.breadcrumb { font-size:13px; color:var(--color-base-400,#9ca3af); margin-bottom:16px; }
+.breadcrumb a { color:#8b0000; text-decoration:none; }
+.page-title { font-size:22px; font-weight:700; margin-bottom:4px; }
+.page-sub   { font-size:13px; color:var(--color-base-400,#9ca3af); margin-bottom:24px; }
+
+.info-banner {
+  background:linear-gradient(135deg,#1d4ed8 0%,#3b82f6 100%);
+  color:white; border-radius:10px; padding:14px 20px; margin-bottom:24px;
+  display:flex; align-items:center; gap:12px; font-size:14px;
+}
+.info-banner strong { font-family:monospace; font-size:16px; }
+
+.card { background:var(--color-base-0,white); border:1px solid var(--color-base-200,#e5e7eb); border-radius:10px; overflow:hidden; margin-bottom:20px; }
+.card-head { padding:14px 20px; border-bottom:1px solid var(--color-base-100,#f3f4f6); font-weight:700; font-size:14px; }
+.card-body  { padding:20px; }
+
+.form-group  { margin-bottom:18px; }
+.form-label  { display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--color-base-700,#374151); }
+.form-label .req { color:#dc2626; margin-left:2px; }
+.form-control {
+  width:100%; padding:10px 14px;
+  border:1px solid var(--color-base-300,#d1d5db); border-radius:8px;
+  font-size:14px; color:var(--color-base-800,#1f2937);
+  background:var(--color-base-0,white); transition:.15s;
+}
+.form-control:focus { outline:none; border-color:#8b0000; box-shadow:0 0 0 3px rgba(139,0,0,.1); }
+.form-control option { background:var(--color-base-0,white); }
+
+.file-upload-area {
+  border:2px dashed var(--color-base-300,#d1d5db); border-radius:10px;
+  padding:32px 20px; text-align:center; cursor:pointer;
+  transition:.2s; background:var(--color-base-50,#f9fafb);
+}
+.file-upload-area:hover, .file-upload-area.drag { border-color:#8b0000; background:#fff5f5; }
+.file-upload-area input[type=file] { display:none; }
+.file-upload-icon { font-size:36px; margin-bottom:8px; }
+.file-upload-text { font-size:14px; font-weight:600; color:var(--color-base-700,#374151); }
+.file-upload-sub  { font-size:12px; color:var(--color-base-400,#9ca3af); margin-top:4px; }
+.file-upload-hint { font-size:11px; color:#dc2626; margin-top:8px; font-weight:500; }
+#file-name-display { margin-top:10px; font-size:13px; font-weight:600; color:#16a34a; display:none; }
+
+.note-area { width:100%; padding:10px 14px; border:1px solid var(--color-base-300,#d1d5db); border-radius:8px; font-size:14px; resize:vertical; min-height:90px; }
+.note-area:focus { outline:none; border-color:#8b0000; box-shadow:0 0 0 3px rgba(139,0,0,.1); }
+
+.actions-bar { display:flex; gap:10px; flex-wrap:wrap; padding-top:4px; }
+.btn-submit {
+  padding:11px 28px; background:#8b0000; color:white; border:none; border-radius:8px;
+  font-size:14px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+  transition:.2s; box-shadow:0 2px 10px rgba(139,0,0,.3);
+}
+.btn-submit:hover { background:#6b0000; transform:translateY(-1px); }
+.btn-back {
+  padding:11px 22px; border:1px solid var(--color-base-300,#d1d5db); border-radius:8px;
+  font-size:14px; font-weight:500; color:var(--color-base-700,#374151); text-decoration:none;
+  display:inline-flex; align-items:center; gap:6px; background:white;
+}
+.btn-back:hover { background:var(--color-base-50,#f9fafb); }
+
+/* Items preview */
+.items-list { max-height:320px; overflow-y:auto; }
+.item-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--color-base-50,#f9fafb); }
+.item-row:last-child { border:none; }
+.item-num { width:28px; height:28px; border-radius:50%; background:var(--color-base-100,#f3f4f6); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+.size-tag { display:inline-block; padding:2px 8px; background:var(--color-base-100,#f3f4f6); border-radius:4px; font-size:12px; font-weight:600; }
+.qty-badge { padding:3px 10px; background:#dbeafe; color:#1d4ed8; border-radius:12px; font-size:12px; font-weight:700; }
+
+.dark .card { background:var(--color-base-900); border-color:var(--color-base-700); }
+.dark .card-head { border-color:var(--color-base-800); }
+.dark .form-control, .dark .note-area { background:var(--color-base-800); border-color:var(--color-base-600); color:var(--color-base-100); }
+.dark .file-upload-area { background:var(--color-base-800); border-color:var(--color-base-600); }
+.dark .btn-back { background:var(--color-base-800); border-color:var(--color-base-600); color:var(--color-base-200); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:0 8px;">
+
+  <div class="breadcrumb">
+    <a href="{% url 'products:purchase_request_detail' pr.pk %}">← Quay lại Chi tiết Đợt {{ pr.code }}</a>
+  </div>
+
+  <div class="page-title">📋 Nộp Hồ Sơ Báo Giá (File CSV)</div>
+  <div class="page-sub">Tải lên danh sách báo giá cho đợt thu mua tương ứng.</div>
+
+  <div class="info-banner">
+    <span style="font-size:24px;">📦</span>
+    <div>
+      Bạn đang nộp báo giá cho:
+      <strong>Đợt {{ pr.code }}</strong>
+      <span style="font-size:12px;opacity:.85;margin-left:8px;">Ngày {{ pr.created_at|date:"d/m/Y" }} · {{ items|length }} biến thể</span>
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div style="display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start;">
+
+      <!-- Left: form -->
+      <div>
+        <div class="card">
+          <div class="card-head">🏭 Thông tin Nhà Cung Cấp &amp; File Báo Giá</div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label" for="supplier-select">Doanh nghiệp thực hiện báo giá <span class="req">*</span></label>
+              <select name="supplier" id="supplier-select" class="form-control" required>
+                <option value="">— Chọn Nhà cung cấp —</option>
+                {% for s in suppliers %}
+                <option value="{{ s.id }}">{{ s.name }}{% if s.phone %} · {{ s.phone }}{% endif %}</option>
+                {% endfor %}
+              </select>
+              {% if not suppliers %}
+              <div style="font-size:12px;color:#dc2626;margin-top:6px;">
+                ⚠️ Chưa có nhà cung cấp nào. <a href="{% url 'admin:products_supplier_add' %}" target="_blank" style="color:#8b0000;">Thêm nhà cung cấp</a>
+              </div>
+              {% endif %}
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="csv-input">Chọn File CSV Báo Giá <span class="req">*</span></label>
+              <div class="file-upload-area" id="upload-area" onclick="document.getElementById('csv-input').click();">
+                <input type="file" name="csv_file" id="csv-input" accept=".csv" required>
+                <div class="file-upload-icon">📄</div>
+                <div class="file-upload-text">Chọn tệp CSV hoặc kéo &amp; thả vào đây</div>
+                <div class="file-upload-sub">Chỉ chấp nhận file .csv (UTF-8)</div>
+                <div class="file-upload-hint">⚠️ Cấu trúc CSV: Mã SP, Tên SP, Size, Số lượng, Đơn giá, Kho còn</div>
+                <div id="file-name-display">✅ <span id="file-name-text"></span></div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="note-input">Ghi chú cho kho hàng</label>
+              <textarea name="note" id="note-input" class="note-area" placeholder="Nhập ghi chú (tùy chọn)..."></textarea>
+            </div>
+
+            <div class="actions-bar">
+              <a href="{% url 'products:purchase_request_detail' pr.pk %}" class="btn-back">← Quay lại danh sách</a>
+              <button type="submit" class="btn-submit">📤 Gửi Hồ Sơ Báo Giá</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: items preview -->
+      <div>
+        <div class="card">
+          <div class="card-head">📦 Danh mục sản phẩm yêu cầu ({{ items|length }})</div>
+          <div class="card-body" style="padding:12px 20px;">
+            <div class="items-list">
+              {% for item in items %}
+              <div class="item-row">
+                <div class="item-num">{{ forloop.counter }}</div>
+                <div style="flex:1;">
+                  <div style="font-weight:600;font-size:13px;">{{ item.variant.product.name|truncatechars:35 }}</div>
+                  <div style="font-size:11px;color:var(--color-base-400,#9ca3af);">{{ item.variant.sku }}</div>
+                </div>
+                <span class="size-tag">{{ item.variant.size.name }}</span>
+                <span class="qty-badge">{{ item.qty_requested }}</span>
+              </div>
+              {% empty %}
+              <div style="text-align:center;padding:24px;color:var(--color-base-400,#9ca3af);">Không có sản phẩm.</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <!-- CSV format hint -->
+        <div class="card">
+          <div class="card-head">ℹ️ Format file CSV</div>
+          <div class="card-body" style="font-size:12px;color:var(--color-base-600,#4b5563);">
+            <p style="margin:0 0 10px;">File CSV cần có các cột sau (dòng đầu là tiêu đề):</p>
+            <table style="width:100%;border-collapse:collapse;font-size:11px;">
+              <tr style="background:var(--color-base-50,#f9fafb);">
+                <td style="padding:5px 8px;border:1px solid var(--color-base-200,#e5e7eb);font-weight:700;">Cột</td>
+                <td style="padding:5px 8px;border:1px solid var(--color-base-200,#e5e7eb);font-weight:700;">Ví dụ</td>
+              </tr>
+              <tr><td style="padding:5px 8px;border:1px solid var(--color-base-200,#e5e7eb);">Mã SP (SKU)</td><td style="padding:5px 8px;border:1px solid var(--color-base-200,#e5e7eb);">nike-air-max-42-trang</td></tr>
+              <tr><td style="padding:5px 8px;border:1px solid var(--color-base-200,#e5e7eb);">Tên sản phẩm</td><td style="padding:5px 8px;border:1px solid var(--color-base-200,#e5e7eb);">Nike Air Max</td></tr>
+              <tr><td style="padding:5px 8px;border:1px solid var(--color-base-200,#e5e7eb);">Kích thước (Size)</td><td style="padding:5px 8px;border:1px solid var(--color-base-200,#e5e7eb);">42</td></tr>
+              <tr><td style="padding:5px 8px;border:1px solid var(--color-base-200,#e5e7eb);">Số lượng yêu cầu</td><td style="padding:5px 8px;border:1px solid var(--color-base-200,#e5e7eb);">10</td></tr>
+              <tr><td style="padding:5px 8px;border:1px solid var(--color-base-200,#e5e7eb);">Đơn giá báo (để trống)</td><td style="padding:5px 8px;border:1px solid var(--color-base-200,#e5e7eb);">850000</td></tr>
+              <tr><td style="padding:5px 8px;border:1px solid var(--color-base-200,#e5e7eb);">Kho còn (để trống)</td><td style="padding:5px 8px;border:1px solid var(--color-base-200,#e5e7eb);">50</td></tr>
+            </table>
+            <div style="margin-top:10px;">
+              💡 Tải CSV mẫu từ trang chi tiết đợt mua để có sẵn SKU và tên SP.
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </form>
+
+</div>
+
+<script>
+const input = document.getElementById('csv-input');
+const area  = document.getElementById('upload-area');
+const fnDisp= document.getElementById('file-name-display');
+const fnText= document.getElementById('file-name-text');
+
+input.addEventListener('change', () => {
+  if (input.files[0]) {
+    fnText.textContent = input.files[0].name;
+    fnDisp.style.display = 'block';
+    area.style.borderColor = '#16a34a';
+  }
+});
+
+// Drag and drop
+area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('drag'); });
+area.addEventListener('dragleave', () => area.classList.remove('drag'));
+area.addEventListener('drop', e => {
+  e.preventDefault(); area.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.csv')) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+    fnText.textContent = file.name;
+    fnDisp.style.display = 'block';
+    area.style.borderColor = '#16a34a';
+  }
+});
+</script>
+{% endblock %}

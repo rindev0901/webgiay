@@ -1,0 +1,239 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Nhận Hàng — {{ pr.code }}{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+.breadcrumb { font-size:13px; color:var(--color-base-400,#9ca3af); margin-bottom:16px; }
+.breadcrumb a { color:#8b0000; text-decoration:none; }
+.page-title { font-size:22px; font-weight:700; margin-bottom:4px; }
+.page-sub   { font-size:13px; color:var(--color-base-400,#9ca3af); margin-bottom:24px; }
+
+.receive-banner {
+  background:linear-gradient(135deg,#15803d 0%,#22c55e 100%);
+  color:white; border-radius:12px; padding:18px 24px; margin-bottom:24px;
+  display:flex; align-items:center; gap:14px;
+}
+.receive-banner h3 { margin:0; font-size:16px; font-weight:700; }
+.receive-banner p  { margin:4px 0 0; font-size:13px; opacity:.85; }
+
+.card { background:var(--color-base-0,white); border:1px solid var(--color-base-200,#e5e7eb); border-radius:10px; overflow:hidden; margin-bottom:20px; }
+.card-head { padding:14px 20px; border-bottom:1px solid var(--color-base-100,#f3f4f6); font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:space-between; }
+
+.recv-table { width:100%; border-collapse:collapse; }
+.recv-table th {
+  padding:10px 16px; text-align:left; font-size:11px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.5px; color:var(--color-base-500,#6b7280);
+  border-bottom:2px solid var(--color-base-200,#e5e7eb);
+}
+.recv-table td { padding:14px 16px; font-size:13px; border-bottom:1px solid var(--color-base-50,#f9fafb); vertical-align:middle; }
+.recv-table tr:last-child td { border-bottom:none; }
+.recv-table tr:hover td { background:var(--color-base-50,#f9fafb); }
+
+.qty-input {
+  width:90px; padding:8px 10px; text-align:center;
+  border:2px solid var(--color-base-300,#d1d5db); border-radius:8px;
+  font-size:16px; font-weight:700; transition:.15s;
+}
+.qty-input:focus { outline:none; border-color:#16a34a; box-shadow:0 0 0 3px rgba(22,163,74,.15); }
+
+.note-input {
+  width:100%; padding:10px 14px;
+  border:1px solid var(--color-base-300,#d1d5db); border-radius:8px;
+  font-size:14px; resize:vertical; min-height:70px;
+  color:var(--color-base-800,#1f2937); background:var(--color-base-0,white);
+}
+.note-input:focus { outline:none; border-color:#16a34a; box-shadow:0 0 0 3px rgba(22,163,74,.1); }
+
+.thumb { width:42px; height:42px; object-fit:contain; border-radius:4px; border:1px solid var(--color-base-200,#e5e7eb); }
+.size-tag { display:inline-block; padding:2px 8px; background:var(--color-base-100,#f3f4f6); border-radius:4px; font-size:12px; font-weight:600; }
+
+.actions-bar { display:flex; gap:12px; align-items:center; padding:18px 20px; background:var(--color-base-50,#f9fafb); border-top:1px solid var(--color-base-200,#e5e7eb); flex-wrap:wrap; }
+.btn-confirm {
+  padding:12px 30px; background:#15803d; color:white; border:none; border-radius:8px;
+  font-size:15px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+  transition:.2s; box-shadow:0 3px 12px rgba(22,163,74,.3);
+}
+.btn-confirm:hover { background:#166534; transform:translateY(-1px); box-shadow:0 5px 16px rgba(22,163,74,.4); }
+.btn-back {
+  padding:12px 22px; border:1px solid var(--color-base-300,#d1d5db); border-radius:8px;
+  font-size:14px; font-weight:500; color:var(--color-base-700,#374151); text-decoration:none;
+  display:inline-flex; align-items:center; gap:6px;
+}
+.btn-back:hover { background:var(--color-base-100,#f3f4f6); }
+
+.fill-all-btn {
+  padding:5px 14px; background:var(--color-base-100,#f3f4f6); color:var(--color-base-700,#374151);
+  border:1px solid var(--color-base-300,#d1d5db); border-radius:6px; font-size:12px; cursor:pointer;
+  transition:.15s;
+}
+.fill-all-btn:hover { background:var(--color-base-200,#e5e7eb); }
+
+/* Supplier info bar */
+.supplier-bar {
+  background:var(--color-base-50,#f9fafb); border:1px solid var(--color-base-200,#e5e7eb);
+  border-radius:8px; padding:14px 18px; display:flex; align-items:center; gap:12px; margin-bottom:20px;
+}
+
+.dark .card { background:var(--color-base-900); border-color:var(--color-base-700); }
+.dark .card-head { border-color:var(--color-base-800); }
+.dark .actions-bar { background:var(--color-base-900); border-color:var(--color-base-700); }
+.dark .recv-table tr:hover td { background:var(--color-base-800); }
+.dark .qty-input, .dark .note-input { background:var(--color-base-800); border-color:var(--color-base-600); color:var(--color-base-100); }
+.dark .btn-back { border-color:var(--color-base-600); color:var(--color-base-200); }
+.dark .btn-back:hover { background:var(--color-base-800); }
+.dark .supplier-bar { background:var(--color-base-800); border-color:var(--color-base-700); }
+.dark .fill-all-btn { background:var(--color-base-800); border-color:var(--color-base-600); color:var(--color-base-200); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;padding:0 8px;">
+
+  <div class="breadcrumb">
+    <a href="{% url 'products:purchase_request_detail' pr.pk %}">← Quay lại Chi tiết Đợt {{ pr.code }}</a>
+  </div>
+
+  <div class="page-title">📦 Nhận Hàng &amp; Nhập Kho</div>
+  <div class="page-sub">Điền số lượng thực nhận — hệ thống sẽ tự động cộng vào tồn kho hiện có.</div>
+
+  <!-- Banner -->
+  <div class="receive-banner">
+    <span style="font-size:32px;">🚚</span>
+    <div>
+      <h3>Kho đang nhận hàng từ đợt {{ pr.code }}</h3>
+      <p>Kiểm đếm hàng thực tế — điền đúng số lượng nhận được. Tồn kho = Tồn cũ + Thực nhận.</p>
+    </div>
+  </div>
+
+  <!-- Supplier info nếu có -->
+  {% if approved_quote %}
+  <div class="supplier-bar">
+    <span style="font-size:24px;">🏭</span>
+    <div>
+      <div style="font-weight:700;font-size:14px;">Nhà cung cấp đã duyệt: {{ approved_quote.supplier.name }}</div>
+      <div style="font-size:12px;color:var(--color-base-500,#6b7280);">
+        Email: {{ approved_quote.supplier.email|default:"—" }} · ĐT: {{ approved_quote.supplier.phone|default:"—" }}
+      </div>
+    </div>
+    <span style="margin-left:auto;padding:4px 12px;background:#dcfce7;color:#166534;border-radius:12px;font-size:12px;font-weight:700;">✅ Đã duyệt</span>
+  </div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+
+    <!-- Note -->
+    <div class="card">
+      <div class="card-head">📝 Ghi chú nhập kho</div>
+      <div style="padding:16px 20px;">
+        <textarea name="note" class="note-input" placeholder="Ví dụ: Nhận hàng từ NCC ABC, lô hàng ngày {{ pr.created_at|date:'d/m/Y' }}...">Nhập hàng từ đợt {{ pr.code }}</textarea>
+      </div>
+    </div>
+
+    <!-- Items table -->
+    <div class="card">
+      <div class="card-head">
+        <span>📦 Danh sách kiểm hàng ({{ items|length }} biến thể)</span>
+        <button type="button" class="fill-all-btn" onclick="fillRequested()">
+          ↳ Điền theo SL yêu cầu
+        </button>
+      </div>
+      <table class="recv-table">
+        <thead>
+          <tr>
+            <th style="width:50px;">Ảnh</th>
+            <th>Sản phẩm</th>
+            <th>Size</th>
+            <th>Màu</th>
+            <th>Tồn kho hiện tại</th>
+            <th>SL yêu cầu</th>
+            <th>SL thực nhận</th>
+            <th>Tồn sau nhập</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>
+              {% with img=item.variant.product.images.first %}
+              {% if img %}<img src="{{ img.image.url }}" class="thumb">
+              {% else %}<div class="thumb" style="background:var(--color-base-100,#f3f4f6);display:flex;align-items:center;justify-content:center;font-size:16px;">👟</div>{% endif %}
+              {% endwith %}
+            </td>
+            <td>
+              <div style="font-weight:600;">{{ item.variant.product.name|truncatechars:45 }}</div>
+              <div style="font-size:11px;color:var(--color-base-400,#9ca3af);">{{ item.variant.product.brand.name }} · {{ item.variant.sku }}</div>
+            </td>
+            <td><span class="size-tag">{{ item.variant.size.name }}</span></td>
+            <td>{{ item.variant.color.name|default:"Mặc định" }}</td>
+            <td>
+              <span id="cur_{{ item.id }}" style="font-size:16px;font-weight:700;
+                {% if item.variant.stock == 0 %}color:#dc2626;{% elif item.variant.stock <= 5 %}color:#ea580c;{% else %}color:#16a34a;{% endif %}">
+                {{ item.variant.stock }}
+              </span>
+              <span style="font-size:11px;color:var(--color-base-400,#9ca3af);margin-left:2px;">đôi</span>
+            </td>
+            <td>
+              <span style="font-size:15px;font-weight:700;color:#1d4ed8;" data-requested="{{ item.qty_requested }}" id="req_{{ item.id }}">
+                {{ item.qty_requested }}
+              </span>
+            </td>
+            <td>
+              <input type="number" name="qty_received_{{ item.id }}"
+                     id="inp_{{ item.id }}"
+                     min="0" value="{{ item.qty_requested }}"
+                     data-stock="{{ item.variant.stock }}"
+                     data-item="{{ item.id }}"
+                     class="qty-input recv-input"
+                     oninput="updatePreview({{ item.id }}, {{ item.variant.stock }})">
+            </td>
+            <td>
+              <span id="preview_{{ item.id }}" style="font-size:16px;font-weight:700;color:#15803d;">
+                {{ item.variant.stock|add:item.qty_requested }}
+              </span>
+              <span style="font-size:11px;color:var(--color-base-400,#9ca3af);margin-left:2px;">đôi</span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--color-base-400,#9ca3af);">Không có biến thể.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="actions-bar">
+        <a href="{% url 'products:purchase_request_detail' pr.pk %}" class="btn-back">← Hủy</a>
+        <button type="submit" class="btn-confirm">
+          ✅ Xác nhận Nhập Kho
+        </button>
+        <span style="font-size:12px;color:var(--color-base-400,#9ca3af);">Thao tác này không thể hoàn tác.</span>
+      </div>
+    </div>
+
+  </form>
+</div>
+
+<script>
+function updatePreview(itemId, currentStock) {
+  const inp = document.getElementById('inp_' + itemId);
+  const preview = document.getElementById('preview_' + itemId);
+  const qty = parseInt(inp.value) || 0;
+  const total = currentStock + qty;
+  preview.textContent = total;
+  preview.style.color = total > 0 ? '#15803d' : '#dc2626';
+}
+
+function fillRequested() {
+  document.querySelectorAll('.recv-input').forEach(inp => {
+    const id = inp.dataset.item;
+    const req = document.getElementById('req_' + id);
+    const stock = parseInt(inp.dataset.stock) || 0;
+    if (req) {
+      inp.value = req.dataset.requested || req.textContent.trim();
+      updatePreview(id, stock);
+    }
+  });
+}
+</script>
+{% endblock %}

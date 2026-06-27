@@ -1,0 +1,204 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}So Sánh Báo Giá — {{ pr.code }}{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+.breadcrumb { font-size:13px; color:var(--color-base-400,#9ca3af); margin-bottom:16px; }
+.breadcrumb a { color:#8b0000; text-decoration:none; }
+.page-title { font-size:22px; font-weight:700; margin-bottom:4px; }
+.page-sub   { font-size:13px; color:var(--color-base-400,#9ca3af); margin-bottom:24px; }
+
+/* Supplier column cards */
+.compare-wrapper { overflow-x:auto; }
+.compare-table { width:100%; border-collapse:collapse; min-width:700px; }
+.compare-table th {
+  padding:12px 16px; text-align:center; font-size:12px; font-weight:700;
+  border-bottom:2px solid var(--color-base-200,#e5e7eb);
+}
+.compare-table th.col-product { text-align:left; }
+.compare-table td {
+  padding:11px 16px; font-size:13px; border-bottom:1px solid var(--color-base-50,#f9fafb);
+  text-align:center; vertical-align:middle;
+}
+.compare-table td.col-product { text-align:left; }
+.compare-table tr:hover td { background:var(--color-base-50,#f9fafb); }
+.compare-table tr:last-child td { border:none; }
+
+/* Supplier header chips */
+.supplier-head { border-radius:10px; padding:10px 16px; display:inline-block; }
+.s-head-0 { background:#dbeafe; color:#1d4ed8; }
+.s-head-1 { background:#f3e8ff; color:#9333ea; }
+.s-head-2 { background:#dcfce7; color:#166534; }
+.s-head-3 { background:#ffedd5; color:#ea580c; }
+.s-head-4 { background:#fef9c3; color:#854d0e; }
+
+/* Price cells */
+.price-cell { display:flex; flex-direction:column; align-items:center; gap:3px; }
+.price-val { font-size:14px; font-weight:700; }
+.price-val.cheapest { color:#16a34a; }
+.price-val.costly   { color:var(--color-base-500,#6b7280); }
+.qty-avail { font-size:11px; color:var(--color-base-400,#9ca3af); }
+.cheapest-badge { background:#dcfce7; color:#166534; font-size:10px; font-weight:700; padding:1px 6px; border-radius:8px; }
+.no-quote { color:var(--color-base-300,#d1d5db); font-size:20px; }
+
+/* Approve buttons */
+.approve-card {
+  background:var(--color-base-0,white); border:1px solid var(--color-base-200,#e5e7eb);
+  border-radius:10px; padding:20px; margin-bottom:16px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+}
+.approve-card.winner { border-color:#86efac; background:#f0fdf4; }
+.approve-btn {
+  padding:10px 24px; background:#15803d; color:white; border:none; border-radius:8px;
+  font-size:14px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:7px;
+  transition:.2s; white-space:nowrap;
+}
+.approve-btn:hover { background:#166534; transform:translateY(-1px); }
+
+.total-price { font-size:20px; font-weight:800; color:var(--color-base-900,#111); }
+.total-label { font-size:11px; color:var(--color-base-400,#9ca3af); font-weight:500; }
+
+.card { background:var(--color-base-0,white); border:1px solid var(--color-base-200,#e5e7eb); border-radius:10px; overflow:hidden; margin-bottom:20px; }
+.card-head { padding:14px 20px; border-bottom:1px solid var(--color-base-100,#f3f4f6); font-weight:700; font-size:14px; }
+.size-tag { display:inline-block; padding:2px 8px; background:var(--color-base-100,#f3f4f6); border-radius:4px; font-size:12px; font-weight:600; }
+
+.no-quotes { text-align:center; padding:60px; color:var(--color-base-400,#9ca3af); }
+
+.dark .card { background:var(--color-base-900); border-color:var(--color-base-700); }
+.dark .compare-table tr:hover td { background:var(--color-base-800); }
+.dark .approve-card { background:var(--color-base-900); border-color:var(--color-base-700); }
+.dark .approve-card.winner { background:rgba(22,101,52,.2); border-color:#4ade80; }
+.dark .total-price { color:var(--color-base-50); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:1300px;margin:0 auto;padding:0 8px;">
+
+  <div class="breadcrumb">
+    <a href="{% url 'products:purchase_request_detail' pr.pk %}">← Quay lại Chi tiết Đợt {{ pr.code }}</a>
+  </div>
+
+  <div class="page-title">⚖️ So Sánh Báo Giá — {{ pr.code }}</div>
+  <div class="page-sub">So sánh giá từ các nhà cung cấp — ✅ màu xanh = rẻ nhất từng biến thể</div>
+
+  {% if quotes %}
+
+  <!-- Comparison table -->
+  <div class="card">
+    <div class="card-head">📊 Bảng so sánh giá ({{ quotes|length }} nhà cung cấp)</div>
+    <div class="compare-wrapper">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th class="col-product" style="width:280px;">Sản phẩm / Biến thể</th>
+            <th style="width:60px;">Yêu cầu</th>
+            {% for q in quotes %}
+            <th>
+              <div class="supplier-head s-head-{{ forloop.counter0 }}">
+                🏭 {{ q.supplier.name }}
+              </div>
+            </th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in compare_matrix %}
+          <tr>
+            <td class="col-product">
+              <div style="font-weight:600;font-size:13px;">{{ row.variant.product.name|truncatechars:45 }}</div>
+              <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
+                <span class="size-tag">{{ row.variant.size.name }}</span>
+                <span style="font-size:11px;color:var(--color-base-400,#9ca3af);">{{ row.variant.color.name|default:"Mặc định" }}</span>
+              </div>
+            </td>
+            <td>
+              <span style="font-weight:700;color:#1d4ed8;">
+                {% for item in pr.items.all %}{% if item.variant_id == row.variant.id %}{{ item.qty_requested }}{% endif %}{% endfor %}
+              </span>
+            </td>
+            {% for q in quotes %}
+            <td>
+              {% with cell=row.suppliers|default_if_none:None %}
+              {% if row.suppliers|dictsort:"0" %}
+              {% with data=row.suppliers %}
+              {% if q.supplier_id in data %}
+              {% with d=data|default_if_none:None %}
+              <div class="price-cell">
+                {% if row.suppliers %}
+                {% for sid, sdata in row.suppliers.items %}
+                {% if sid == q.supplier_id %}
+                <span class="price-val {% if sdata.price == min_price_map|default_if_none:0 %}cheapest{% else %}costly{% endif %}">
+                  {{ sdata.price|floatformat:0 }}₫
+                </span>
+                <span class="qty-avail">Còn: {{ sdata.qty_available }}</span>
+                {% endif %}
+                {% endfor %}
+                {% endif %}
+              </div>
+              {% endwith %}
+              {% else %}
+              <span class="no-quote">—</span>
+              {% endif %}
+              {% endwith %}
+              {% endwith %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% empty %}
+          <tr><td colspan="20" class="no-quotes">Không có dữ liệu so sánh.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Approve section -->
+  <div style="margin-bottom:8px;font-size:14px;font-weight:700;color:var(--color-base-700,#374151);">
+    ✅ Chọn Nhà Cung Cấp để Duyệt
+  </div>
+
+  {% for q in quotes %}
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="approve_quote" value="{{ q.pk }}">
+    <div class="approve-card {% if forloop.first %}winner{% endif %}">
+      <div style="width:44px;height:44px;border-radius:50%;background:{% if forloop.first %}#dcfce7{% else %}var(--color-base-100,#f3f4f6){% endif %};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🏭</div>
+      <div style="flex:1;">
+        <div style="font-weight:700;font-size:15px;">{{ q.supplier.name }}</div>
+        <div style="font-size:12px;color:var(--color-base-500,#6b7280);margin-top:2px;">
+          {{ q.quote_items.count }} biến thể · Nộp lúc {{ q.submitted_at|date:"d/m/Y H:i" }}
+        </div>
+        {% if q.note %}
+        <div style="font-size:12px;color:var(--color-base-600,#4b5563);margin-top:4px;font-style:italic;">"{{ q.note }}"</div>
+        {% endif %}
+      </div>
+      <div style="text-align:right;">
+        <div class="total-label">Tổng giá trị ước tính</div>
+        <div class="total-price">{{ q.total_cost|floatformat:0 }}₫</div>
+      </div>
+      <button type="submit" class="approve-btn">
+        {% if forloop.first %}⭐{% endif %} Duyệt NCC này
+      </button>
+    </div>
+  </form>
+  {% endfor %}
+
+  {% else %}
+  <div class="card">
+    <div class="no-quotes">
+      <div style="font-size:48px;margin-bottom:16px;">📭</div>
+      <div style="font-size:16px;font-weight:600;margin-bottom:8px;">Chưa có báo giá nào</div>
+      <div style="margin-bottom:20px;color:var(--color-base-500,#6b7280);">
+        Chưa có nhà cung cấp nào nộp báo giá cho đợt này.
+      </div>
+      <a href="{% url 'products:submit_quote' pr.pk %}" style="padding:10px 24px;background:#8b0000;color:white;border-radius:8px;text-decoration:none;font-weight:600;">
+        📤 Nộp Báo Giá Ngay
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

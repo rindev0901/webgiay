@@ -1,0 +1,279 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+.breadcrumb { font-size:13px; color:var(--color-base-400,#9ca3af); margin-bottom:16px; }
+.breadcrumb a { color:#8b0000; text-decoration:none; }
+.detail-header { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:24px; }
+.code-title { font-size:26px; font-weight:800; font-family:monospace; color:var(--color-base-900,#111); }
+.status-badge { display:inline-flex; align-items:center; gap:5px; padding:5px 14px; border-radius:20px; font-size:12px; font-weight:700; margin-top:6px; }
+.s-draft     { background:#f3f4f6; color:#6b7280; }
+.s-sent      { background:#dbeafe; color:#1d4ed8; }
+.s-quoted    { background:#f3e8ff; color:#9333ea; }
+.s-approved  { background:#dcfce7; color:#15803d; }
+.s-receiving { background:#ffedd5; color:#ea580c; }
+.s-done      { background:#bbf7d0; color:#166534; }
+.s-cancelled { background:#fee2e2; color:#991b1b; }
+
+.step-banner {
+  background:linear-gradient(135deg,#8b0000 0%,#b91c1c 100%);
+  color:white; border-radius:12px; padding:18px 24px; margin-bottom:24px;
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+}
+.step-banner h3 { margin:0; font-size:16px; font-weight:700; }
+.step-banner p  { margin:4px 0 0; font-size:13px; opacity:.85; }
+.step-actions   { display:flex; gap:10px; flex-wrap:wrap; margin-left:auto; }
+
+.btn-white {
+  padding:9px 20px; background:white; color:#8b0000;
+  border:none; border-radius:8px; font-size:13px; font-weight:700;
+  cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition:.2s;
+}
+.btn-white:hover { background:#fff5f5; transform:translateY(-1px); }
+.btn-outline-white {
+  padding:9px 20px; background:transparent; color:white;
+  border:2px solid rgba(255,255,255,.6); border-radius:8px; font-size:13px; font-weight:600;
+  cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition:.2s;
+}
+.btn-outline-white:hover { background:rgba(255,255,255,.15); }
+
+.btn-action {
+  padding:8px 18px; background:#8b0000; color:white;
+  border:none; border-radius:8px; font-size:13px; font-weight:600;
+  cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition:.2s;
+}
+.btn-action:hover { background:#6b0000; }
+.btn-action.blue  { background:#1d4ed8; }
+.btn-action.blue:hover { background:#1e40af; }
+.btn-action.green { background:#15803d; }
+.btn-action.green:hover { background:#166534; }
+
+.card { background:var(--color-base-0,white); border:1px solid var(--color-base-200,#e5e7eb); border-radius:10px; overflow:hidden; margin-bottom:20px; }
+.card-head { padding:14px 20px; border-bottom:1px solid var(--color-base-100,#f3f4f6); font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:space-between; }
+.card-body  { padding:0; }
+
+.items-table { width:100%; border-collapse:collapse; }
+.items-table th { padding:10px 16px; text-align:left; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--color-base-500,#6b7280); border-bottom:1px solid var(--color-base-200,#e5e7eb); }
+.items-table td { padding:12px 16px; font-size:13px; border-bottom:1px solid var(--color-base-50,#f9fafb); vertical-align:middle; }
+.items-table tr:last-child td { border-bottom:none; }
+
+.thumb { width:40px; height:40px; object-fit:contain; border-radius:4px; border:1px solid var(--color-base-200,#e5e7eb); }
+.size-tag { display:inline-block; padding:2px 8px; background:var(--color-base-100,#f3f4f6); border-radius:4px; font-size:12px; font-weight:600; }
+
+.meta-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:0; }
+.meta-cell { padding:16px 20px; border-right:1px solid var(--color-base-100,#f3f4f6); }
+.meta-cell:last-child { border-right:none; }
+.meta-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--color-base-400,#9ca3af); margin-bottom:4px; }
+.meta-value { font-size:14px; font-weight:600; color:var(--color-base-800,#1f2937); }
+
+.quote-card {
+  border:1px solid var(--color-base-200,#e5e7eb); border-radius:8px;
+  padding:14px 18px; display:flex; align-items:center; gap:12px;
+  margin:0 20px 12px; flex-wrap:wrap;
+}
+.quote-card:last-child { margin-bottom:20px; }
+.q-approved { border-color:#86efac; background:#f0fdf4; }
+.q-rejected  { border-color:#fca5a5; background:#fff5f5; opacity:.7; }
+
+.dark .card { background:var(--color-base-900); border-color:var(--color-base-700); }
+.dark .card-head { border-color:var(--color-base-800); }
+.dark .meta-cell { border-color:var(--color-base-800); }
+.dark .code-title { color:var(--color-base-50); }
+.dark .meta-value { color:var(--color-base-100); }
+.dark .items-table tr:hover td { background:var(--color-base-800); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;padding:0 8px;">
+
+  <div class="breadcrumb">
+    <a href="{% url 'products:purchase_request_list' %}">← Danh sách đợt mua hàng</a>
+  </div>
+
+  <!-- Header -->
+  <div class="detail-header">
+    <div>
+      <div style="font-size:12px;font-weight:600;color:var(--color-base-500,#6b7280);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Đợt Mua Hàng</div>
+      <div class="code-title">{{ pr.code }}</div>
+      <div style="margin-top:6px;">
+        <span class="status-badge s-{{ pr.status }}">
+          {% if pr.status == 'draft' %}✏️ Nháp
+          {% elif pr.status == 'sent' %}📤 Đã gửi NCC
+          {% elif pr.status == 'quoted' %}💬 Đã nhận báo giá
+          {% elif pr.status == 'approved' %}✅ Đã duyệt
+          {% elif pr.status == 'receiving' %}🚚 Đang nhận hàng
+          {% elif pr.status == 'done' %}🎉 Hoàn thành
+          {% elif pr.status == 'cancelled' %}❌ Đã hủy
+          {% endif %}
+        </span>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-self:flex-start;margin-top:8px;">
+      {% if pr.status == 'approved' or pr.status == 'receiving' %}
+      <a href="{% url 'products:receive_goods' pr.pk %}" class="btn-action green">📦 Nhận hàng & Nhập kho</a>
+      {% endif %}
+      {% if pr.status == 'quoted' %}
+      <a href="{% url 'products:compare_quotes' pr.pk %}" class="btn-action blue">⚖️ So sánh báo giá</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Meta grid -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="meta-grid">
+      <div class="meta-cell">
+        <div class="meta-label">Người tạo</div>
+        <div class="meta-value">{{ pr.created_by|default:"—" }}</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Ngày tạo</div>
+        <div class="meta-value">{{ pr.created_at|date:"d/m/Y H:i" }}</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Ghi chú</div>
+        <div class="meta-value" style="font-weight:400;font-size:13px;">{{ pr.note|default:"(không có)" }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step banner: Hành động theo trạng thái -->
+  {% if pr.status == 'draft' or pr.status == 'sent' %}
+  <div class="step-banner">
+    <div>
+      <h3>📋 Gửi yêu cầu cho Nhà Cung Cấp</h3>
+      <p>Tải file CSV mẫu rồi gửi cho NCC, sau đó NCC nộp lại báo giá.</p>
+    </div>
+    <div class="step-actions">
+      <a href="{% url 'products:download_csv_template' pr.pk %}" class="btn-white">
+        ⬇️ Bước 1: Tải File CSV Mẫu
+      </a>
+      <a href="{% url 'products:submit_quote' pr.pk %}" class="btn-outline-white">
+        📤 Bước 2: Tiến hành Nộp Báo Giá
+      </a>
+    </div>
+  </div>
+  {% elif pr.status == 'quoted' %}
+  <div class="step-banner" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);">
+    <div>
+      <h3>⚖️ Đã nhận báo giá — Sẵn sàng so sánh</h3>
+      <p>So sánh giá từ các NCC và chọn NCC rẻ nhất để duyệt.</p>
+    </div>
+    <div class="step-actions">
+      <a href="{% url 'products:compare_quotes' pr.pk %}" class="btn-white" style="color:#1d4ed8;">
+        ⚖️ So sánh &amp; Duyệt báo giá
+      </a>
+      <a href="{% url 'products:submit_quote' pr.pk %}" class="btn-outline-white">
+        + Thêm báo giá NCC
+      </a>
+    </div>
+  </div>
+  {% elif pr.status == 'approved' %}
+  <div class="step-banner" style="background:linear-gradient(135deg,#15803d,#22c55e);">
+    <div>
+      <h3>📦 Đã duyệt — Chờ nhận hàng</h3>
+      <p>NCC đang chuẩn bị hàng. Khi hàng về, xác nhận nhận hàng và nhập kho.</p>
+    </div>
+    <div class="step-actions">
+      <a href="{% url 'products:receive_goods' pr.pk %}" class="btn-white" style="color:#15803d;">
+        ✅ Nhận hàng &amp; Nhập kho
+      </a>
+    </div>
+  </div>
+  {% elif pr.status == 'done' %}
+  <div class="step-banner" style="background:linear-gradient(135deg,#166534,#4ade80);">
+    <div>
+      <h3>🎉 Hoàn thành!</h3>
+      <p>Đợt nhập hàng này đã hoàn tất. Tồn kho đã được cập nhật.</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Items table -->
+  <div class="card">
+    <div class="card-head">
+      <span>📦 Danh mục sản phẩm yêu cầu ({{ items|length }} biến thể)</span>
+    </div>
+    <div class="card-body">
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th style="width:50px;">Ảnh</th>
+            <th>Sản phẩm</th>
+            <th>Kích thước (Size)</th>
+            <th>Màu sắc</th>
+            <th>Số lượng Admin cần mua</th>
+            {% if pr.status == 'done' or pr.status == 'receiving' %}<th>Thực nhận</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>
+              {% with img=item.variant.product.images.first %}
+              {% if img %}<img src="{{ img.image.url }}" class="thumb">
+              {% else %}<div class="thumb" style="background:var(--color-base-100,#f3f4f6);display:flex;align-items:center;justify-content:center;font-size:16px;">👟</div>{% endif %}
+              {% endwith %}
+            </td>
+            <td>
+              <div style="font-weight:600;">{{ item.variant.product.name|truncatechars:50 }}</div>
+              <div style="font-size:11px;color:var(--color-base-400,#9ca3af);">{{ item.variant.product.brand.name }}</div>
+            </td>
+            <td><span class="size-tag">{{ item.variant.size.name }}</span></td>
+            <td>{{ item.variant.color.name|default:"Mặc định" }}</td>
+            <td>
+              <span style="font-size:16px;font-weight:700;color:#1d4ed8;">{{ item.qty_requested }}</span>
+            </td>
+            {% if pr.status == 'done' or pr.status == 'receiving' %}
+            <td>
+              <span style="font-size:16px;font-weight:700;color:#15803d;">{{ item.qty_received }}</span>
+            </td>
+            {% endif %}
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--color-base-400,#9ca3af);">Không có sản phẩm.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Quotes section -->
+  {% if quotes %}
+  <div class="card">
+    <div class="card-head">
+      <span>💬 Báo giá từ Nhà Cung Cấp ({{ quotes|length }})</span>
+      <a href="{% url 'products:submit_quote' pr.pk %}" style="font-size:12px;color:#8b0000;text-decoration:none;font-weight:600;">+ Thêm báo giá</a>
+    </div>
+    <div class="card-body" style="padding-top:12px;">
+      {% for q in quotes %}
+      <div class="quote-card {% if q.status == 'approved' %}q-approved{% elif q.status == 'rejected' %}q-rejected{% endif %}">
+        <div style="width:36px;height:36px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🏭</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:14px;">{{ q.supplier.name }}</div>
+          <div style="font-size:12px;color:var(--color-base-500,#6b7280);">
+            Nộp lúc: {{ q.submitted_at|date:"d/m/Y H:i"|default:"Chưa nộp" }}
+            {% if q.quote_items.count %} · {{ q.quote_items.count }} biến thể{% endif %}
+          </div>
+        </div>
+        <span style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;
+          {% if q.status == 'approved' %}background:#dcfce7;color:#166534;
+          {% elif q.status == 'rejected' %}background:#fee2e2;color:#991b1b;
+          {% elif q.status == 'submitted' %}background:#dbeafe;color:#1d4ed8;
+          {% else %}background:#f3f4f6;color:#6b7280;{% endif %}">
+          {% if q.status == 'approved' %}✅ Đã duyệt
+          {% elif q.status == 'rejected' %}❌ Không chọn
+          {% elif q.status == 'submitted' %}📄 Đã nộp báo giá
+          {% else %}⏳ Chờ báo giá{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
