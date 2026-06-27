@@ -1,0 +1,127 @@
+{% extends 'supply/base_supply.html' %}
+{% load supply_admin %}
+
+{% block title %}Tạo đợt yêu cầu đặt hàng{% endblock %}
+
+{% block supply_content %}
+
+<nav class="supply-breadcrumb">
+    <a href="{% supply_url 'analytics' %}">Biên độ</a>
+    <i class="fas fa-chevron-right"></i>
+    <a href="{% supply_url 'request_list' %}">Yêu cầu đặt hàng</a>
+    <i class="fas fa-chevron-right"></i>
+    <span>Tạo mới</span>
+</nav>
+
+<div class="supply-header">
+    <h1 class="supply-title">➕ Tạo đợt yêu cầu đặt hàng</h1>
+</div>
+
+<form method="post">
+{% csrf_token %}
+{% for v in all_variants %}
+<input type="hidden" name="variant_ids" value="{{ v.pk }}" />
+{% endfor %}
+
+<div class="s-card" style="margin-bottom:16px;">
+    <div class="s-card-header"><span class="s-card-title">Thông tin đợt</span></div>
+    <div class="s-card-body">
+        <div class="s-form-group">
+            <label>Tiêu đề</label>
+            <input type="text" name="title" class="s-form-control"
+                   value="Đợt thu mua bổ sung tồn kho" required />
+        </div>
+        <div class="s-form-group">
+            <label>Ghi chú gửi NCC</label>
+            <textarea name="note" class="s-form-control" rows="2"
+                      placeholder="VD: Nhập đơn hàng Tháng 6..."></textarea>
+        </div>
+        <div class="s-form-group">
+            <label>Hạn báo giá</label>
+            <input type="date" name="deadline" class="s-form-control" style="max-width:220px;" />
+        </div>
+    </div>
+</div>
+
+<div class="s-card" style="margin-bottom:16px;">
+    <div class="s-card-header">
+        <span class="s-card-title">📦 Sản phẩm đã chọn ({{ page_obj.paginator.count }})</span>
+    </div>
+    <div style="overflow-x:auto;">
+    <table class="s-table">
+        <thead>
+            <tr>
+                <th>Mã SP</th>
+                <th>Tên sản phẩm</th>
+                <th>Size</th>
+                <th>Màu</th>
+                <th>Tồn kho</th>
+                <th>SL yêu cầu mua</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for v in variants %}
+            <tr>
+                <td>{{ v.pk }}</td>
+                <td style="font-weight:600;">{{ v.product.name }}</td>
+                <td><span style="background:#f3f4f6;padding:3px 8px;border-radius:4px;font-weight:600;font-size:12px;">{{ v.size.name }}</span></td>
+                <td>{{ v.color.name|default:"Mặc định" }}</td>
+                <td>
+                    {% if v.stock <= 5 %}
+                    <span style="color:#f59e0b;font-weight:700;">⚠ {{ v.stock }}</span>
+                    {% else %}
+                    <span style="color:#16a34a;font-weight:700;">{{ v.stock }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <input type="number" name="qty_{{ v.pk }}" value="{{ v.suggested_qty|default:10 }}"
+                           min="1" max="9999" class="s-form-control" style="width:90px;" />
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align:center;padding:32px;color:#999;">
+                    Chưa chọn sản phẩm.
+                    <a href="{% supply_url 'analytics' %}">Quay lại biên độ tồn kho</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% include 'supply/_pagination.html' %}
+</div>
+
+{% if suppliers %}
+<div class="s-card" style="margin-bottom:16px;">
+    <div class="s-card-header">
+        <span class="s-card-title">🏭 Gửi đến nhà cung cấp</span>
+        <span style="font-size:12px;color:#888;">Chọn ít nhất 1 NCC để gửi ngay</span>
+    </div>
+    <div class="s-card-body" style="display:flex;flex-wrap:wrap;gap:12px;">
+        {% for s in suppliers %}
+        <label style="display:flex;align-items:center;gap:8px;padding:10px 16px;border:1.5px solid #e5e7eb;border-radius:6px;cursor:pointer;min-width:200px;">
+            <input type="checkbox" name="supplier_ids" value="{{ s.pk }}" style="width:16px;height:16px;" />
+            <div>
+                <strong style="font-size:13px;">{{ s.name }}</strong>
+                {% if s.contact_name %}<div style="font-size:11px;color:#888;">{{ s.contact_name }}</div>{% endif %}
+            </div>
+        </label>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#92400e;">
+    ⚠ Chưa có nhà cung cấp. Tạo NCC trong Admin trước, hoặc lưu bản nháp và gửi sau.
+</div>
+{% endif %}
+
+<div style="display:flex;gap:10px;justify-content:flex-end;">
+    <a href="{% supply_url 'analytics' %}" class="btn-secondary">Hủy</a>
+    <button type="submit" class="btn-primary" {% if not page_obj.paginator.count %}disabled{% endif %}>
+        <i class="fas fa-paper-plane"></i> Tạo &amp; gửi yêu cầu
+    </button>
+</div>
+</form>
+
+{% endblock %}

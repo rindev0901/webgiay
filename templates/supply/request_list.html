@@ -1,0 +1,74 @@
+{% extends 'supply/base_supply.html' %}
+{% load supply_admin %}
+
+{% block title %}Danh sách đợt yêu cầu — Cửa hàng trưởng{% endblock %}
+
+{% block supply_content %}
+
+<nav class="supply-breadcrumb">
+    <a href="{{ supply_paths.admin_index }}">Admin</a>
+    <i class="fas fa-chevron-right"></i>
+    <a href="{% supply_url 'analytics' %}">Biên độ</a>
+    <i class="fas fa-chevron-right"></i>
+    <span>Yêu cầu đặt hàng</span>
+</nav>
+
+<div class="supply-header">
+    <h1 class="supply-title">📋 Danh sách đợt yêu cầu đặt hàng</h1>
+    <a href="{% supply_url 'analytics' %}" class="btn-green">
+        <i class="fas fa-plus"></i> Tạo từ biên độ tồn kho
+    </a>
+</div>
+
+<div class="s-card">
+    <div style="overflow-x:auto;">
+    <table class="s-table">
+        <thead>
+            <tr>
+                <th>Mã đợt</th>
+                <th>Tiêu đề</th>
+                <th>Trạng thái</th>
+                <th>Số mặt hàng</th>
+                <th>NCC</th>
+                <th>Ngày tạo</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pr in requests %}
+            <tr>
+                <td><code style="font-size:12px;">{{ pr.code }}</code></td>
+                <td style="font-weight:600;">{{ pr.title }}</td>
+                <td><span class="badge badge-{{ pr.status }}">{{ pr.get_status_display }}</span></td>
+                <td>{{ pr.items.count }}</td>
+                <td style="font-size:12px;color:#666;">
+                    {% if pr.approved_supplier %}
+                    <span style="color:#16a34a;font-weight:600;">⭐ {{ pr.approved_supplier.name }}</span>
+                    {% elif pr.suppliers.exists %}
+                    {{ pr.suppliers.count }} NCC
+                    {% else %}
+                    <span style="color:#999;">Chưa gửi</span>
+                    {% endif %}
+                </td>
+                <td style="font-size:12px;color:#888;">{{ pr.created_at|date:"d/m/Y H:i" }}</td>
+                <td>
+                    <a href="{% supply_url 'request_detail' pr.pk %}" class="btn-secondary" style="font-size:12px;padding:6px 12px;">
+                        Xem chi tiết
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align:center;padding:48px;color:#999;">
+                    Chưa có đợt yêu cầu nào.<br>
+                    <a href="{% supply_url 'analytics' %}" style="color:#8b0000;margin-top:8px;display:inline-block;">→ Vào biên độ tồn kho để tạo</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% include 'supply/_pagination.html' %}
+</div>
+
+{% endblock %}

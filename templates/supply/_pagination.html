@@ -1,0 +1,29 @@
+{% if page_obj.paginator.num_pages > 1 %}
+{% with page_param=page_param|default:"page" %}
+<div class="supply-pagination">
+    <span>
+        Trang {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+        ({{ page_obj.paginator.count }} mục)
+    </span>
+    <div class="supply-pagination-pages">
+        {% if page_obj.has_previous %}
+        <a href="?{% if querystring %}{{ querystring }}&{% endif %}{{ page_param }}=1" title="Đầu">&laquo;</a>
+        <a href="?{% if querystring %}{{ querystring }}&{% endif %}{{ page_param }}={{ page_obj.previous_page_number }}">&lsaquo;</a>
+        {% endif %}
+        {% for p in page_range %}
+            {% if p == '...' %}
+            <span class="ellipsis">…</span>
+            {% elif p == page_obj.number %}
+            <span class="current">{{ p }}</span>
+            {% else %}
+            <a href="?{% if querystring %}{{ querystring }}&{% endif %}{{ page_param }}={{ p }}">{{ p }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <a href="?{% if querystring %}{{ querystring }}&{% endif %}{{ page_param }}={{ page_obj.next_page_number }}">&rsaquo;</a>
+        <a href="?{% if querystring %}{{ querystring }}&{% endif %}{{ page_param }}={{ page_obj.paginator.num_pages }}" title="Cuối">&raquo;</a>
+        {% endif %}
+    </div>
+</div>
+{% endwith %}
+{% endif %}

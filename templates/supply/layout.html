@@ -1,0 +1,65 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Chuỗi cung ứng{% endblock %} — Dat Shoes</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
+    <link rel="stylesheet" href="{% static 'css/supply.css' %}" />
+    {% block supply_head %}{% endblock %}
+</head>
+<body class="supply-body">
+<div class="supply-app">
+    <aside class="supply-sidebar">
+        <div class="supply-brand">
+            <a href="{{ supply_paths.admin_index }}">
+                <i class="fas fa-arrow-left"></i> Admin
+            </a>
+            <strong>Chuỗi cung ứng</strong>
+        </div>
+        <nav class="supply-nav">
+            {% if supply_is_manager %}
+            <div class="supply-nav-group">
+                <span class="supply-nav-label">Cửa hàng trưởng</span>
+                <a href="{{ supply_paths.bien_do }}" class="supply-nav-link{% if request.path == supply_paths.bien_do %} active{% endif %}">
+                    <i class="fas fa-chart-line"></i> Biên độ tồn kho
+                </a>
+                <a href="{{ supply_paths.request_list }}" class="supply-nav-link{% if '/supply/requests' in request.path %} active{% endif %}">
+                    <i class="fas fa-clipboard-list"></i> Yêu cầu đặt hàng
+                </a>
+            </div>
+            {% endif %}
+            {% if supply_is_supplier %}
+            <div class="supply-nav-group">
+                <span class="supply-nav-label">Nhà cung cấp</span>
+                <a href="{{ supply_paths.bao_gia }}" class="supply-nav-link{% if '/supply/portal' in request.path %} active{% endif %}">
+                    <i class="fas fa-inbox"></i> Báo giá NCC
+                </a>
+            </div>
+            {% endif %}
+        </nav>
+        {% if user.is_authenticated %}
+        <div class="supply-user">
+            <i class="fas fa-user-circle"></i>
+            <span>{{ user.username }}</span>
+        </div>
+        {% endif %}
+    </aside>
+
+    <main class="supply-main">
+        {% if messages %}
+        <div class="supply-messages">
+            {% for message in messages %}
+            <div class="supply-msg supply-msg-{{ message.tags|default:'info' }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <div class="supply-page">
+            {% block supply_content %}{% endblock %}
+        </div>
+    </main>
+</div>
+{% block supply_js %}{% endblock %}
+</body>
+</html>

@@ -3,6 +3,12 @@ from django.utils.text import slugify
 from django.core.validators import MinValueValidator
 from typing import TYPE_CHECKING
 
+# Re-export supply chain models so Django discovers them in this app
+from .supply_models import (  # noqa: F401
+    Supplier, PurchaseRequest, PurchaseRequestItem,
+    SupplierQuote, SupplierQuoteItem,
+)
+
 # ====================== 1. Danh mục & Thương hiệu ======================
 
 

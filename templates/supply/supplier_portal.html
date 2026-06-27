@@ -1,0 +1,68 @@
+{% extends 'supply/base_supply.html' %}
+{% load supply_admin %}
+
+{% block title %}Hộp thư yêu cầu báo giá — {{ supplier.name }}{% endblock %}
+
+{% block supply_content %}
+
+<nav class="supply-breadcrumb">
+    <a href="{{ supply_paths.admin_index }}">Admin</a>
+    <i class="fas fa-chevron-right"></i>
+    <span>Hộp thư báo giá</span>
+</nav>
+
+<div class="supply-header">
+    <div>
+        <h1 class="supply-title">📬 Hộp thư yêu cầu báo giá</h1>
+        <div style="margin-top:4px;font-size:13px;color:#888;">
+            {{ supplier.name }} — Danh sách các đợt gọi thầu từ cửa hàng trưởng
+        </div>
+    </div>
+</div>
+
+{% if requests %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;">
+    {% for pr in requests %}
+    <div class="s-card" style="margin-bottom:0;">
+        <div class="s-card-body">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px;">
+                <span class="badge badge-{{ pr.status }}">{{ pr.get_status_display }}</span>
+                {% if pr.pk in submitted %}
+                <span style="font-size:11px;color:#16a34a;font-weight:700;">✓ Đã nộp báo giá</span>
+                {% endif %}
+            </div>
+            <h3 style="font-size:15px;font-weight:700;margin-bottom:6px;">{{ pr.title }}</h3>
+            <div style="font-size:12px;color:#888;margin-bottom:8px;">
+                <i class="fas fa-calendar"></i> {{ pr.created_at|date:"d/m/Y" }}
+                &nbsp;•&nbsp; {{ pr.items.count }} mặt hàng
+            </div>
+            {% if pr.note %}
+            <p style="font-size:13px;color:#666;background:#f9fafb;padding:8px 12px;border-radius:4px;margin-bottom:12px;">
+                {{ pr.note }}
+            </p>
+            {% endif %}
+            {% if pr.approved_supplier_id == supplier.pk %}
+            <div style="background:#ede9fe;color:#6d28d9;font-size:12px;font-weight:700;padding:8px 12px;border-radius:4px;margin-bottom:12px;">
+                ⭐ Bạn được chọn — chờ giao hàng
+            </div>
+            {% elif pr.approved_supplier %}
+            <div style="font-size:12px;color:#999;margin-bottom:12px;">Đã chọn NCC khác</div>
+            {% endif %}
+            <a href="{% supply_url 'submit_quote' pr.pk %}" class="btn-blue" style="width:100%;justify-content:center;">
+                {% if pr.pk in submitted %}Xem / cập nhật báo giá{% else %}Xem chi tiết &amp; nộp báo giá{% endif %}
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% include 'supply/_pagination.html' %}
+{% else %}
+<div class="s-card">
+    <div class="s-card-body" style="text-align:center;padding:48px;color:#999;">
+        <i class="fas fa-inbox" style="font-size:40px;color:#ddd;margin-bottom:12px;display:block;"></i>
+        Chưa có yêu cầu báo giá nào gửi đến bạn.
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

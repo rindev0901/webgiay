@@ -1,0 +1,221 @@
+{% extends 'supply/base_supply.html' %}
+{% load supply_admin %}
+
+{% block title %}Biên độ tồn kho — Cửa hàng trưởng{% endblock %}
+
+{% block supply_content %}
+
+<nav class="supply-breadcrumb">
+    <a href="{{ supply_paths.admin_index }}">Admin</a>
+    <i class="fas fa-chevron-right"></i>
+    <span>Biên độ tồn kho</span>
+</nav>
+
+<div class="supply-header">
+    <h1 class="supply-title">📊 Biên độ tồn kho</h1>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <a href="{% supply_url 'request_list' %}" class="btn-secondary">
+            <i class="fas fa-list"></i> Danh sách đợt yêu cầu
+        </a>
+    </div>
+</div>
+
+<!-- KPI -->
+<div class="kpi-row">
+    <div class="kpi-card" style="--kc:#dc2626;">
+        <div class="val">{{ hot_count }}</div>
+        <div class="lbl">🔥 Bán chạy (≥10 đơn / {{ days }}n)</div>
+    </div>
+    <div class="kpi-card" style="--kc:#6b7280;">
+        <div class="val">{{ slow_count }}</div>
+        <div class="lbl">🐢 Bán ế (0 đơn / {{ days }}n)</div>
+    </div>
+    <div class="kpi-card" style="--kc:#f59e0b;">
+        <div class="val">{{ low_count }}</div>
+        <div class="lbl">⚠ Sắp hết (≤ {{ low_threshold }} đôi)</div>
+    </div>
+    <div class="kpi-card" style="--kc:#8b0000;">
+        <div class="val">{{ total }}</div>
+        <div class="lbl">📦 Tổng biến thể đang bán</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="s-card" style="margin-bottom:16px;">
+    <div class="s-card-body" style="padding:14px 20px;">
+        <form method="get" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+            <label style="font-size:13px;font-weight:600;">Khoảng thời gian:</label>
+            <input type="number" name="days" value="{{ days }}" min="1" max="365"
+                   class="s-form-control" style="width:80px;" />
+            <span style="font-size:13px;color:#888;">ngày</span>
+
+            <label style="font-size:13px;font-weight:600;margin-left:16px;">Cảnh báo tồn ≤</label>
+            <input type="number" name="low" value="{{ low_threshold }}" min="0" max="99"
+                   class="s-form-control" style="width:70px;" />
+
+            <label style="font-size:13px;font-weight:600;margin-left:16px;">Hiển thị</label>
+            <select name="per_page" class="s-form-control" style="width:80px;">
+                <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+            </select>
+            <span style="font-size:13px;color:#888;">/ trang</span>
+
+            <label style="font-size:13px;font-weight:600;margin-left:16px;">Lọc</label>
+            <select name="tag" class="s-form-control" style="width:130px;">
+                <option value="">Tất cả</option>
+                <option value="hot" {% if tag_filter == 'hot' %}selected{% endif %}>Bán chạy</option>
+                <option value="slow" {% if tag_filter == 'slow' %}selected{% endif %}>Bán ế</option>
+                <option value="low" {% if tag_filter == 'low' %}selected{% endif %}>Sắp hết</option>
+            </select>
+
+            <button type="submit" class="btn-primary" style="padding:8px 16px;">
+                <i class="fas fa-search"></i> Cập nhật
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Table -->
+<form id="createPrForm" method="post" action="{% supply_url 'request_create' %}">
+{% csrf_token %}
+<input type="hidden" name="days_ctx" value="{{ days }}" />
+
+<div class="s-card">
+    <div class="s-card-header">
+        <span class="s-card-title">Danh sách sản phẩm</span>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <span id="selectedCount" style="font-size:13px;color:#888;align-self:center;">0 được chọn</span>
+            <button type="button" id="btnExportCsv" class="btn-blue" style="opacity:.4;" disabled>
+                <i class="fas fa-download"></i> Xuất CSV hàng chọn
+            </button>
+            <button type="button" id="btnCreatePr" class="btn-green" style="opacity:.4;" disabled>
+                <i class="fas fa-plus"></i> Tạo yêu cầu đặt hàng
+            </button>
+        </div>
+    </div>
+
+    <div style="overflow-x:auto;">
+    <table class="s-table">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="selectAll" style="width:15px;height:15px;" /></th>
+                <th>Sản phẩm</th>
+                <th>Brand</th>
+                <th>Size</th>
+                <th>Màu</th>
+                <th>SKU</th>
+                <th>Tồn kho</th>
+                <th>Đã bán ({{ days }}n)</th>
+                <th>Phân loại</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in rows %}
+            <tr>
+                <td>
+                    <input type="checkbox" name="variant_ids" value="{{ r.variant.pk }}"
+                           class="row-check"
+                           data-product="{{ r.product }}"
+                           data-sku="{{ r.variant.sku }}"
+                           data-stock="{{ r.stock }}"
+                           data-sold="{{ r.sold }}"
+                           data-suggest="{{ r.suggest_qty }}" />
+                </td>
+                <td style="font-weight:600; max-width:180px;">
+                    {{ r.product }}
+                    {% if r.low %}
+                    <span style="background:#fef3c7;color:#92400e;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:4px;">⚠ Sắp hết</span>
+                    {% endif %}
+                </td>
+                <td style="color:#888;font-size:12px;">{{ r.brand }}</td>
+                <td>
+                    <span style="background:#f3f4f6;padding:3px 8px;border-radius:4px;font-weight:600;font-size:12px;">{{ r.size }}</span>
+                </td>
+                <td style="font-size:12px;">{{ r.color }}</td>
+                <td><code style="font-size:11px;color:#888;background:#f9fafb;padding:2px 6px;border-radius:3px;">{{ r.variant.sku }}</code></td>
+                <td>
+                    <div class="stock-bar-wrap">
+                        {% if r.stock == 0 %}
+                        <span style="color:#dc2626;font-weight:700;font-size:12px;">Hết hàng</span>
+                        {% else %}
+                        <div class="stock-bar-bg">
+                            <div class="stock-bar-fill"
+                                 style="width:{% widthratio r.stock 50 100 %}%;max-width:100%;
+                                        background:{% if r.low %}#f59e0b{% else %}#16a34a{% endif %};"></div>
+                        </div>
+                        <span style="font-weight:700;color:{% if r.low %}#f59e0b{% else %}#16a34a{% endif %};">{{ r.stock }}</span>
+                        {% endif %}
+                    </div>
+                </td>
+                <td>
+                    <span style="font-weight:700;color:{% if r.sold >= 10 %}#dc2626{% elif r.sold == 0 %}#9ca3af{% else %}#16a34a{% endif %};">
+                        {{ r.sold }}
+                    </span>
+                </td>
+                <td>
+                    {% if r.tag == 'hot' %}<span class="badge badge-hot">🔥 Bán chạy</span>
+                    {% elif r.tag == 'slow' %}<span class="badge badge-slow">🐢 Bán ế</span>
+                    {% else %}<span class="badge badge-norm">✓ Bình thường</span>{% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="9" style="text-align:center;padding:40px;color:#999;">Không có dữ liệu</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% include 'supply/_pagination.html' %}
+</div>
+</form>
+
+<script>
+const selectAll  = document.getElementById('selectAll');
+const checks     = () => document.querySelectorAll('.row-check');
+const countEl    = document.getElementById('selectedCount');
+const btnExport  = document.getElementById('btnExportCsv');
+const btnPr      = document.getElementById('btnCreatePr');
+
+function refreshUI() {
+    const checked = [...checks()].filter(c => c.checked);
+    const n = checked.length;
+    countEl.textContent = n ? `${n} sản phẩm được chọn` : '0 được chọn';
+    [btnExport, btnPr].forEach(b => {
+        b.disabled      = !n;
+        b.style.opacity = n ? '1' : '.4';
+    });
+}
+
+selectAll.addEventListener('change', () => {
+    checks().forEach(c => c.checked = selectAll.checked);
+    refreshUI();
+});
+document.addEventListener('change', e => {
+    if (e.target.classList.contains('row-check')) refreshUI();
+});
+
+// Export selected as CSV (client-side)
+btnExport.addEventListener('click', () => {
+    const checked = [...checks()].filter(c => c.checked);
+    if (!checked.length) return;
+    const rows = [['Ma SP','Ten san pham','SKU','Ton kho','So luong yeu cau','Don gia bao (NCC dien)','So luong NCC con','So ngay giao hang']];
+    checked.forEach(cb => {
+        rows.push([cb.value, cb.dataset.product, cb.dataset.sku, cb.dataset.stock, cb.dataset.suggest || Math.max(1, 10 - parseInt(cb.dataset.stock)), '', '', '']);
+    });
+    const csv  = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+    const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+    const url  = URL.createObjectURL(blob);
+    const a    = Object.assign(document.createElement('a'), {href:url, download:`yeu_cau_${new Date().toISOString().slice(0,10)}.csv`});
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+});
+
+// Create PR — redirect to create form with selected variant IDs
+btnPr.addEventListener('click', () => {
+    const checked = [...checks()].filter(c => c.checked);
+    if (!checked.length) return;
+    const ids = checked.map(c => c.value).join(',');
+    window.location = `{% supply_url 'request_create' %}?variants=${ids}`;
+});
+</script>
+{% endblock %}

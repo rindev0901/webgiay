@@ -13,9 +13,18 @@ from .models import (
     ProductVariant,
     ProductImage,
     StockMovement,
+    Supplier,
 )
 from .resources import *
 from .inventory import adjust_stock
+
+
+class SupplySidebarHiddenMixin:
+    """Ẩn model khỏi All applications — chỉ hiện trong menu Chuỗi cung ứng."""
+
+    def has_module_permission(self, request):
+        return False
+
 
 # ====================== DANH MỤC ======================
 # Register the Giay model with the admin site
@@ -205,7 +214,7 @@ class ProductVariantAdmin(ImportExportModelAdmin, ModelAdmin):
 
 # ====================== LỊCH SỬ TỒN KHO ======================
 @admin.register(StockMovement)
-class StockMovementAdmin(ModelAdmin):
+class StockMovementAdmin(SupplySidebarHiddenMixin, ModelAdmin):
     list_display = (
         "created_at",
         "variant_display",
@@ -297,6 +306,15 @@ class ProductImageAdmin(ModelAdmin):
         return "—"
 
     image_preview.short_description = "Ảnh"
+
+
+# ====================== CHUỖI CUNG ỨNG — SupplierAdmin (cuối file) ======================
+@admin.register(Supplier)
+class SupplierAdmin(SupplySidebarHiddenMixin, ModelAdmin):
+    list_display = ('name', 'contact_name', 'phone', 'email', 'is_active', 'user')
+    list_filter = ('is_active',)
+    search_fields = ('name', 'contact_name', 'email', 'phone')
+    autocomplete_fields = ('user',)
 
 
 # ====================== Admin site config ======================

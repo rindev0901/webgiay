@@ -1,0 +1,242 @@
+{% extends 'supply/base_supply.html' %}
+{% load format_money supply_url %}
+
+{% block title %}Chi tiết đợt yêu cầu {{ pr.code }}{% endblock %}
+
+{% block supply_content %}
+
+<nav class="supply-breadcrumb">
+    <a href="{% supply_url 'analytics' %}">Biên độ</a>
+    <i class="fas fa-chevron-right"></i>
+    <a href="{% supply_url 'request_list' %}">Yêu cầu đặt hàng</a>
+    <i class="fas fa-chevron-right"></i>
+    <span>{{ pr.code }}</span>
+</nav>
+
+<div class="supply-header">
+    <div>
+        <h1 class="supply-title">{{ pr.title }}</h1>
+        <div style="margin-top:6px;font-size:13px;color:#888;">
+            Ngày tạo: {{ pr.created_at|date:"d/m/Y H:i" }}
+            &nbsp;•&nbsp;
+            Trang thái: <span class="badge badge-{{ pr.status }}">{{ pr.get_status_display }}</span>
+            {% if pr.deadline %}&nbsp;•&nbsp; Hạn báo giá: <strong>{{ pr.deadline|date:"d/m/Y" }}</strong>{% endif %}
+        </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        {% if pr.status == 'draft' or pr.status == 'sent' %}
+        <a href="{% supply_url 'export_csv' pr.pk %}" class="btn-blue">
+            <i class="fas fa-download"></i> Bước 1: Tải File CSV Mẫu
+        </a>
+        {% endif %}
+        {% if pr.status == 'quoted' %}
+        <button type="button" class="btn-green" onclick="document.getElementById('approveModal').style.display='flex'">
+            ✅ Duyệt NCC tốt nhất
+        </button>
+        {% endif %}
+        {% if pr.status == 'approved' %}
+        <a href="{% supply_url 'receive_goods' pr.pk %}" class="btn-green">
+            <i class="fas fa-box-open"></i> Nhận hàng vào kho
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+{% if pr.note %}
+<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#0369a1;">
+    <strong>Ghi chú từ Admin:</strong> {{ pr.note }}
+</div>
+{% endif %}
+
+{% if pr.status == 'draft' and suppliers %}
+<div class="s-card" style="margin-bottom:16px;">
+    <div class="s-card-header"><span class="s-card-title">📤 Gửi yêu cầu cho NCC</span></div>
+    <div class="s-card-body">
+        <form method="post" action="{% supply_url 'send_to_suppliers' pr.pk %}">
+            {% csrf_token %}
+            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+                {% for s in suppliers %}
+                <label style="display:flex;align-items:center;gap:8px;padding:8px 14px;border:1.5px solid #e5e7eb;border-radius:6px;cursor:pointer;">
+                    <input type="checkbox" name="supplier_ids" value="{{ s.pk }}"
+                           {% if s in pr.suppliers.all %}checked{% endif %} />
+                    {{ s.name }}
+                </label>
+                {% endfor %}
+            </div>
+            <button type="submit" class="btn-green"><i class="fas fa-paper-plane"></i> Gửi cho NCC</button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- Items table -->
+<div class="s-card">
+    <div class="s-card-header">
+        <span class="s-card-title">📋 Danh mục sản phẩm yêu cầu</span>
+        <span style="font-size:13px;color:#888;">{{ items_page.paginator.count }} mặt hàng</span>
+    </div>
+    <div style="overflow-x:auto;">
+    <table class="s-table">
+        <thead>
+            <tr>
+                <th>Mã SP</th>
+                <th>Tên / Tên sản phẩm</th>
+                <th>Kích thước (Size)</th>
+                <th>Màu sắc</th>
+                <th>Tồn kho hiện tại</th>
+                <th>Số lượng Admin cần mua</th>
+                {% if pr.status == 'received' %}<th>SL thực nhận</th>{% endif %}
+                {% if best_price %}<th>Giá tốt nhất</th>{% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td style="color:#888;">{{ item.variant.pk }}</td>
+                <td style="font-weight:600;">{{ item.variant.product.name }}</td>
+                <td>
+                    <span style="background:#f3f4f6;padding:3px 8px;border-radius:4px;font-weight:600;font-size:12px;">
+                        {{ item.variant.size.name }}
+                    </span>
+                </td>
+                <td>{{ item.variant.color.name|default:"Mặc định" }}</td>
+                <td>
+                    {% if item.current_stock == 0 %}
+                    <span style="color:#dc2626;font-weight:700;">Hết hàng (0)</span>
+                    {% elif item.current_stock <= 5 %}
+                    <span style="color:#f59e0b;font-weight:700;">⚠ {{ item.current_stock }}</span>
+                    {% else %}
+                    <span style="color:#16a34a;font-weight:700;">{{ item.current_stock }}</span>
+                    {% endif %}
+                </td>
+                <td style="font-weight:700;color:#8b0000;font-size:15px;">{{ item.requested_qty }}</td>
+                {% if pr.status == 'received' %}
+                <td style="color:#16a34a;font-weight:700;">{{ item.received_qty }}</td>
+                {% endif %}
+                {% if best_price %}
+                <td>
+                    {% with bp=best_price|dictsort:"0" %}
+                    {% for vid, info in best_price.items %}
+                        {% if vid == item.variant.pk %}
+                        <span style="color:#16a34a;font-weight:700;">{{ info.price|vnd }}</span>
+                        <small style="color:#888;"> / {{ info.supplier.name }}</small>
+                        {% endif %}
+                    {% endfor %}
+                    {% endwith %}
+                </td>
+                {% endif %}
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" style="text-align:center;padding:32px;color:#999;">Chưa có mặt hàng nào</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% with page_obj=items_page page_range=items_page_range querystring=items_querystring page_param='items_page' %}
+    {% include 'supply/_pagination.html' %}
+    {% endwith %}
+</div>
+{% if quotes %}
+<div class="s-card">
+    <div class="s-card-header">
+        <span class="s-card-title">💬 Báo giá từ nhà cung cấp</span>
+        <span style="font-size:13px;color:#888;">{{ quotes|length }} NCC đã nộp</span>
+    </div>
+    {% for quote in quotes %}
+    <div style="padding:16px 20px;border-bottom:1px solid #f0f0f0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+            <div>
+                <strong>{{ quote.supplier.name }}</strong>
+                <span style="font-size:12px;color:#888;margin-left:8px;">Nộp lúc {{ quote.submitted_at|date:"d/m/Y H:i" }}</span>
+                {% if pr.approved_supplier == quote.supplier %}
+                <span class="badge badge-approved" style="margin-left:6px;">⭐ Đã chọn</span>
+                {% endif %}
+            </div>
+            {% if quote.csv_file %}
+            <a href="{{ quote.csv_file.url }}" class="btn-secondary" style="font-size:12px;padding:6px 12px;">
+                <i class="fas fa-download"></i> Tải báo giá
+            </a>
+            {% endif %}
+        </div>
+        {% if quote.note %}
+        <div style="font-size:13px;color:#666;background:#f9fafb;padding:8px 12px;border-radius:4px;margin-bottom:10px;">
+            "{{ quote.note }}"
+        </div>
+        {% endif %}
+        {% if quote.items.exists %}
+        <table class="s-table" style="font-size:12px;">
+            <thead>
+                <tr>
+                    <th>Sản phẩm</th><th>Size</th><th>Đơn giá</th><th>SL còn</th><th>Ngày giao</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for qi in quote.items.all %}
+                <tr>
+                    <td>{{ qi.variant.product.name }}</td>
+                    <td>{{ qi.variant.size.name }}</td>
+                    <td style="font-weight:700;color:#8b0000;">{{ qi.unit_price|vnd }}</td>
+                    <td>{{ qi.available_qty }}</td>
+                    <td>{{ qi.lead_days }}ngày</td>
+                    <td>
+                        {% with bp=best_price %}
+                        {% for vid, info in bp.items %}
+                            {% if vid == qi.variant_id and info.supplier == quote.supplier %}
+                            <span style="color:#16a34a;font-size:11px;font-weight:700;">⭐ Rẻ nhất</span>
+                            {% endif %}
+                        {% endfor %}
+                        {% endwith %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Approve modal -->
+{% if pr.status == 'quoted' and quotes %}
+<div id="approveModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:8px;padding:28px;max-width:520px;width:90%;max-height:90vh;overflow:auto;">
+        <h3 style="font-size:18px;font-weight:700;margin-bottom:16px;">✅ Duyệt nhà cung cấp</h3>
+        <p style="font-size:13px;color:#666;margin-bottom:20px;">Chọn NCC có tổng giá thấp nhất cho đợt {{ pr.code }}:</p>
+        <form method="post" action="{% supply_url 'approve_request' pr.pk %}">
+            {% csrf_token %}
+            {% if recommended %}
+            <label style="display:flex;align-items:center;gap:10px;padding:14px;border:2px solid #16a34a;border-radius:6px;margin-bottom:12px;cursor:pointer;background:#f0fdf4;">
+                <input type="radio" name="supplier_id" value="auto" checked />
+                <div>
+                    <strong>⭐ Tự chọn NCC rẻ nhất</strong>
+                    <div style="font-size:12px;color:#16a34a;margin-top:2px;">
+                        → {{ recommended.name }}
+                    </div>
+                </div>
+            </label>
+            {% endif %}
+            {% for s in quote_summaries %}
+            <label style="display:flex;align-items:center;gap:10px;padding:12px;border:1.5px solid #e5e7eb;border-radius:6px;margin-bottom:8px;cursor:pointer;">
+                <input type="radio" name="supplier_id" value="{{ s.supplier.pk }}"
+                       {% if not recommended %}required{% endif %} />
+                <div style="flex:1;">
+                    <strong>{{ s.supplier.name }}</strong>
+                    <div style="font-size:12px;color:#888;margin-top:2px;">
+                        {{ s.covered }}/{{ items|length }} mặt hàng có giá
+                        {% if s.total %} • Tổng: <strong style="color:#8b0000;">{{ s.total|vnd }}</strong>{% endif %}
+                        {% if recommended == s.supplier %}<span style="color:#16a34a;font-weight:700;"> — Rẻ nhất</span>{% endif %}
+                    </div>
+                </div>
+            </label>
+            {% endfor %}
+            <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+                <button type="button" class="btn-secondary" onclick="document.getElementById('approveModal').style.display='none'">Hủy</button>
+                <button type="submit" class="btn-primary">Duyệt NCC này</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

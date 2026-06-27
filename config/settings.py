@@ -66,6 +66,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "apps.cart.context_processors.cart_count",
                 "apps.products.context_processors.navigation_data",
+                "apps.products.context_processors.supply_nav",
             ],
         },
     },
@@ -153,6 +154,8 @@ MOMO_IPN_URL = os.getenv("MOMO_IPN_URL", "http://127.0.0.1:8000/cart/momo/ipn/")
 MOMO_REQUEST_TYPE = os.getenv("MOMO_REQUEST_TYPE", "captureWallet")
 
 # ====================== UNFOLD ADMIN ======================
+from config.admin_sidebar import SIDEBAR_NAVIGATION
+
 UNFOLD = {
     "SITE_TITLE": "Quản trị Dat Shoes",
     "SITE_HEADER": "Dat Shoes Admin",
@@ -162,6 +165,11 @@ UNFOLD = {
     "STYLES": [
         lambda request: static("css/main.css"),
     ],
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": SIDEBAR_NAVIGATION,
+    },
 }
 
 # ====================== CORS ======================
