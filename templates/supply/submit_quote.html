@@ -61,6 +61,10 @@
     {% endwith %}
 </div>
 
+<script id="requested-items-json" type="application/json">
+    {{ items_json|safe }}
+</script>
+
 <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
 
@@ -73,7 +77,7 @@
             </div>
             <div class="s-form-group">
                 <label>Chọn File CSV Báo Giá *</label>
-                <input type="file" name="csv_file" accept=".csv" class="s-form-control" required />
+                <input type="file" id="csv_file_input" name="csv_file" accept=".csv" class="s-form-control" required />
                 <div style="font-size:12px;color:#dc2626;margin-top:6px;">
                     Cấu trúc CSV: Mã SP, Tên SP, Kích thước, Màu sắc, SKU, Tồn kho hiện tại, Số lượng yêu cầu,
                     <strong>Đơn giá báo (NCC điền)</strong>, <strong>Số lượng NCC còn</strong>, <strong>Số ngày giao
@@ -83,6 +87,72 @@
             <div class="s-form-group">
                 <label>Ghi chú kèm theo</label>
                 <textarea name="note" class="s-form-control" rows="3" placeholder="Nhập ghi chú..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- CSV Verification & Preview Card -->
+    <div id="csv-preview-card" class="s-card" style="display: none; margin-top: 20px; border-left: 4px solid #3b82f6; transition: all 0.3s ease;">
+        <div class="s-card-header" style="background: #f8fafc;">
+            <span class="s-card-title" style="display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-clipboard-check" style="color: #2563eb;"></i> 
+                Kết Quả Kiểm Tra Báo Giá File CSV
+            </span>
+            <span id="csv-overall-status" class="badge">Kiểm tra</span>
+        </div>
+        <div class="s-card-body" style="padding: 20px;">
+            <!-- Alert Banner -->
+            <div id="csv-alert-banner" class="supply-msg" style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                <!-- Will be dynamically populated -->
+            </div>
+
+            <!-- Summary Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px;">
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 16px; text-align: center;">
+                    <div style="font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase;">Mặt Hàng Yêu Cầu</div>
+                    <div id="summary-requested-qty" style="font-size: 20px; font-weight: 800; color: #1e293b; margin-top: 4px;">0</div>
+                </div>
+                <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 12px 16px; text-align: center;">
+                    <div style="font-size: 11px; color: #065f46; font-weight: 600; text-transform: uppercase;">Khớp & Hợp Lệ</div>
+                    <div id="summary-matched-qty" style="font-size: 20px; font-weight: 800; color: #047857; margin-top: 4px;">0</div>
+                </div>
+                <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px 16px; text-align: center;">
+                    <div style="font-size: 11px; color: #92400e; font-weight: 600; text-transform: uppercase;">Chưa Có Báo Giá</div>
+                    <div id="summary-missing-qty" style="font-size: 20px; font-weight: 800; color: #b45309; margin-top: 4px;">0</div>
+                </div>
+                <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 12px 16px; text-align: center;">
+                    <div style="font-size: 11px; color: #991b1b; font-weight: 600; text-transform: uppercase;">Số Dòng Lỗi</div>
+                    <div id="summary-error-qty" style="font-size: 20px; font-weight: 800; color: #b91c1c; margin-top: 4px;">0</div>
+                </div>
+                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px 16px; text-align: center; grid-column: span 2;">
+                    <div style="font-size: 11px; color: #1e40af; font-weight: 600; text-transform: uppercase;">Tổng Giá Trị Dự Kiến</div>
+                    <div id="summary-total-value" style="font-size: 20px; font-weight: 800; color: #1d4ed8; margin-top: 4px;">0₫</div>
+                </div>
+            </div>
+
+            <!-- Details Table -->
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 12px; color: #334155; display: flex; align-items: center; gap: 6px;">
+                <i class="fas fa-list-ul"></i> Chi Tiết Báo Giá Từ File
+            </h4>
+            <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 6px;">
+                <table class="s-table" style="margin: 0; min-width: 800px;">
+                    <thead>
+                        <tr style="background: #475569;">
+                            <th style="background: #475569; width: 60px;">Dòng</th>
+                            <th style="background: #475569; width: 80px;">Mã SP</th>
+                            <th style="background: #475569;">Sản phẩm</th>
+                            <th style="background: #475569; width: 100px;">Size/Màu</th>
+                            <th style="background: #475569; width: 90px; text-align: right;">SL Yêu Cầu</th>
+                            <th style="background: #475569; width: 120px; text-align: right;">Đơn Giá Báo</th>
+                            <th style="background: #475569; width: 100px; text-align: right;">SL Có Sẵn</th>
+                            <th style="background: #475569; width: 110px; text-align: right;">Giao Hàng</th>
+                            <th style="background: #475569; width: 150px;">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody id="csv-preview-table-body">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -97,4 +167,331 @@
     </div>
 </form>
 
+{% endblock %}
+
+{% block supply_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('csv_file_input');
+    const previewCard = document.getElementById('csv-preview-card');
+    const previewTableBody = document.getElementById('csv-preview-table-body');
+    const requestedJsonElem = document.getElementById('requested-items-json');
+    
+    if (!fileInput || !requestedJsonElem) return;
+    
+    const requestedItems = JSON.parse(requestedJsonElem.textContent);
+    const requestedMap = {};
+    requestedItems.forEach(item => {
+        requestedMap[item.variant_id] = item;
+    });
+    
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) {
+            previewCard.style.display = 'none';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            try {
+                const text = evt.target.result;
+                const parsedLines = parseCSV(text);
+                
+                if (parsedLines.length < 2) {
+                    showErrorBanner("File CSV trống hoặc không có dòng dữ liệu.");
+                    return;
+                }
+                
+                // Clean headers
+                const headers = parsedLines[0].map(h => cleanHeader(h));
+                
+                // Find indices of key columns
+                const colIdx = {
+                    maSP: headers.findIndex(h => h.includes('ma sp') || h.includes('ma_sp')),
+                    donGia: headers.findIndex(h => h.includes('don gia') || h.includes('don_gia') || h.includes('gia bao')),
+                    availQty: headers.findIndex(h => h.includes('so luong ncc') || h.includes('sl ncc') || h.includes('so_luong_ncc') || h.includes('ton kho ncc')),
+                    leadDays: headers.findIndex(h => h.includes('so ngay') || h.includes('ngay giao') || h.includes('lead days') || h.includes('lead_days')),
+                    ghiChu: headers.findIndex(h => h.includes('ghi chu') || h.includes('ghi_chu') || h.includes('note'))
+                };
+                
+                if (colIdx.maSP === -1) {
+                    showErrorBanner("Không tìm thấy cột 'Ma SP' (Mã SP) trong file CSV. Vui lòng kiểm tra lại cấu trúc file.");
+                    return;
+                }
+                if (colIdx.donGia === -1) {
+                    showErrorBanner("Không tìm thấy cột 'Don gia bao (NCC dien)' trong file CSV. Vui lòng kiểm tra lại cấu trúc file.");
+                    return;
+                }
+                
+                const parsedRows = [];
+                const csvMatchedIds = new Set();
+                let hasErrors = false;
+                let hasWarnings = false;
+                
+                for (let i = 1; i < parsedLines.length; i++) {
+                    const row = parsedLines[i];
+                    if (row.length === 0 || (row.length === 1 && row[0].trim() === "")) {
+                        continue;
+                    }
+                    
+                    const rawId = colIdx.maSP > -1 ? row[colIdx.maSP] : "";
+                    const rawPrice = colIdx.donGia > -1 ? row[colIdx.donGia] : "";
+                    const rawAvail = colIdx.availQty > -1 ? row[colIdx.availQty] : "";
+                    const rawLead = colIdx.leadDays > -1 ? row[colIdx.leadDays] : "";
+                    const note = colIdx.ghiChu > -1 ? row[colIdx.ghiChu] : "";
+                    
+                    const variantId = parseInt(rawId.trim(), 10);
+                    const cleanPriceStr = rawPrice.trim().replace(/[,.]/g, "");
+                    const unitPrice = parseFloat(cleanPriceStr);
+                    const availQty = parseInt(rawAvail.trim(), 10);
+                    const leadDays = parseInt(rawLead.trim(), 10);
+                    
+                    const rowData = {
+                        rowNumber: i + 1,
+                        variantId: variantId,
+                        rawId: rawId,
+                        rawPrice: rawPrice,
+                        unitPrice: unitPrice,
+                        availQty: isNaN(availQty) ? 0 : availQty,
+                        leadDays: isNaN(leadDays) ? 3 : leadDays,
+                        note: note,
+                        status: 'valid',
+                        message: 'Hợp lệ',
+                        reqItem: null
+                    };
+                    
+                    if (isNaN(variantId)) {
+                        rowData.status = 'error';
+                        rowData.message = 'Mã SP không hợp lệ (trống hoặc không phải là số)';
+                        hasErrors = true;
+                    } else {
+                        const reqItem = requestedMap[variantId];
+                        if (!reqItem) {
+                            rowData.status = 'error';
+                            rowData.message = 'Mã SP không thuộc yêu cầu';
+                            hasErrors = true;
+                        } else {
+                            rowData.reqItem = reqItem;
+                            csvMatchedIds.add(variantId);
+                            
+                            if (isNaN(unitPrice) || unitPrice <= 0) {
+                                rowData.status = 'error';
+                                rowData.message = 'Đơn giá báo trống hoặc không hợp lệ';
+                                hasErrors = true;
+                            }
+                        }
+                    }
+                    parsedRows.push(rowData);
+                }
+                
+                // Find missing items (requested items that are not in the CSV)
+                const missingItems = [];
+                requestedItems.forEach(item => {
+                    if (!csvMatchedIds.has(item.variant_id)) {
+                        missingItems.push(item);
+                        hasWarnings = true;
+                    }
+                });
+                
+                // Display the results
+                renderPreview(parsedRows, missingItems, csvMatchedIds, hasErrors, hasWarnings);
+                
+            } catch (err) {
+                showErrorBanner("Lỗi phân tích file CSV: " + err.message);
+            }
+        };
+        reader.readAsText(file);
+    });
+    
+    function cleanHeader(h) {
+        return h.trim().toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/[()]/g, "");
+    }
+    
+    function parseCSV(text) {
+        let delimiter = ',';
+        let newlineIdx = text.indexOf('\n');
+        let firstLine = newlineIdx > -1 ? text.substring(0, newlineIdx) : text;
+        if (firstLine.indexOf(';') > -1 && firstLine.indexOf(',') === -1) {
+            delimiter = ';';
+        }
+        
+        let lines = [];
+        let row = [""];
+        let inQuotes = false;
+        for (let i = 0; i < text.length; i++) {
+            let c = text[i];
+            let next = text[i+1];
+            if (c === '"') {
+                if (inQuotes && next === '"') {
+                    row[row.length - 1] += '"';
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (c === delimiter && !inQuotes) {
+                row.push("");
+            } else if ((c === '\r' || c === '\n') && !inQuotes) {
+                if (c === '\r' && next === '\n') {
+                    i++;
+                }
+                lines.push(row);
+                row = [""];
+            } else {
+                row[row.length - 1] += c;
+            }
+        }
+        if (row.length > 1 || row[0] !== "") {
+            lines.push(row);
+        }
+        return lines;
+    }
+    
+    function formatMoney(amount) {
+        if (isNaN(amount) || amount === null) return '0₫';
+        return amount.toLocaleString('vi-VN') + '₫';
+    }
+    
+    function showErrorBanner(msg) {
+        previewCard.style.display = 'block';
+        previewCard.style.borderLeftColor = '#ef4444';
+        
+        document.getElementById('csv-overall-status').className = 'badge badge-hot';
+        document.getElementById('csv-overall-status').textContent = 'Lỗi cấu trúc';
+        
+        const banner = document.getElementById('csv-alert-banner');
+        banner.className = 'supply-msg supply-msg-error';
+        banner.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <strong>Lỗi cấu trúc file:</strong> ${msg}`;
+        
+        // Reset summary and table
+        document.getElementById('summary-requested-qty').textContent = requestedItems.length;
+        document.getElementById('summary-matched-qty').textContent = '0';
+        document.getElementById('summary-missing-qty').textContent = requestedItems.length;
+        document.getElementById('summary-error-qty').textContent = '—';
+        document.getElementById('summary-total-value').textContent = '0₫';
+        previewTableBody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #dc2626;">File CSV không hợp lệ. Vui lòng kiểm tra lại định dạng file.</td></tr>';
+    }
+    
+    function renderPreview(parsedRows, missingItems, csvMatchedIds, hasErrors, hasWarnings) {
+        previewCard.style.display = 'block';
+        
+        const banner = document.getElementById('csv-alert-banner');
+        const overallStatusBadge = document.getElementById('csv-overall-status');
+        
+        let estimatedValue = 0;
+        let totalErrors = parsedRows.filter(r => r.status === 'error').length;
+        let totalMatched = csvMatchedIds.size;
+        let totalMissing = missingItems.length;
+        
+        // Calculate estimated value
+        parsedRows.forEach(r => {
+            if (r.status === 'valid' && r.reqItem && r.unitPrice > 0) {
+                estimatedValue += r.unitPrice * r.reqItem.requested_qty;
+            }
+        });
+        
+        // Update summary boxes
+        document.getElementById('summary-requested-qty').textContent = requestedItems.length;
+        document.getElementById('summary-matched-qty').textContent = totalMatched;
+        document.getElementById('summary-missing-qty').textContent = totalMissing;
+        document.getElementById('summary-error-qty').textContent = totalErrors;
+        document.getElementById('summary-total-value').textContent = formatMoney(estimatedValue);
+        
+        // Update alert banner & overall badge
+        if (hasErrors) {
+            previewCard.style.borderLeftColor = '#ef4444';
+            overallStatusBadge.className = 'badge badge-hot';
+            overallStatusBadge.textContent = 'Dữ liệu không hợp lệ';
+            
+            banner.className = 'supply-msg supply-msg-error';
+            banner.innerHTML = `<i class="fas fa-exclamation-circle"></i> <strong>File có dòng lỗi:</strong> Phát hiện ${totalErrors} dòng lỗi trong file CSV (tô màu đỏ ở bảng dưới). Vui lòng sửa lại trước khi gửi.`;
+        } else if (totalMissing > 0) {
+            previewCard.style.borderLeftColor = '#f59e0b';
+            overallStatusBadge.className = 'badge badge-quoted';
+            overallStatusBadge.textContent = 'Thiếu báo giá';
+            
+            banner.className = 'supply-msg supply-msg-warning';
+            banner.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <strong>Thiếu sản phẩm yêu cầu:</strong> Bạn chưa báo giá cho ${totalMissing} sản phẩm trong yêu cầu (tô màu vàng ở cuối bảng). Bạn vẫn có thể gửi, nhưng nên báo giá đầy đủ.`;
+        } else {
+            previewCard.style.borderLeftColor = '#10b981';
+            overallStatusBadge.className = 'badge badge-norm';
+            overallStatusBadge.textContent = 'Hợp lệ';
+            
+            banner.className = 'supply-msg supply-msg-success';
+            banner.innerHTML = `<i class="fas fa-check-circle"></i> <strong>File hoàn toàn hợp lệ:</strong> Toàn bộ sản phẩm yêu cầu được mapping chính xác và không có lỗi nào.`;
+        }
+        
+        // Render table rows
+        let html = '';
+        
+        // Render parsed rows
+        parsedRows.forEach(r => {
+            let rowStyle = '';
+            let statusBadge = '';
+            let name = '—';
+            let sizeColor = '—';
+            let reqQty = '—';
+            
+            if (r.status === 'error') {
+                rowStyle = 'background: #fef2f2; color: #991b1b;';
+                statusBadge = `<span class="badge badge-hot" style="font-size: 11px;">Lỗi: ${r.message}</span>`;
+            } else if (r.status === 'warning') {
+                rowStyle = 'background: #fffbeb; color: #92400e;';
+                statusBadge = `<span class="badge badge-quoted" style="font-size: 11px;">Cảnh báo: ${r.message}</span>`;
+            } else {
+                statusBadge = '<span class="badge badge-norm" style="font-size: 11px;">Khớp yêu cầu</span>';
+            }
+            
+            if (r.reqItem) {
+                name = r.reqItem.name;
+                sizeColor = `${r.reqItem.size || 'Mặc định'} / ${r.reqItem.color || 'Mặc định'}`;
+                reqQty = r.reqItem.requested_qty;
+            }
+            
+            const priceStr = isNaN(r.unitPrice) ? r.rawPrice : formatMoney(r.unitPrice);
+            const leadStr = isNaN(r.leadDays) ? '—' : `${r.leadDays} ngày`;
+            const availStr = isNaN(r.availQty) ? '—' : r.availQty;
+            
+            html += `
+                <tr style="${rowStyle}">
+                    <td style="font-weight: 600;">${r.rowNumber}</td>
+                    <td>${r.variantId || r.rawId || '—'}</td>
+                    <td style="font-weight: 600;">${name}</td>
+                    <td>${sizeColor}</td>
+                    <td style="text-align: right; font-weight: 700;">${reqQty}</td>
+                    <td style="text-align: right; font-weight: 700; color: #1e3a8a;">${priceStr}</td>
+                    <td style="text-align: right;">${availStr}</td>
+                    <td style="text-align: right;">${leadStr}</td>
+                    <td>${statusBadge}</td>
+                </tr>
+            `;
+        });
+        
+        // Render missing items from request
+        missingItems.forEach(item => {
+            html += `
+                <tr style="background: #fafafa; color: #6b7280; opacity: 0.85;">
+                    <td style="font-weight: 600; color: #9ca3af;">—</td>
+                    <td style="color: #9ca3af;">${item.variant_id}</td>
+                    <td style="font-weight: 600; text-decoration: line-through;">${item.name}</td>
+                    <td>${item.size || 'Mặc định'} / ${item.color || 'Mặc định'}</td>
+                    <td style="text-align: right; font-weight: 700;">${item.requested_qty}</td>
+                    <td style="text-align: right; font-weight: 700; color: #b45309;">Chưa báo giá</td>
+                    <td style="text-align: right;">—</td>
+                    <td style="text-align: right;">—</td>
+                    <td><span class="badge" style="background: #fef3c7; color: #d97706; font-size: 11px;">Thiếu dòng trong CSV</span></td>
+                </tr>
+            `;
+        });
+        
+        if (parsedRows.length === 0 && missingItems.length === 0) {
+            html = '<tr><td colspan="9" style="text-align: center; color: #6b7280;">Không tìm thấy dữ liệu.</td></tr>';
+        }
+        
+        previewTableBody.innerHTML = html;
+    }
+});
+</script>
 {% endblock %}

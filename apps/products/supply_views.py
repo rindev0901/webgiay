@@ -12,6 +12,7 @@ URLs:
 """
 import csv
 import io
+import json
 from datetime import timedelta
 
 from django.contrib import messages
@@ -535,6 +536,20 @@ def submit_quote(request, pr_pk):
     items_qs = pr.items.select_related('variant', 'variant__product', 'variant__size', 'variant__color')
     items_page, items_paginator = paginate_queryset(request, items_qs, per_page=20)
 
+    # Serialize all requested items for client-side CSV validation and mapping
+    items_json_data = [
+        {
+            "variant_id": item.variant.pk,
+            "name": item.variant.product.name,
+            "size": item.variant.size.name if item.variant.size else '',
+            "color": item.variant.color.name if item.variant.color else '',
+            "sku": item.variant.sku or '',
+            "requested_qty": item.requested_qty,
+        }
+        for item in items_qs
+    ]
+    items_json = json.dumps(items_json_data)
+
     context = {
         'pr': pr,
         'supplier': supplier,
@@ -542,5 +557,6 @@ def submit_quote(request, pr_pk):
         'items_page': items_page,
         'items_page_range': smart_page_range(items_page, items_paginator),
         'items_querystring': _querystring(request),
+        'items_json': items_json,
     }
     return render(request, 'supply/submit_quote.html', context)
