@@ -159,6 +159,7 @@ from config.admin_sidebar import SIDEBAR_NAVIGATION
 UNFOLD = {
     "SITE_TITLE": "Quản trị Dat Shoes",
     "SITE_HEADER": "Dat Shoes Admin",
+    "SHOW_HEADER": True,
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
     "DASHBOARD_CALLBACK": "apps.cart.dashboard.dashboard_callback",

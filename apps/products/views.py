@@ -11,6 +11,7 @@ from .models import (
 from django.http import HttpRequest
 from django.db.models import Q
 from decimal import Decimal, InvalidOperation
+from .supply_pagination import smart_page_range
 
 
 def product_list(request: HttpRequest):
@@ -104,6 +105,7 @@ def product_list(request: HttpRequest):
         'products': page_obj.object_list,
         'page_obj': page_obj,
         'paginator': paginator,
+        'page_range': smart_page_range(page_obj, paginator),
         'is_paginated': page_obj.has_other_pages(),
         'categories': categories,
         'brands': brands,
@@ -188,12 +190,12 @@ def category_detail(request, slug):
         'products': page_obj.object_list,
         'page_obj': page_obj,
         'paginator': paginator,
+        'page_range': smart_page_range(page_obj, paginator),
         'is_paginated': page_obj.has_other_pages(),
         'categories': Category.objects.filter(is_active=True),
         'brands': brands_in_category,           # ← Quan trọng nhất
         'current_category': category.slug,
-        'title': f'{category.name} - WebGiày'
-        ,
+        'title': f'{category.name} - WebGiày',
         'query_string': query_string,
     }
     return render(request, 'product_list.html', context)

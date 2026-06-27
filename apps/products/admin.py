@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin, TabularInline
+from unfold.paginator import InfinitePaginator
 from import_export.admin import ImportExportModelAdmin
 from import_export.forms import ImportForm, ConfirmImportForm
 
@@ -37,6 +38,8 @@ class CategoryAdmin(ImportExportModelAdmin, ModelAdmin):
     search_fields = ("name", "description")
     prepopulated_fields = {"slug": ("name",)}
     ordering = ("name",)
+    list_per_page = 20
+    paginator = InfinitePaginator
 
 
 # ====================== THƯƠNG HIỆU ======================
@@ -46,6 +49,8 @@ class BrandAdmin(ImportExportModelAdmin, ModelAdmin):
     list_filter = ("is_active",)
     search_fields = ("name", "description")
     prepopulated_fields = {"slug": ("name",)}
+    list_per_page = 20
+    paginator = InfinitePaginator
 
 
 # ====================== MÀU SẮC ======================
@@ -53,6 +58,8 @@ class BrandAdmin(ImportExportModelAdmin, ModelAdmin):
 class ColorAdmin(ModelAdmin):
     list_display = ("name", "hex_code")
     search_fields = ("name",)
+    list_per_page = 30
+    paginator = InfinitePaginator
 
 
 # ====================== SIZE ======================
@@ -61,6 +68,8 @@ class SizeAdmin(ModelAdmin):
     list_display = ("name", "order")
     search_fields = ("name",)
     ordering = ("order", "name")
+    list_per_page = 30
+    paginator = InfinitePaginator
 
 
 # ====================== INLINE CHO SẢN PHẨM ======================
@@ -110,6 +119,8 @@ class ProductAdmin(ImportExportModelAdmin, ModelAdmin):
     search_fields = ("name", "description", "brand__name", "category__name")
     prepopulated_fields = {"slug": ("name",)}
     inlines = [ProductVariantInline, ProductImageInline]
+    list_per_page = 20
+    paginator = InfinitePaginator
 
     fieldsets = (
         (
@@ -168,6 +179,8 @@ class ProductVariantAdmin(ImportExportModelAdmin, ModelAdmin):
     inlines = [StockMovementInline]
     readonly_fields = ("sku",)
     actions = ["mark_in_stock", "mark_out_of_stock", "go_to_stock_in"]
+    list_per_page = 25
+    paginator = InfinitePaginator
 
     def stock_badge(self, obj):
         if obj.stock == 0:
@@ -230,6 +243,8 @@ class StockMovementAdmin(SupplySidebarHiddenMixin, ModelAdmin):
     search_fields = ("variant__product__name", "variant__sku", "order_code", "note")
     date_hierarchy = "created_at"
     readonly_fields = [f.name for f in StockMovement._meta.fields]
+    list_per_page = 30
+    paginator = InfinitePaginator
     list_select_related = (
         "variant",
         "variant__product",
@@ -295,6 +310,8 @@ class ProductImageAdmin(ModelAdmin):
     autocomplete_fields = ("product",)
     list_select_related = ("product", "color")
     ordering = ("product", "color", "order")
+    list_per_page = 30
+    paginator = InfinitePaginator
 
     def image_preview(self, obj):
         if obj.image:
@@ -315,6 +332,8 @@ class SupplierAdmin(SupplySidebarHiddenMixin, ModelAdmin):
     list_filter = ('is_active',)
     search_fields = ('name', 'contact_name', 'email', 'phone')
     autocomplete_fields = ('user',)
+    list_per_page = 20
+    paginator = InfinitePaginator
 
 
 # ====================== Admin site config ======================

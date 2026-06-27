@@ -267,6 +267,69 @@
     border-radius: 2px;
     font-weight: 600;
 }
+
+/* ── Pagination ── */
+.pl-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-top: 1px solid #e5e7eb;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.pl-pagination-info {
+    font-size: 13px;
+    color: #555;
+}
+.pl-pagination-pages {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.pl-pagination-pages a,
+.pl-pagination-pages span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 34px;
+    padding: 0 6px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+    text-decoration: none;
+    color: #333;
+    background: white;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    cursor: pointer;
+}
+.pl-pagination-pages a:hover {
+    background: #f3f4f6;
+    border-color: #bbb;
+}
+.pl-pagination-pages span.current {
+    background: #8b0000;
+    border-color: #8b0000;
+    color: white;
+    font-weight: 700;
+    cursor: default;
+}
+.pl-pagination-pages span.ellipsis {
+    border: none;
+    background: transparent;
+    color: #999;
+    min-width: 20px;
+    cursor: default;
+}
+.pl-pagination-pages a.nav-btn {
+    color: #555;
+    font-size: 15px;
+}
+.pl-pagination-pages a.nav-btn:hover {
+    color: #8b0000;
+    border-color: #8b0000;
+}
 </style>
 {% endblock %}
 
@@ -478,28 +541,35 @@
 
 		<!-- Pagination -->
 		{% if is_paginated %}
-		<div style="padding: 20px; border-top: 1px solid #e5e7eb; display:flex; justify-content:center; gap:8px;">
-			{% if page_obj.has_previous %}
-			<a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}"
-				style="padding:8px 14px; border:1px solid #ddd; border-radius:4px; background:white; color:#333; text-decoration:none; font-size:13px;">
-				Trước
-			</a>
-			{% endif %}
-			
-			{% for num in paginator.page_range %}
-			<a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ num }}"
-				style="padding:8px 14px; border:1px solid #ddd; border-radius:4px; background:{% if num == page_obj.number %}#dc2626{% else %}white{% endif %}; 
-				color:{% if num == page_obj.number %}white{% else %}#333{% endif %}; text-decoration:none; font-size:13px;">
-				{{ num }}
-			</a>
-			{% endfor %}
-			
-			{% if page_obj.has_next %}
-			<a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}"
-				style="padding:8px 14px; border:1px solid #ddd; border-radius:4px; background:white; color:#333; text-decoration:none; font-size:13px;">
-				Sau
-			</a>
-			{% endif %}
+		<div class="pl-pagination">
+			<!-- Info: Trang X / Y (Z mục) -->
+			<span class="pl-pagination-info">
+				Trang {{ page_obj.number }} / {{ paginator.num_pages }}
+				({{ paginator.count }} sản phẩm)
+			</span>
+
+			<!-- Page buttons -->
+			<div class="pl-pagination-pages">
+				{% if page_obj.has_previous %}
+				<a href="?{% if query_string %}{{ query_string }}&{% endif %}page=1" class="nav-btn" title="Trang đầu">&laquo;</a>
+				<a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}" class="nav-btn" title="Trang trước">&lsaquo;</a>
+				{% endif %}
+
+				{% for p in page_range %}
+					{% if p == '...' %}
+					<span class="ellipsis">…</span>
+					{% elif p == page_obj.number %}
+					<span class="current">{{ p }}</span>
+					{% else %}
+					<a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ p }}">{{ p }}</a>
+					{% endif %}
+				{% endfor %}
+
+				{% if page_obj.has_next %}
+				<a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}" class="nav-btn" title="Trang sau">&rsaquo;</a>
+				<a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ paginator.num_pages }}" class="nav-btn" title="Trang cuối">&raquo;</a>
+				{% endif %}
+			</div>
 		</div>
 		{% endif %}
 	</div>
