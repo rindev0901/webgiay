@@ -1,5 +1,5 @@
 {% extends 'supply/base_supply.html' %}
-{% load format_money supply_url %}
+{% load format_money supply_admin %}
 
 {% block title %}Nộp báo giá — {{ pr.code }}{% endblock %}
 
@@ -20,39 +20,42 @@
     </div>
 </div>
 
-<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#1d4ed8;">
-    Bạn đang nộp báo giá cho: <strong>{{ pr.code }}</strong> — Ngày tạo: <strong>{{ pr.created_at|date:"d/m/Y" }}</strong>
+<div
+    style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#1d4ed8;">
+    Bạn đang nộp báo giá cho: <strong>{{ pr.code }}</strong> — Ngày tạo: <strong>{{ pr.created_at|date:"d/m/Y"
+        }}</strong>
     {% if pr.deadline %} • Hạn: <strong>{{ pr.deadline|date:"d/m/Y" }}</strong>{% endif %}
 </div>
 
 <div class="s-card" style="margin-bottom:16px;">
     <div class="s-card-header">
         <span class="s-card-title">Danh mục sản phẩm yêu cầu</span>
-        <a href="{% supply_url 'supplier_export_csv' pr.pk %}" class="btn-secondary" style="font-size:12px;padding:6px 12px;">
+        <a href="{% supply_url 'supplier_export_csv' pr.pk %}" class="btn-secondary"
+            style="font-size:12px;padding:6px 12px;">
             <i class="fas fa-download"></i> Tải CSV mẫu
         </a>
     </div>
     <div style="overflow-x:auto;">
-    <table class="s-table">
-        <thead>
-            <tr>
-                <th>Mã SP</th>
-                <th>Tên sản phẩm</th>
-                <th>Size</th>
-                <th>SL yêu cầu</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in items %}
-            <tr>
-                <td>{{ item.variant.pk }}</td>
-                <td style="font-weight:600;">{{ item.variant.product.name }}</td>
-                <td>{{ item.variant.size.name }}</td>
-                <td style="font-weight:700;color:#8b0000;">{{ item.requested_qty }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+        <table class="s-table">
+            <thead>
+                <tr>
+                    <th>Mã SP</th>
+                    <th>Tên sản phẩm</th>
+                    <th>Size</th>
+                    <th>SL yêu cầu</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.variant.pk }}</td>
+                    <td style="font-weight:600;">{{ item.variant.product.name }}</td>
+                    <td>{{ item.variant.size.name }}</td>
+                    <td style="font-weight:700;color:#8b0000;">{{ item.requested_qty }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
     {% with page_obj=items_page page_range=items_page_range querystring=items_querystring page_param='items_page' %}
     {% include 'supply/_pagination.html' %}
@@ -60,38 +63,39 @@
 </div>
 
 <form method="post" enctype="multipart/form-data">
-{% csrf_token %}
+    {% csrf_token %}
 
-<div class="s-card">
-    <div class="s-card-body">
-        <div class="s-form-group">
-            <label>Doanh nghiệp thực hiện báo giá *</label>
-            <input type="text" class="s-form-control" value="{{ supplier.name }}" readonly
-                   style="background:#f9fafb;" />
-        </div>
-        <div class="s-form-group">
-            <label>Chọn File CSV Báo Giá *</label>
-            <input type="file" name="csv_file" accept=".csv" class="s-form-control" required />
-            <div style="font-size:12px;color:#dc2626;margin-top:6px;">
-                Cấu trúc CSV: Mã SP, Tên SP, Kích thước, Màu sắc, SKU, Tồn kho hiện tại, Số lượng yêu cầu,
-                <strong>Đơn giá báo (NCC điền)</strong>, <strong>Số lượng NCC còn</strong>, <strong>Số ngày giao hàng</strong>
+    <div class="s-card">
+        <div class="s-card-body">
+            <div class="s-form-group">
+                <label>Doanh nghiệp thực hiện báo giá *</label>
+                <input type="text" class="s-form-control" value="{{ supplier.name }}" readonly
+                    style="background:#f9fafb;" />
+            </div>
+            <div class="s-form-group">
+                <label>Chọn File CSV Báo Giá *</label>
+                <input type="file" name="csv_file" accept=".csv" class="s-form-control" required />
+                <div style="font-size:12px;color:#dc2626;margin-top:6px;">
+                    Cấu trúc CSV: Mã SP, Tên SP, Kích thước, Màu sắc, SKU, Tồn kho hiện tại, Số lượng yêu cầu,
+                    <strong>Đơn giá báo (NCC điền)</strong>, <strong>Số lượng NCC còn</strong>, <strong>Số ngày giao
+                        hàng</strong>
+                </div>
+            </div>
+            <div class="s-form-group">
+                <label>Ghi chú kèm theo</label>
+                <textarea name="note" class="s-form-control" rows="3" placeholder="Nhập ghi chú..."></textarea>
             </div>
         </div>
-        <div class="s-form-group">
-            <label>Ghi chú kèm theo</label>
-            <textarea name="note" class="s-form-control" rows="3" placeholder="Nhập ghi chú..."></textarea>
-        </div>
     </div>
-</div>
 
-<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
-    <a href="{% supply_url 'supplier_portal' %}" class="btn-secondary">
-        <i class="fas fa-arrow-left"></i> Quay lại danh sách
-    </a>
-    <button type="submit" class="btn-blue">
-        <i class="fas fa-paper-plane"></i> Gửi Hồ Sơ Báo Giá
-    </button>
-</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+        <a href="{% supply_url 'supplier_portal' %}" class="btn-secondary">
+            <i class="fas fa-arrow-left"></i> Quay lại danh sách
+        </a>
+        <button type="submit" class="btn-blue">
+            <i class="fas fa-paper-plane"></i> Gửi Hồ Sơ Báo Giá
+        </button>
+    </div>
 </form>
 
 {% endblock %}

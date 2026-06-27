@@ -27,6 +27,9 @@ body.supply-body {
 /* Sidebar */
 .supply-sidebar {
     width: 240px;
+    height: 100vh;
+    position: sticky;
+    top: 0;
     flex-shrink: 0;
     background: var(--sc-sidebar);
     color: var(--sc-sidebar-text);
@@ -55,7 +58,7 @@ body.supply-body {
     font-size: 15px;
 }
 
-.supply-nav { flex: 1; padding: 12px 10px; }
+.supply-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
 .supply-nav-group { margin-bottom: 20px; }
 .supply-nav-label {
     display: block;
@@ -89,11 +92,68 @@ body.supply-body {
 .supply-user {
     padding: 14px 18px;
     border-top: 1px solid rgba(255,255,255,.08);
-    font-size: 13px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     color: #94a3b8;
+}
+.supply-user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: #374151;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    text-transform: uppercase;
+}
+.supply-user-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+.supply-user-name {
+    font-weight: 600;
+    color: #f1f5f9;
+    font-size: 12.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+.supply-user-email {
+    font-size: 11px;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+    margin-top: 1px;
+}
+.supply-user-actions {
+    color: #94a3b8;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+}
+.supply-user-actions button {
+    color: #94a3b8;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s;
+}
+.supply-user-actions button:hover {
+    color: #fff;
 }
 
 /* Main */

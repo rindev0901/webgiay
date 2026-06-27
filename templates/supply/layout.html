@@ -13,9 +13,11 @@
 <div class="supply-app">
     <aside class="supply-sidebar">
         <div class="supply-brand">
+            {% if user.is_superuser %}
             <a href="{{ supply_paths.admin_index }}">
                 <i class="fas fa-arrow-left"></i> Admin
             </a>
+            {% endif %}
             <strong>Chuỗi cung ứng</strong>
         </div>
         <nav class="supply-nav">
@@ -41,8 +43,37 @@
         </nav>
         {% if user.is_authenticated %}
         <div class="supply-user">
-            <i class="fas fa-user-circle"></i>
-            <span>{{ user.username }}</span>
+            <div class="supply-user-avatar">
+                {% if supply_supplier %}
+                    {{ supply_supplier.name|slice:":1"|upper }}
+                {% else %}
+                    {{ user.username|slice:":1"|upper }}
+                {% endif %}
+            </div>
+            <div class="supply-user-info">
+                <span class="supply-user-name">
+                    {% if supply_supplier %}
+                        {{ supply_supplier.name }}
+                    {% else %}
+                        {{ user.get_full_name|default:user.username }}
+                    {% endif %}
+                </span>
+                <span class="supply-user-email">
+                    {% if supply_supplier %}
+                        {{ supply_supplier.email|default:user.email }}
+                    {% else %}
+                        {{ user.email }}
+                    {% endif %}
+                </span>
+            </div>
+            <div class="supply-user-actions">
+                <form method="post" action="{% url 'admin:logout' %}" style="display: inline; margin: 0; padding: 0;">
+                    {% csrf_token %}
+                    <button type="submit" title="Đăng xuất" style="background: none; border: none; color: inherit; padding: 0; cursor: pointer; font: inherit; display: flex; align-items: center;">
+                        <i class="fas fa-right-from-bracket"></i>
+                    </button>
+                </form>
+            </div>
         </div>
         {% endif %}
     </aside>

@@ -14,8 +14,13 @@ def navigation_data(request):
 
 def supply_nav(request):
     user = request.user
+    supplier = None
+    if user.is_authenticated:
+        from .supply_models import Supplier
+        supplier = Supplier.objects.filter(user=user, is_active=True).first()
     return {
         'supply_is_manager': is_store_manager(user),
         'supply_is_supplier': is_supplier_user(user),
         'supply_paths': SUPPLY_PATHS,
+        'supply_supplier': supplier,
     }

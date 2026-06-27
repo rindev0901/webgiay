@@ -1,4 +1,3 @@
-"""Cấu hình sidebar Unfold — tất cả nhóm cùng cấp."""
 from apps.products.supply_admin_paths import SUPPLY_PATHS
 
 SIDEBAR_NAVIGATION = [
@@ -7,9 +6,24 @@ SIDEBAR_NAVIGATION = [
         "separator": True,
         "collapsible": True,
         "items": [
-            {"title": "Biên độ / CHT", "icon": "analytics", "link": SUPPLY_PATHS["bien_do"]},
-            {"title": "Yêu cầu đặt hàng", "icon": "inventory_2", "link": SUPPLY_PATHS["request_list"]},
-            {"title": "Báo giá NCC", "icon": "mail", "link": SUPPLY_PATHS["bao_gia"]},
+            {
+                "title": "Biên độ / CHT",
+                "icon": "analytics",
+                "link": SUPPLY_PATHS["bien_do"],
+                "permission": lambda request: __import__("apps.products.supply_permissions", fromlist=["is_store_manager"]).is_store_manager(request.user),
+            },
+            {
+                "title": "Yêu cầu đặt hàng",
+                "icon": "inventory_2",
+                "link": SUPPLY_PATHS["request_list"],
+                "permission": lambda request: __import__("apps.products.supply_permissions", fromlist=["is_store_manager"]).is_store_manager(request.user),
+            },
+            {
+                "title": "Báo giá NCC",
+                "icon": "mail",
+                "link": SUPPLY_PATHS["bao_gia"],
+                "permission": lambda request: __import__("apps.products.supply_permissions", fromlist=["is_supplier_user"]).is_supplier_user(request.user),
+            },
         ],
     },
     {
