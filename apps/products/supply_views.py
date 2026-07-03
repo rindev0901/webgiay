@@ -546,9 +546,10 @@ def receive_goods(request, pk):
 
 @login_required
 def inventory_check_list(request):
-    """Danh sách phiếu kiểm kê."""
-    if not is_store_manager(request.user) and not request.user.has_perm('products.can_check_inventory'):
-        messages.error(request, 'Bạn không có quyền truy cập.')
+    """Danh sách phiếu kiểm kê - CHỈ Quản lý kho và Admin."""
+    from .supply_permissions import is_warehouse_manager
+    if not is_warehouse_manager(request.user):
+        messages.error(request, 'Bạn không có quyền truy cập phiếu kiểm kê.')
         return redirect('admin:index')
 
     qs = InventoryCheck.objects.select_related(
@@ -576,9 +577,10 @@ def inventory_check_list(request):
 
 @login_required
 def inventory_check_detail(request, pk):
-    """Chi tiết phiếu kiểm kê."""
-    if not is_store_manager(request.user) and not request.user.has_perm('products.can_check_inventory'):
-        messages.error(request, 'Bạn không có quyền truy cập.')
+    """Chi tiết phiếu kiểm kê - CHỈ Quản lý kho và Admin."""
+    from .supply_permissions import is_warehouse_manager
+    if not is_warehouse_manager(request.user):
+        messages.error(request, 'Bạn không có quyền truy cập phiếu kiểm kê.')
         return redirect('admin:index')
 
     check = get_object_or_404(
@@ -655,9 +657,10 @@ def inventory_check_detail(request, pk):
 
 @login_required
 def perform_inventory_check(request, pk):
-    """Thực hiện kiểm kê: nhập số lượng thực nhận."""
-    if not request.user.has_perm('products.can_check_inventory') and not is_store_manager(request.user):
-        messages.error(request, 'Bạn không có quyền kiểm kê hàng.')
+    """Thực hiện kiểm kê: nhập số lượng thực nhận - CHỈ Quản lý kho và Admin."""
+    from .supply_permissions import is_warehouse_manager
+    if not is_warehouse_manager(request.user):
+        messages.error(request, 'Bạn không có quyền thực hiện kiểm kê.')
         return redirect('admin:index')
 
     check = get_object_or_404(
@@ -734,8 +737,9 @@ def perform_inventory_check(request, pk):
 
 @login_required
 def approve_inventory_check(request, pk):
-    """Cửa hàng trưởng duyệt phiếu kiểm kê → tạo phiếu chi (CHT sẽ nhập kho thủ công)."""
-    if not is_store_manager(request.user):
+    """Quản lý kho duyệt phiếu kiểm kê → tạo phiếu chi - CHỈ Quản lý kho và Admin."""
+    from .supply_permissions import is_warehouse_manager
+    if not is_warehouse_manager(request.user):
         messages.error(request, 'Bạn không có quyền duyệt phiếu kiểm kê.')
         return redirect('admin:index')
 
