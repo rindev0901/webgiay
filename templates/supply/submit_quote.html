@@ -95,7 +95,7 @@
     <div id="csv-preview-card" class="s-card" style="display: none; margin-top: 20px; border-left: 4px solid #3b82f6; transition: all 0.3s ease;">
         <div class="s-card-header" style="background: #f8fafc;">
             <span class="s-card-title" style="display: flex; align-items: center; gap: 8px;">
-                <i class="fas fa-clipboard-check" style="color: #2563eb;"></i> 
+                <i class="fas fa-clipboard-check" style="color: #2563eb;"></i>
                 Kết Quả Kiểm Tra Báo Giá File CSV
             </span>
             <span id="csv-overall-status" class="badge">Kiểm tra</span>
@@ -161,7 +161,7 @@
         <a href="{% supply_url 'supplier_portal' %}" class="btn-secondary">
             <i class="fas fa-arrow-left"></i> Quay lại danh sách
         </a>
-        <button type="submit" class="btn-blue">
+        <button type="submit" id="submit-quote-btn" class="btn-blue">
             <i class="fas fa-paper-plane"></i> Gửi Hồ Sơ Báo Giá
         </button>
     </div>
@@ -176,36 +176,43 @@ document.addEventListener('DOMContentLoaded', function() {
     const previewCard = document.getElementById('csv-preview-card');
     const previewTableBody = document.getElementById('csv-preview-table-body');
     const requestedJsonElem = document.getElementById('requested-items-json');
-    
-    if (!fileInput || !requestedJsonElem) return;
-    
+    const submitBtn = document.getElementById('submit-quote-btn');
+
+    if (!fileInput || !requestedJsonElem || !submitBtn) return;
+
+    // Disable submit button initially
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = '0.5';
+    submitBtn.style.cursor = 'not-allowed';
+    submitBtn.title = 'Vui lòng chọn file CSV hợp lệ';
+
     const requestedItems = JSON.parse(requestedJsonElem.textContent);
     const requestedMap = {};
     requestedItems.forEach(item => {
         requestedMap[item.variant_id] = item;
     });
-    
+
     fileInput.addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) {
             previewCard.style.display = 'none';
             return;
         }
-        
+
         const reader = new FileReader();
         reader.onload = function(evt) {
             try {
                 const text = evt.target.result;
                 const parsedLines = parseCSV(text);
-                
+
                 if (parsedLines.length < 2) {
                     showErrorBanner("File CSV trống hoặc không có dòng dữ liệu.");
                     return;
                 }
-                
+
                 // Clean headers
                 const headers = parsedLines[0].map(h => cleanHeader(h));
-                
+
                 // Find indices of key columns
                 const colIdx = {
                     maSP: headers.findIndex(h => h.includes('ma sp') || h.includes('ma_sp')),
@@ -214,39 +221,39 @@ document.addEventListener('DOMContentLoaded', function() {
                     leadDays: headers.findIndex(h => h.includes('so ngay') || h.includes('ngay giao') || h.includes('lead days') || h.includes('lead_days')),
                     ghiChu: headers.findIndex(h => h.includes('ghi chu') || h.includes('ghi_chu') || h.includes('note'))
                 };
-                
+
                 if (colIdx.maSP === -1) {
                     showErrorBanner("Không tìm thấy cột 'Ma SP' (Mã SP) trong file CSV. Vui lòng kiểm tra lại cấu trúc file.");
                     return;
                 }
                 if (colIdx.donGia === -1) {
-                    showErrorBanner("Không tìm thấy cột 'Don gia bao (NCC dien)' trong file CSV. Vui lòng kiểm tra lại cấu trúc file.");
+                    showErrorBanner("Không tìm thấy cột 'Don gia bao' trong file CSV. Vui lòng kiểm tra lại cấu trúc file.");
                     return;
                 }
-                
+
                 const parsedRows = [];
                 const csvMatchedIds = new Set();
                 let hasErrors = false;
                 let hasWarnings = false;
-                
+
                 for (let i = 1; i < parsedLines.length; i++) {
                     const row = parsedLines[i];
                     if (row.length === 0 || (row.length === 1 && row[0].trim() === "")) {
                         continue;
                     }
-                    
+
                     const rawId = colIdx.maSP > -1 ? row[colIdx.maSP] : "";
                     const rawPrice = colIdx.donGia > -1 ? row[colIdx.donGia] : "";
                     const rawAvail = colIdx.availQty > -1 ? row[colIdx.availQty] : "";
                     const rawLead = colIdx.leadDays > -1 ? row[colIdx.leadDays] : "";
                     const note = colIdx.ghiChu > -1 ? row[colIdx.ghiChu] : "";
-                    
+
                     const variantId = parseInt(rawId.trim(), 10);
                     const cleanPriceStr = rawPrice.trim().replace(/[,.]/g, "");
                     const unitPrice = parseFloat(cleanPriceStr);
                     const availQty = parseInt(rawAvail.trim(), 10);
                     const leadDays = parseInt(rawLead.trim(), 10);
-                    
+
                     const rowData = {
                         rowNumber: i + 1,
                         variantId: variantId,
@@ -260,7 +267,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         message: 'Hợp lệ',
                         reqItem: null
                     };
-                    
+
                     if (isNaN(variantId)) {
                         rowData.status = 'error';
                         rowData.message = 'Mã SP không hợp lệ (trống hoặc không phải là số)';
@@ -274,7 +281,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else {
                             rowData.reqItem = reqItem;
                             csvMatchedIds.add(variantId);
-                            
+
                             if (isNaN(unitPrice) || unitPrice <= 0) {
                                 rowData.status = 'error';
                                 rowData.message = 'Đơn giá báo trống hoặc không hợp lệ';
@@ -284,7 +291,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     parsedRows.push(rowData);
                 }
-                
+
                 // Find missing items (requested items that are not in the CSV)
                 const missingItems = [];
                 requestedItems.forEach(item => {
@@ -293,23 +300,23 @@ document.addEventListener('DOMContentLoaded', function() {
                         hasWarnings = true;
                     }
                 });
-                
+
                 // Display the results
                 renderPreview(parsedRows, missingItems, csvMatchedIds, hasErrors, hasWarnings);
-                
+
             } catch (err) {
                 showErrorBanner("Lỗi phân tích file CSV: " + err.message);
             }
         };
         reader.readAsText(file);
     });
-    
+
     function cleanHeader(h) {
         return h.trim().toLowerCase()
             .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
             .replace(/[()]/g, "");
     }
-    
+
     function parseCSV(text) {
         let delimiter = ',';
         let newlineIdx = text.indexOf('\n');
@@ -317,7 +324,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (firstLine.indexOf(';') > -1 && firstLine.indexOf(',') === -1) {
             delimiter = ';';
         }
-        
+
         let lines = [];
         let row = [""];
         let inQuotes = false;
@@ -348,23 +355,29 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return lines;
     }
-    
+
     function formatMoney(amount) {
         if (isNaN(amount) || amount === null) return '0₫';
         return amount.toLocaleString('vi-VN') + '₫';
     }
-    
+
     function showErrorBanner(msg) {
         previewCard.style.display = 'block';
         previewCard.style.borderLeftColor = '#ef4444';
-        
+
+        // Disable submit button
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.5';
+        submitBtn.style.cursor = 'not-allowed';
+        submitBtn.title = 'File CSV không hợp lệ';
+
         document.getElementById('csv-overall-status').className = 'badge badge-hot';
         document.getElementById('csv-overall-status').textContent = 'Lỗi cấu trúc';
-        
+
         const banner = document.getElementById('csv-alert-banner');
         banner.className = 'supply-msg supply-msg-error';
         banner.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <strong>Lỗi cấu trúc file:</strong> ${msg}`;
-        
+
         // Reset summary and table
         document.getElementById('summary-requested-qty').textContent = requestedItems.length;
         document.getElementById('summary-matched-qty').textContent = '0';
@@ -373,59 +386,79 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('summary-total-value').textContent = '0₫';
         previewTableBody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #dc2626;">File CSV không hợp lệ. Vui lòng kiểm tra lại định dạng file.</td></tr>';
     }
-    
+
     function renderPreview(parsedRows, missingItems, csvMatchedIds, hasErrors, hasWarnings) {
         previewCard.style.display = 'block';
-        
+
         const banner = document.getElementById('csv-alert-banner');
         const overallStatusBadge = document.getElementById('csv-overall-status');
-        
+
         let estimatedValue = 0;
         let totalErrors = parsedRows.filter(r => r.status === 'error').length;
         let totalMatched = csvMatchedIds.size;
         let totalMissing = missingItems.length;
-        
+
         // Calculate estimated value
         parsedRows.forEach(r => {
             if (r.status === 'valid' && r.reqItem && r.unitPrice > 0) {
                 estimatedValue += r.unitPrice * r.reqItem.requested_qty;
             }
         });
-        
+
         // Update summary boxes
         document.getElementById('summary-requested-qty').textContent = requestedItems.length;
         document.getElementById('summary-matched-qty').textContent = totalMatched;
         document.getElementById('summary-missing-qty').textContent = totalMissing;
         document.getElementById('summary-error-qty').textContent = totalErrors;
         document.getElementById('summary-total-value').textContent = formatMoney(estimatedValue);
-        
+
         // Update alert banner & overall badge
         if (hasErrors) {
             previewCard.style.borderLeftColor = '#ef4444';
             overallStatusBadge.className = 'badge badge-hot';
             overallStatusBadge.textContent = 'Dữ liệu không hợp lệ';
-            
+
             banner.className = 'supply-msg supply-msg-error';
             banner.innerHTML = `<i class="fas fa-exclamation-circle"></i> <strong>File có dòng lỗi:</strong> Phát hiện ${totalErrors} dòng lỗi trong file CSV (tô màu đỏ ở bảng dưới). Vui lòng sửa lại trước khi gửi.`;
+
+            // Disable submit button when has errors
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.5';
+            submitBtn.style.cursor = 'not-allowed';
+            submitBtn.title = `Có ${totalErrors} dòng lỗi, vui lòng sửa file CSV`;
+
         } else if (totalMissing > 0) {
             previewCard.style.borderLeftColor = '#f59e0b';
             overallStatusBadge.className = 'badge badge-quoted';
             overallStatusBadge.textContent = 'Thiếu báo giá';
-            
+
             banner.className = 'supply-msg supply-msg-warning';
             banner.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <strong>Thiếu sản phẩm yêu cầu:</strong> Bạn chưa báo giá cho ${totalMissing} sản phẩm trong yêu cầu (tô màu vàng ở cuối bảng). Bạn vẫn có thể gửi, nhưng nên báo giá đầy đủ.`;
+
+            // Enable submit button with warning (allow partial quotes)
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.style.cursor = 'pointer';
+            submitBtn.title = `Thiếu ${totalMissing} sản phẩm, nhưng vẫn có thể gửi`;
+
         } else {
             previewCard.style.borderLeftColor = '#10b981';
             overallStatusBadge.className = 'badge badge-norm';
             overallStatusBadge.textContent = 'Hợp lệ';
-            
+
             banner.className = 'supply-msg supply-msg-success';
             banner.innerHTML = `<i class="fas fa-check-circle"></i> <strong>File hoàn toàn hợp lệ:</strong> Toàn bộ sản phẩm yêu cầu được mapping chính xác và không có lỗi nào.`;
+
+            // Enable submit button when all valid
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.style.cursor = 'pointer';
+            submitBtn.title = 'Click để gửi báo giá';
         }
-        
+
         // Render table rows
         let html = '';
-        
+
         // Render parsed rows
         parsedRows.forEach(r => {
             let rowStyle = '';
@@ -433,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
             let name = '—';
             let sizeColor = '—';
             let reqQty = '—';
-            
+
             if (r.status === 'error') {
                 rowStyle = 'background: #fef2f2; color: #991b1b;';
                 statusBadge = `<span class="badge badge-hot" style="font-size: 11px;">Lỗi: ${r.message}</span>`;
@@ -443,17 +476,17 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 statusBadge = '<span class="badge badge-norm" style="font-size: 11px;">Khớp yêu cầu</span>';
             }
-            
+
             if (r.reqItem) {
                 name = r.reqItem.name;
                 sizeColor = `${r.reqItem.size || 'Mặc định'} / ${r.reqItem.color || 'Mặc định'}`;
                 reqQty = r.reqItem.requested_qty;
             }
-            
+
             const priceStr = isNaN(r.unitPrice) ? r.rawPrice : formatMoney(r.unitPrice);
             const leadStr = isNaN(r.leadDays) ? '—' : `${r.leadDays} ngày`;
             const availStr = isNaN(r.availQty) ? '—' : r.availQty;
-            
+
             html += `
                 <tr style="${rowStyle}">
                     <td style="font-weight: 600;">${r.rowNumber}</td>
@@ -468,7 +501,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </tr>
             `;
         });
-        
+
         // Render missing items from request
         missingItems.forEach(item => {
             html += `
@@ -485,11 +518,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 </tr>
             `;
         });
-        
+
         if (parsedRows.length === 0 && missingItems.length === 0) {
             html = '<tr><td colspan="9" style="text-align: center; color: #6b7280;">Không tìm thấy dữ liệu.</td></tr>';
         }
-        
+
         previewTableBody.innerHTML = html;
     }
 });

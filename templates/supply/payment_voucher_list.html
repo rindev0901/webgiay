@@ -1,0 +1,140 @@
+{% extends 'supply/base_supply.html' %}
+{% load format_money supply_admin %}
+
+{% block title %}Phiếu chi tiền NCC{% endblock %}
+
+{% block supply_content %}
+
+<nav class="supply-breadcrumb">
+    <a href="{% supply_url 'analytics' %}">Biên độ</a>
+    <i class="fas fa-chevron-right"></i>
+    <span>Phiếu chi tiền</span>
+</nav>
+
+<div class="supply-header">
+    <div>
+        <h1 class="supply-title">💰 Phiếu chi tiền NCC</h1>
+        <div style="margin-top:6px;font-size:13px;color:#888;">
+            Tổng {{ page_obj.paginator.count }} phiếu
+        </div>
+    </div>
+</div>
+
+<!-- Summary cards -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-bottom:20px;">
+    <div class="s-card">
+        <div class="s-card-body" style="text-align:center;">
+            <div style="font-size:13px;color:#888;margin-bottom:6px;">Chờ thanh toán</div>
+            <div style="font-size:28px;font-weight:700;color:#f59e0b;">{{ total_pending|vnd }}</div>
+        </div>
+    </div>
+    <div class="s-card">
+        <div class="s-card-body" style="text-align:center;">
+            <div style="font-size:13px;color:#888;margin-bottom:6px;">Đã thanh toán</div>
+            <div style="font-size:28px;font-weight:700;color:#16a34a;">{{ total_paid|vnd }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter -->
+<div class="s-card" style="margin-bottom:16px;">
+    <div class="s-card-body" style="padding:12px 20px;">
+        <form method="get" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+            <label style="font-size:13px;font-weight:600;">Lọc:</label>
+            <select name="status" style="padding:6px 12px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;">
+                <option value="">Tất cả trạng thái</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn-primary" style="padding:6px 16px;font-size:13px;">
+                <i class="fas fa-filter"></i> Lọc
+            </button>
+            {% if status_filter %}
+            <a href="?" class="btn-secondary" style="padding:6px 16px;font-size:13px;">
+                <i class="fas fa-times"></i> Xóa lọc
+            </a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- List -->
+<div class="s-card">
+    <div style="overflow-x:auto;">
+        <table class="s-table">
+            <thead>
+                <tr>
+                    <th>Mã phiếu</th>
+                    <th>Phiếu kiểm kê</th>
+                    <th>Đợt đặt hàng</th>
+                    <th>NCC</th>
+                    <th>Số tiền</th>
+                    <th>Trạng thái</th>
+                    <th>PT thanh toán</th>
+                    <th>Người thanh toán</th>
+                    <th>Ngày tạo</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for voucher in vouchers %}
+                <tr>
+                    <td style="font-weight:700;">{{ voucher.code }}</td>
+                    <td>
+                        <a href="{% supply_url 'inventory_check_detail' voucher.inventory_check.pk %}"
+                           style="color:#3b82f6;text-decoration:none;">
+                            {{ voucher.inventory_check.code }}
+                        </a>
+                    </td>
+                    <td>
+                        <a href="{% supply_url 'request_detail' voucher.inventory_check.purchase_request.pk %}"
+                           style="color:#3b82f6;text-decoration:none;">
+                            {{ voucher.inventory_check.purchase_request.code }}
+                        </a>
+                    </td>
+                    <td style="font-weight:600;">{{ voucher.supplier.name }}</td>
+                    <td style="font-weight:700;color:#8b0000;font-size:15px;">{{ voucher.amount|vnd }}</td>
+                    <td>
+                        <span class="badge badge-{{ voucher.status }}">{{ voucher.get_status_display }}</span>
+                    </td>
+                    <td style="font-size:12px;">{{ voucher.payment_method|default:"—" }}</td>
+                    <td style="font-size:12px;">
+                        {% if voucher.paid_by %}
+                            {{ voucher.paid_by.get_full_name|default:voucher.paid_by.username }}
+                        {% else %}
+                            <span style="color:#999;">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:12px;color:#666;">{{ voucher.created_at|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        <div style="display:flex;gap:6px;">
+                            <a href="{% supply_url 'payment_voucher_detail' voucher.pk %}"
+                               class="btn-secondary" style="padding:4px 10px;font-size:12px;">
+                                <i class="fas fa-eye"></i> Xem
+                            </a>
+                            {% if voucher.status == 'pending' %}
+                            <a href="{% supply_url 'mark_payment_paid' voucher.pk %}"
+                               class="btn-green" style="padding:4px 10px;font-size:12px;">
+                                <i class="fas fa-money-bill"></i> Thanh toán
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" style="text-align:center;padding:32px;color:#999;">
+                        Chưa có phiếu chi nào
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% with page_range=page_range querystring=querystring %}
+    {% include 'supply/_pagination.html' %}
+    {% endwith %}
+</div>
+
+{% endblock %}

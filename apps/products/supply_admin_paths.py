@@ -11,6 +11,18 @@ SUPPLY_PATHS = {
     'bao_gia': '/supply/portal/',
     'submit_quote': '/supply/portal/{pk}/quote/',
     'supplier_export': '/supply/portal/{pk}/export/',
+
+    # Inventory Check Paths
+    'inventory_check_list': '/supply/inventory-checks/',
+    'inventory_check_detail': '/supply/inventory-checks/{pk}/',
+    'perform_inventory_check': '/supply/inventory-checks/{pk}/perform/',
+    'approve_inventory_check': '/supply/inventory-checks/{pk}/approve/',
+
+    # Payment Voucher Paths
+    'payment_voucher_list': '/supply/payment-vouchers/',
+    'payment_voucher_detail': '/supply/payment-vouchers/{pk}/',
+    'mark_payment_paid': '/supply/payment-vouchers/{pk}/mark-paid/',
+
     'admin_index': '/admin/',
 }
 
@@ -26,6 +38,17 @@ SUPPLY_ALIASES = {
     'supplier_portal': 'bao_gia',
     'submit_quote': 'submit_quote',
     'supplier_export_csv': 'supplier_export',
+
+    # Inventory Check Aliases
+    'inventory_check_list': 'inventory_check_list',
+    'inventory_check_detail': 'inventory_check_detail',
+    'perform_inventory_check': 'perform_inventory_check',
+    'approve_inventory_check': 'approve_inventory_check',
+
+    # Payment Voucher Aliases
+    'payment_voucher_list': 'payment_voucher_list',
+    'payment_voucher_detail': 'payment_voucher_detail',
+    'mark_payment_paid': 'mark_payment_paid',
 }
 
 
@@ -35,3 +58,4 @@ def supply_path(name, pk=None):
     if pk is not None and '{pk}' in path:
         return path.format(pk=pk)
     return path
+

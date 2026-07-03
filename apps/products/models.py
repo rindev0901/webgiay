@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from .supply_models import (  # noqa: F401
     Supplier, PurchaseRequest, PurchaseRequestItem,
     SupplierQuote, SupplierQuoteItem,
+    InventoryCheck, InventoryCheckItem, PaymentVoucher,
 )
 
 # ====================== 1. Danh mục & Thương hiệu ======================
@@ -99,23 +100,23 @@ class Product(models.Model):
         # Check if both prices exist and are valid
         if not self.discount_price or not self.price:
             return 0
-        
+
         try:
             # Convert to float for proper division
             discount_float = float(self.discount_price)
             price_float = float(self.price)
-            
+
             # Validate positive values
             if discount_float <= 0 or price_float <= 0:
                 return 0
-            
+
             # Only show discount if discount_price is less than price
             if discount_float < price_float:
                 percent = int((1 - discount_float / price_float) * 100)
                 return percent if percent > 0 else 0
         except (ValueError, TypeError, ZeroDivisionError):
             return 0
-        
+
         return 0
 
     @property
@@ -278,4 +279,4 @@ class StockMovement(models.Model):
     def __str__(self):
         qty = int(self.quantity) if self.quantity is not None else 0
         return f"{self.get_movement_type_display()} | {self.variant} | {qty:+d}"
-        
+

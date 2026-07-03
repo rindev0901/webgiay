@@ -19,6 +19,18 @@ SIDEBAR_NAVIGATION = [
                 "permission": lambda request: __import__("apps.products.supply_permissions", fromlist=["is_store_manager"]).is_store_manager(request.user),
             },
             {
+                "title": "Phiếu kiểm kê",
+                "icon": "fact_check",
+                "link": SUPPLY_PATHS["inventory_check_list"],
+                "permission": lambda request: __import__("apps.products.supply_permissions", fromlist=["can_view_inventory_check"]).can_view_inventory_check(request),
+            },
+            {
+                "title": "Phiếu chi tiền NCC",
+                "icon": "payments",
+                "link": SUPPLY_PATHS["payment_voucher_list"],
+                "permission": lambda request: __import__("apps.products.supply_permissions", fromlist=["can_view_payment_voucher"]).can_view_payment_voucher(request),
+            },
+            {
                 "title": "Báo giá NCC",
                 "icon": "mail",
                 "link": SUPPLY_PATHS["bao_gia"],

@@ -1,0 +1,197 @@
+{% extends 'supply/base_supply.html' %}
+{% load format_money supply_admin %}
+
+{% block title %}Duyệt phiếu kiểm kê {{ check.code }}{% endblock %}
+
+{% block supply_content %}
+
+<nav class="supply-breadcrumb">
+    <a href="{% supply_url 'analytics' %}">Biên độ</a>
+    <i class="fas fa-chevron-right"></i>
+    <a href="{% supply_url 'inventory_check_list' %}">Phiếu kiểm kê</a>
+    <i class="fas fa-chevron-right"></i>
+    <a href="{% supply_url 'inventory_check_detail' check.pk %}">{{ check.code }}</a>
+    <i class="fas fa-chevron-right"></i>
+    <span>Duyệt</span>
+</nav>
+
+<div class="supply-header">
+    <div>
+        <h1 class="supply-title">✅ Duyệt phiếu kiểm kê</h1>
+        <div style="margin-top:6px;font-size:13px;color:#888;">
+            Phiếu: {{ check.code }} • Người kiểm: {{ check.checker.get_full_name|default:check.checker.username }}
+        </div>
+    </div>
+</div>
+
+<div style="background:#bb9422;border:1px solid #16a34a;border-radius:6px;padding:16px;margin-bottom:20px;">
+    <h3 style="font-size:15px;font-weight:700;color:#166534;margin-bottom:8px;">
+        ℹ️ Sau khi duyệt, hệ thống sẽ tự động:
+    </h3>
+    <ul style="font-size:13px;color:#166534;margin:0;padding-left:20px;">
+        <li><strong>Cộng tồn kho</strong> cho từng mặt hàng theo số lượng thực nhận</li>
+        <li><strong>Tạo phiếu chi tiền</strong> cho NCC {{ check.purchase_request.approved_supplier.name }}</li>
+        <li>Chuyển đợt đặt hàng sang trạng thái "Đã kiểm kê"</li>
+        <li>Ghi nhận lịch sử tồn kho chi tiết</li>
+    </ul>
+</div>
+
+<!-- Summary -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px;">
+    <div class="s-card">
+        <div class="s-card-body" style="text-align:center;">
+            <div style="font-size:13px;color:#888;margin-bottom:4px;">Tổng mặt hàng</div>
+            <div style="font-size:28px;font-weight:700;color:#3b82f6;">{{ total_items }}</div>
+        </div>
+    </div>
+    <div class="s-card">
+        <div class="s-card-body" style="text-align:center;">
+            <div style="font-size:13px;color:#888;margin-bottom:4px;">Khớp đơn</div>
+            <div style="font-size:28px;font-weight:700;color:#16a34a;">{{ matched_items }}</div>
+        </div>
+    </div>
+    <div class="s-card">
+        <div class="s-card-body" style="text-align:center;">
+            <div style="font-size:13px;color:#888;margin-bottom:4px;">NCC nhận</div>
+            <div style="font-size:18px;font-weight:700;color:#0369a1;margin-top:6px;">
+                {{ check.purchase_request.approved_supplier.name }}
+            </div>
+        </div>
+    </div>
+    <div class="s-card">
+        <div class="s-card-body" style="text-align:center;">
+            <div style="font-size:13px;color:#888;margin-bottom:4px;">Số tiền thanh toán</div>
+            <div style="font-size:22px;font-weight:700;color:#8b0000;margin-top:6px;">
+                {{ total_amount|vnd }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Items table -->
+<div class="s-card" style="margin-bottom:20px;">
+    <div class="s-card-header">
+        <span class="s-card-title">📦 Chi tiết hàng đã kiểm</span>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="s-table">
+            <thead>
+                <tr>
+                    <th>Sản phẩm</th>
+                    <th>Size</th>
+                    <th>Màu</th>
+                    <th>SL đặt</th>
+                    <th>SL nhận</th>
+                    <th>Chênh lệch</th>
+                    <th>Đơn giá</th>
+                    <th>Thành tiền</th>
+                    <th>Ghi chú</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr {% if not item.is_matched %}style="background:#fef3c7;"{% endif %}>
+                    <td style="font-weight:600;">{{ item.variant.product.name }}</td>
+                    <td>
+                        <span style="background:#f3f4f6;padding:3px 8px;border-radius:4px;font-weight:600;font-size:12px;">
+                            {{ item.variant.size.name }}
+                        </span>
+                    </td>
+                    <td>{{ item.variant.color.name|default:"Mặc định" }}</td>
+                    <td style="font-weight:700;">{{ item.ordered_qty }}</td>
+                    <td style="font-weight:700;{% if item.received_qty < item.ordered_qty %}color:#dc2626;{% elif item.received_qty > item.ordered_qty %}color:#f59e0b;{% else %}color:#16a34a;{% endif %}">
+                        {{ item.received_qty }}
+                    </td>
+                    <td style="font-weight:700;">
+                        {% with diff=item.received_qty|add:"-"|add:item.ordered_qty|add:item.ordered_qty %}
+                            {% with delta=item.received_qty %}
+                                {% if delta == item.ordered_qty %}
+                                    <span style="color:#16a34a;">0</span>
+                                {% elif delta > item.ordered_qty %}
+                                    <span style="color:#f59e0b;">+{{ delta|add:"-"|add:item.ordered_qty|add:item.ordered_qty }}</span>
+                                {% else %}
+                                    <span style="color:#dc2626;">-{{ item.ordered_qty|add:"-"|add:delta|add:delta }}</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% endwith %}
+                    </td>
+                    <td>{{ item.unit_price|vnd }}</td>
+                    <td style="font-weight:700;color:#8b0000;">{{ item.total_price|vnd }}</td>
+                    <td style="font-size:12px;color:#666;">
+                        {% if item.note %}
+                            {{ item.note }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr style="background:#f9fafb;font-weight:700;">
+                    <td colspan="7" style="text-align:right;padding-right:20px;">TỔNG CỘNG:</td>
+                    <td style="color:#8b0000;font-size:16px;">{{ total_amount|vnd }}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<!-- Actions -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <!-- Approve -->
+    <div class="s-card">
+        <div class="s-card-body">
+            <h3 style="font-size:15px;font-weight:700;color:#16a34a;margin-bottom:12px;">
+                ✅ Duyệt phiếu kiểm kê
+            </h3>
+            <p style="font-size:13px;color:#666;margin-bottom:16px;">
+                Xác nhận số lượng chính xác và cho phép cộng tồn kho + tạo phiếu chi tiền.
+            </p>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="approve" />
+                <button type="submit" class="btn-green" style="width:100%;">
+                    <i class="fas fa-check"></i> Duyệt & Cộng tồn kho
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reject -->
+    <div class="s-card">
+        <div class="s-card-body">
+            <h3 style="font-size:15px;font-weight:700;color:#dc2626;margin-bottom:12px;">
+                ❌ Từ chối phiếu kiểm kê
+            </h3>
+            <form method="post" onsubmit="return confirm('Bạn chắc chắn muốn từ chối phiếu này?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reject" />
+                <div style="margin-bottom:12px;">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">
+                        Lý do từ chối *
+                    </label>
+                    <textarea
+                        name="rejection_reason"
+                        rows="3"
+                        required
+                        placeholder="Nhập lý do từ chối..."
+                        style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;"
+                    ></textarea>
+                </div>
+                <button type="submit" class="btn-red" style="width:100%;">
+                    <i class="fas fa-times"></i> Từ chối phiếu
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div style="margin-top:16px;text-align:center;">
+    <a href="{% supply_url 'inventory_check_detail' check.pk %}" class="btn-secondary">
+        <i class="fas fa-arrow-left"></i> Quay lại xem phiếu
+    </a>
+</div>
+
+{% endblock %}

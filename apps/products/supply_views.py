@@ -26,6 +26,7 @@ from django.views.decorators.http import require_POST
 from .supply_models import (
     Supplier, PurchaseRequest, PurchaseRequestItem,
     SupplierQuote, SupplierQuoteItem,
+    InventoryCheck, InventoryCheckItem, PaymentVoucher,
 )
 from .models import ProductVariant
 from .supply_permissions import is_store_manager
@@ -50,7 +51,7 @@ def _build_csv_response(pr):
     writer.writerow([
         'Ma SP', 'Ten san pham', 'Kich thuoc (Size)', 'Mau sac',
         'SKU', 'Ton kho hien tai', 'So luong yeu cau',
-        'Don gia bao (NCC dien)', 'So luong NCC con', 'So ngay giao hang', 'Ghi chu'
+        'Don gia bao', 'So luong NCC con', 'So ngay giao hang', 'Ghi chu'
     ])
     for item in pr.items.select_related(
         'variant', 'variant__product', 'variant__size', 'variant__color'
@@ -397,40 +398,73 @@ def approve_request(request, pk):
 
 @login_required
 def receive_goods(request, pk):
-    """Kho nhận hàng: nhập số lượng thực nhận → cộng tồn kho."""
+    """NCC đã giao hàng → chuyển sang trạng thái SHIPPED → tạo phiếu kiểm kê."""
     if not is_store_manager(request.user):
         return redirect('admin:index')
 
-    pr    = get_object_or_404(PurchaseRequest, pk=pk, status=PurchaseRequest.Status.APPROVED)
-    items_qs = pr.items.select_related('variant', 'variant__product', 'variant__size', 'variant__color')
+    pr = get_object_or_404(PurchaseRequest, pk=pk, status=PurchaseRequest.Status.APPROVED)
 
     if request.method == 'POST':
-        count = 0
-        for item in items_qs:
-            key = f'received_{item.pk}'
-            if key not in request.POST:
-                continue
-            try:
-                qty = int(request.POST.get(key, 0))
-            except (ValueError, TypeError):
-                qty = 0
-            if qty > 0:
-                item.received_qty = qty
-                item.save(update_fields=['received_qty'])
-                adjust_stock(
-                    variant=item.variant,
-                    quantity=qty,
-                    note=f'Nhập hàng từ đợt {pr.code}',
-                    actor=str(request.user),
-                )
-                count += 1
-
-        pr.status = PurchaseRequest.Status.RECEIVED
+        # Chuyển trạng thái sang SHIPPED và tạo phiếu kiểm kê
+        pr.status = PurchaseRequest.Status.SHIPPED
         pr.save(update_fields=['status', 'updated_at'])
-        messages.success(request, f'Đã nhập kho {count} mặt hàng từ đợt {pr.code}!')
-        return redirect(supply_admin_url('request_detail', pk))
 
+        # Tạo phiếu kiểm kê tự động
+        inventory_check = InventoryCheck.objects.create(
+            purchase_request=pr,
+            status=InventoryCheck.Status.PENDING,
+        )
+
+        # Lấy báo giá đã duyệt
+        quote = SupplierQuote.objects.filter(
+            request=pr,
+            supplier=pr.approved_supplier
+        ).prefetch_related('items').first()
+
+        if not quote:
+            messages.warning(
+                request,
+                f'⚠️ Chưa có báo giá từ NCC {pr.approved_supplier.name}. '
+                f'Đơn giá trong phiếu kiểm kê sẽ = 0. Vui lòng cập nhật thủ công nếu cần.'
+            )
+
+        # Tạo chi tiết kiểm kê từ items của purchase request và giá từ quote
+        items_without_price = []
+        for item in pr.items.select_related('variant').all():
+            # Tìm giá từ quote
+            unit_price = 0
+            if quote:
+                quote_item = quote.items.filter(variant=item.variant).first()
+                if quote_item:
+                    unit_price = quote_item.unit_price
+                else:
+                    items_without_price.append(str(item.variant))
+
+            # Fill sẵn received_qty = ordered_qty (nhân viên sẽ điều chỉnh nếu lệch)
+            InventoryCheckItem.objects.create(
+                inventory_check=inventory_check,
+                variant=item.variant,
+                ordered_qty=item.requested_qty,
+                received_qty=item.requested_qty,  # Điền sẵn = số lượng đặt
+                unit_price=unit_price or 0,
+            )
+
+        if items_without_price:
+            messages.warning(
+                request,
+                f'⚠️ {len(items_without_price)} mặt hàng chưa có giá trong báo giá: '
+                f'{", ".join(items_without_price[:3])}{"..." if len(items_without_price) > 3 else ""}'
+            )
+
+        messages.success(
+            request,
+            f'Đã xác nhận NCC giao hàng và tạo phiếu kiểm kê {inventory_check.code}!'
+        )
+        return redirect(supply_admin_url('inventory_check_detail', inventory_check.pk))
+
+    items_qs = pr.items.select_related('variant', 'variant__product', 'variant__size', 'variant__color')
     items_page, items_paginator = paginate_queryset(request, items_qs, per_page=20)
+
     context = {
         'pr': pr,
         'items': items_page.object_list,
@@ -438,7 +472,389 @@ def receive_goods(request, pk):
         'items_page_range': smart_page_range(items_page, items_paginator),
         'items_querystring': _querystring(request),
     }
-    return render(request, 'supply/receive_goods.html', context)
+    return render(request, 'supply/confirm_shipped.html', context)
+
+
+# ═══════════════════════════════════════════════════════════
+#  INVENTORY CHECK — Kiểm kê hàng nhập
+# ═══════════════════════════════════════════════════════════
+
+@login_required
+def inventory_check_list(request):
+    """Danh sách phiếu kiểm kê."""
+    if not is_store_manager(request.user) and not request.user.has_perm('products.can_check_inventory'):
+        messages.error(request, 'Bạn không có quyền truy cập.')
+        return redirect('admin:index')
+
+    qs = InventoryCheck.objects.select_related(
+        'purchase_request',
+        'purchase_request__approved_supplier',
+        'checker',
+        'approved_by'
+    ).order_by('-created_at')
+
+    # Filter by status
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+
+    page_obj, paginator = paginate_queryset(request, qs, per_page=15)
+
+    context = {
+        'checks': page_obj.object_list,
+        'status_choices': InventoryCheck.Status.choices,
+        'status_filter': status_filter,
+    }
+    context.update(_pagination_context(request, page_obj, paginator))
+    return render(request, 'supply/inventory_check_list.html', context)
+
+
+@login_required
+def inventory_check_detail(request, pk):
+    """Chi tiết phiếu kiểm kê."""
+    if not is_store_manager(request.user) and not request.user.has_perm('products.can_check_inventory'):
+        messages.error(request, 'Bạn không có quyền truy cập.')
+        return redirect('admin:index')
+
+    check = get_object_or_404(
+        InventoryCheck.objects.select_related(
+            'purchase_request',
+            'purchase_request__approved_supplier',
+            'checker',
+            'approved_by'
+        ),
+        pk=pk
+    )
+
+    items_qs = check.items.select_related(
+        'variant',
+        'variant__product',
+        'variant__size',
+        'variant__color'
+    )
+    items_page, items_paginator = paginate_queryset(request, items_qs, per_page=20, page_param='items_page')
+    # Calculate statistics
+    total_items = items_qs.count()
+    matched_items = items_qs.filter(is_matched=True).count()
+    mismatched_items = total_items - matched_items
+    total_amount = sum(item.total_price for item in items_qs)
+
+    context = {
+        'check': check,
+        'items': items_page.object_list,
+        'items_page': items_page,
+        'items_page_range': smart_page_range(items_page, items_paginator),
+        'items_querystring': _querystring(request, exclude=('items_page',)),
+        'total_items': total_items,
+        'matched_items': matched_items,
+        'mismatched_items': mismatched_items,
+        'total_amount': total_amount,
+    }
+    return render(request, 'supply/inventory_check_detail.html', context)
+
+
+@login_required
+def perform_inventory_check(request, pk):
+    """Thực hiện kiểm kê: nhập số lượng thực nhận."""
+    if not request.user.has_perm('products.can_check_inventory') and not is_store_manager(request.user):
+        messages.error(request, 'Bạn không có quyền kiểm kê hàng.')
+        return redirect('admin:index')
+
+    check = get_object_or_404(
+        InventoryCheck,
+        pk=pk,
+        status__in=[InventoryCheck.Status.PENDING, InventoryCheck.Status.CHECKING, InventoryCheck.Status.COMPLETED]
+    )
+
+    if request.method == 'POST':
+        # Update status to checking if pending
+        if check.status == InventoryCheck.Status.PENDING:
+            check.status = InventoryCheck.Status.CHECKING
+            check.checker = request.user
+            check.save(update_fields=['status', 'checker', 'updated_at'])
+
+        # Update items
+        items = check.items.all()
+        total_amount = 0
+
+        for item in items:
+            received_key = f'received_{item.pk}'
+            price_key = f'price_{item.pk}'
+            note_key = f'note_{item.pk}'
+
+            if received_key in request.POST:
+                try:
+                    received_qty = int(request.POST.get(received_key, 0))
+                except (ValueError, TypeError):
+                    received_qty = 0
+
+                try:
+                    unit_price = int(float(request.POST.get(price_key, 0)))
+                except (ValueError, TypeError):
+                    unit_price = 0
+
+                item.received_qty = received_qty
+                item.unit_price = unit_price
+                item.note = request.POST.get(note_key, '')
+                item.save()
+
+                total_amount += item.total_price
+
+        # Update check
+        check.total_amount = total_amount
+        check.checked_at = timezone.now()
+        check.status = InventoryCheck.Status.COMPLETED
+        check.note = request.POST.get('note', '')
+        check.save(update_fields=['total_amount', 'checked_at', 'status', 'note', 'updated_at'])
+
+        # Update purchase request status
+        check.purchase_request.status = PurchaseRequest.Status.IN_CHECKING
+        check.purchase_request.save(update_fields=['status', 'updated_at'])
+
+        messages.success(request, f'Đã hoàn thành kiểm kê phiếu {check.code}!')
+        return redirect(supply_admin_url('inventory_check_detail', pk))
+
+    items_qs = check.items.select_related(
+        'variant',
+        'variant__product',
+        'variant__size',
+        'variant__color'
+    )
+    items_page, items_paginator = paginate_queryset(request, items_qs, per_page=20)
+
+    context = {
+        'check': check,
+        'items': items_page.object_list,
+        'items_page': items_page,
+        'items_page_range': smart_page_range(items_page, items_paginator),
+        'items_querystring': _querystring(request),
+    }
+    return render(request, 'supply/perform_inventory_check.html', context)
+
+
+@login_required
+def approve_inventory_check(request, pk):
+    """Cửa hàng trưởng duyệt phiếu kiểm kê → cộng tồn kho + tạo phiếu chi."""
+    if not is_store_manager(request.user):
+        messages.error(request, 'Bạn không có quyền duyệt phiếu kiểm kê.')
+        return redirect('admin:index')
+
+    check = get_object_or_404(
+        InventoryCheck,
+        pk=pk,
+        status=InventoryCheck.Status.COMPLETED
+    )
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'approve':
+            # Cộng tồn kho cho từng item
+            from django.db import transaction
+            with transaction.atomic():
+                for item in check.items.all():
+                    if item.received_qty > 0:
+                        adjust_stock(
+                            variant=item.variant,
+                            quantity=item.received_qty,
+                            note=f'Nhập kho từ phiếu kiểm kê {check.code}',
+                            actor=str(request.user),
+                        )
+
+                        # Update received_qty in PurchaseRequestItem
+                        pr_item = check.purchase_request.items.filter(variant=item.variant).first()
+                        if pr_item:
+                            pr_item.received_qty = item.received_qty
+                            pr_item.save(update_fields=['received_qty'])
+
+                # Update check status
+                check.status = InventoryCheck.Status.APPROVED
+                check.approved_by = request.user
+                check.approved_at = timezone.now()
+                check.save(update_fields=['status', 'approved_by', 'approved_at', 'updated_at'])
+
+                # Update purchase request status
+                check.purchase_request.status = PurchaseRequest.Status.CHECKED
+                check.purchase_request.save(update_fields=['status', 'updated_at'])
+
+                # Create payment voucher
+                payment_voucher = PaymentVoucher.objects.create(
+                    inventory_check=check,
+                    supplier=check.purchase_request.approved_supplier,
+                    amount=check.total_amount,
+                    status=PaymentVoucher.Status.PENDING,
+                    created_by=request.user,
+                )
+
+                messages.success(
+                    request,
+                    f'Đã duyệt phiếu kiểm kê {check.code}! '
+                    f'Đã cộng tồn kho và tạo phiếu chi {payment_voucher.code}.'
+                )
+                return redirect(supply_admin_url('payment_voucher_detail', payment_voucher.pk))
+
+        elif action == 'reject':
+            rejection_reason = request.POST.get('rejection_reason', '')
+            if not rejection_reason:
+                messages.error(request, 'Vui lòng nhập lý do từ chối.')
+                return redirect(supply_admin_url('approve_inventory_check', pk))
+
+            check.status = InventoryCheck.Status.REJECTED
+            check.rejection_reason = rejection_reason
+            check.approved_by = request.user
+            check.approved_at = timezone.now()
+            check.save(update_fields=['status', 'rejection_reason', 'approved_by', 'approved_at', 'updated_at'])
+
+            # Reset purchase request status
+            check.purchase_request.status = PurchaseRequest.Status.APPROVED
+            check.purchase_request.save(update_fields=['status', 'updated_at'])
+
+            messages.warning(request, f'Đã từ chối phiếu kiểm kê {check.code}.')
+            return redirect(supply_admin_url('inventory_check_detail', pk))
+
+    items_qs = check.items.select_related(
+        'variant',
+        'variant__product',
+        'variant__size',
+        'variant__color'
+    )
+
+    # Calculate statistics
+    total_items = items_qs.count()
+    matched_items = items_qs.filter(is_matched=True).count()
+
+    context = {
+        'check': check,
+        'items': items_qs,
+        'total_amount': check.total_amount,
+        'total_items': total_items,
+        'matched_items': matched_items,
+    }
+    return render(request, 'supply/approve_inventory_check.html', context)
+
+
+# ═══════════════════════════════════════════════════════════
+#  PAYMENT VOUCHER — Phiếu chi tiền NCC
+# ═══════════════════════════════════════════════════════════
+
+@login_required
+def payment_voucher_list(request):
+    """Danh sách phiếu chi tiền NCC."""
+    if not is_store_manager(request.user):
+        messages.error(request, 'Bạn không có quyền truy cập.')
+        return redirect('admin:index')
+
+    qs = PaymentVoucher.objects.select_related(
+        'supplier',
+        'inventory_check',
+        'inventory_check__purchase_request',
+        'created_by',
+        'paid_by'
+    ).order_by('-created_at')
+
+    # Filter by status
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+
+    page_obj, paginator = paginate_queryset(request, qs, per_page=15)
+
+    # Calculate totals
+    total_pending = PaymentVoucher.objects.filter(status=PaymentVoucher.Status.PENDING).aggregate(
+        total=Sum('amount')
+    )['total'] or 0
+
+    total_paid = PaymentVoucher.objects.filter(status=PaymentVoucher.Status.PAID).aggregate(
+        total=Sum('amount')
+    )['total'] or 0
+
+    context = {
+        'vouchers': page_obj.object_list,
+        'status_choices': PaymentVoucher.Status.choices,
+        'status_filter': status_filter,
+        'total_pending': total_pending,
+        'total_paid': total_paid,
+    }
+    context.update(_pagination_context(request, page_obj, paginator))
+    return render(request, 'supply/payment_voucher_list.html', context)
+
+
+@login_required
+def payment_voucher_detail(request, pk):
+    """Chi tiết phiếu chi tiền."""
+    if not is_store_manager(request.user):
+        messages.error(request, 'Bạn không có quyền truy cập.')
+        return redirect('admin:index')
+
+    voucher = get_object_or_404(
+        PaymentVoucher.objects.select_related(
+            'supplier',
+            'inventory_check',
+            'inventory_check__purchase_request',
+            'created_by',
+            'paid_by'
+        ),
+        pk=pk
+    )
+
+    items = voucher.inventory_check.items.select_related(
+        'variant',
+        'variant__product',
+        'variant__size',
+        'variant__color'
+    )
+
+    context = {
+        'voucher': voucher,
+        'items': items,
+    }
+    return render(request, 'supply/payment_voucher_detail.html', context)
+
+
+@login_required
+def mark_payment_paid(request, pk):
+    """Đánh dấu đã thanh toán cho NCC."""
+    if not is_store_manager(request.user):
+        messages.error(request, 'Bạn không có quyền thanh toán.')
+        return redirect('admin:index')
+
+    voucher = get_object_or_404(
+        PaymentVoucher,
+        pk=pk,
+        status=PaymentVoucher.Status.PENDING
+    )
+
+    if request.method == 'POST':
+        payment_method = request.POST.get('payment_method', '')
+        payment_ref = request.POST.get('payment_ref', '')
+        note = request.POST.get('note', '')
+
+        voucher.status = PaymentVoucher.Status.PAID
+        voucher.payment_method = payment_method
+        voucher.payment_ref = payment_ref
+        voucher.note = note
+        voucher.paid_by = request.user
+        voucher.paid_at = timezone.now()
+        voucher.save(update_fields=[
+            'status', 'payment_method', 'payment_ref', 'note',
+            'paid_by', 'paid_at', 'updated_at'
+        ])
+
+        # Update purchase request to RECEIVED (final status)
+        pr = voucher.inventory_check.purchase_request
+        pr.status = PurchaseRequest.Status.RECEIVED
+        pr.save(update_fields=['status', 'updated_at'])
+
+        messages.success(
+            request,
+            f'Đã thanh toán phiếu {voucher.code} cho NCC {voucher.supplier.name}!'
+        )
+        return redirect(supply_admin_url('payment_voucher_detail', pk))
+
+    context = {
+        'voucher': voucher,
+    }
+    return render(request, 'supply/mark_payment_paid.html', context)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -497,26 +913,99 @@ def submit_quote(request, pr_pk):
             )
             # Parse CSV → create SupplierQuoteItem rows
             try:
+                # QUAN TRỌNG: update_or_create ở trên đã đọc hết file (để lưu vào
+                # storage), khiến con trỏ file bị đẩy tới cuối (EOF).
+                # Phải seek(0) để đọc lại từ đầu, nếu không reader sẽ rỗng.
+                csv_file.seek(0)
                 content = csv_file.read().decode('utf-8-sig')
+
+                # Remove any stray BOM characters that might appear in the content
+                content = content.replace('\ufeff', '').replace('\xef\xbb\xbf', '')
+
+                # Split into lines and clean BOM from start of each line
+                lines = content.splitlines()
+                cleaned_lines = []
+                for line in lines:
+                    # Remove BOM from start of line
+                    cleaned_line = line.lstrip('\ufeff').lstrip('\xef\xbb\xbf')
+                    cleaned_lines.append(cleaned_line)
+
+                # Rejoin with newlines
+                content = '\n'.join(cleaned_lines)
+
                 reader  = csv.DictReader(io.StringIO(content))
                 quote.items.all().delete()
                 errors = []
+                success_count = 0
+                skipped_variants = []
+                # Build a map of valid variant IDs from the purchase request
+                valid_variant_ids = set(pr.items.values_list('variant_id', flat=True))
                 for row in reader:
                     try:
-                        vid        = int(row.get('Ma SP', 0))
-                        unit_price = float(str(row.get('Don gia bao (NCC dien)', '0')).replace(',', '').replace('.', '') or 0)
-                        avail_qty  = int(row.get('So luong NCC con', 0) or 0)
-                        lead_days  = int(row.get('So ngay giao hang', 3) or 3)
-                        v = ProductVariant.objects.filter(pk=vid).first()
-                        if v and unit_price > 0:
-                            SupplierQuoteItem.objects.create(
-                                quote=quote, variant=v,
-                                unit_price=int(unit_price),
-                                available_qty=avail_qty,
-                                lead_days=lead_days,
+                        # Get Ma SP (already cleaned at file level)
+                        raw_vid = str(row.get('Ma SP', '0')).strip()
+                        # Debug: log if we can't parse the ID
+                        if not raw_vid or raw_vid == '0' or not raw_vid.isdigit():
+                            # Show all available keys for debugging
+                            available_keys = list(row.keys())[:5]  # First 5 keys
+                            skipped_variants.append(
+                                f"Dòng có Mã SP không hợp lệ: '{raw_vid}' "
+                                f"(các cột có: {', '.join(available_keys)})"
                             )
-                    except (ValueError, TypeError):
-                        errors.append(str(row))
+                            continue
+
+                        vid = int(raw_vid)
+
+                        # Check if variant ID is part of this purchase request
+                        if vid not in valid_variant_ids:
+                            skipped_variants.append(
+                                f"ID {vid} không thuộc yêu cầu này (các ID hợp lệ: {', '.join(map(str, sorted(valid_variant_ids)))})"
+                            )
+                            continue
+
+                        # Parse unit price - support multiple column names (Vietnamese with/without diacritics)
+                        price_str = (
+                            row.get('Don gia bao', '') or
+                            row.get('Đơn giá báo', '') or
+                            row.get('Don gia bao (NCC dien)', '') or
+                            row.get('Đơn giá báo (NCC điền)', '') or
+                            '0'
+                        )
+
+                        # Remove thousands separators and whitespace
+                        price_str = str(price_str).strip().replace(',', '').replace(' ', '')
+
+                        # Try to parse as number
+                        try:
+                            unit_price = float(price_str)
+                        except ValueError:
+                            unit_price = 0
+
+                        avail_qty = int(row.get('So luong NCC con', 0) or row.get('Số lượng NCC còn', 0) or 0)
+                        lead_days = int(row.get('So ngay giao hang', 3) or row.get('Số ngày giao hàng', 3) or 3)
+
+                        v = ProductVariant.objects.filter(pk=vid).first()
+                        if not v:
+                            skipped_variants.append(f"ID {vid} không tồn tại trong cơ sở dữ liệu")
+                            continue
+
+                        if unit_price <= 0:
+                            skipped_variants.append(
+                                f"{v.product.name} - Size {v.size.name if v.size else 'N/A'} "
+                                f"(ID {vid}): Giá trong CSV = '{price_str}' → Bỏ qua"
+                            )
+                            continue
+
+                        SupplierQuoteItem.objects.create(
+                            quote=quote, variant=v,
+                            unit_price=int(unit_price),
+                            available_qty=avail_qty,
+                            lead_days=lead_days,
+                        )
+                        success_count += 1
+
+                    except (ValueError, TypeError) as e:
+                        errors.append(f"Dòng ID {row.get('Ma SP', '?')}: {str(e)}")
                         continue
 
                 # Update request status
@@ -524,10 +1013,29 @@ def submit_quote(request, pr_pk):
                     pr.status = PurchaseRequest.Status.QUOTED
                     pr.save(update_fields=['status', 'updated_at'])
 
-                if errors:
-                    messages.warning(request, f'Đã nộp báo giá. {len(errors)} dòng lỗi bị bỏ qua.')
+                # Show detailed feedback
+                if success_count > 0:
+                    messages.success(request, f'✅ Đã nộp báo giá! {success_count} mặt hàng có giá hợp lệ.')
                 else:
-                    messages.success(request, 'Nộp hồ sơ báo giá thành công!')
+                    # Show expected variant IDs if no items were saved
+                    messages.error(
+                        request,
+                        f'❌ Không có mặt hàng nào được lưu! '
+                        f'Các Mã SP hợp lệ cho đợt này: {", ".join(map(str, sorted(valid_variant_ids)))}'
+                    )
+
+                if skipped_variants:
+                    skip_list = '<br>'.join(skipped_variants[:5])
+                    if len(skipped_variants) > 5:
+                        skip_list += f'<br>... và {len(skipped_variants) - 5} mặt hàng khác'
+                    messages.warning(
+                        request,
+                        f'⚠️ Bỏ qua {len(skipped_variants)} mặt hàng:<br>{skip_list}',
+                        extra_tags='safe'
+                    )
+
+                if errors:
+                    messages.error(request, f'❌ {len(errors)} dòng bị lỗi khi parse CSV.')
             except Exception as e:
                 messages.error(request, f'Lỗi đọc file CSV: {e}')
 

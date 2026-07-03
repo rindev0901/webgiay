@@ -254,13 +254,21 @@ body.supply-body {
 .badge-sent { background: #dbeafe; color: #1d4ed8; }
 .badge-quoted { background: #fef3c7; color: #92400e; }
 .badge-approved { background: #ede9fe; color: #6d28d9; }
+.badge-shipped { background: #fbbf24; color: #78350f; }
+.badge-in_checking { background: #a5f3fc; color: #155e75; }
+.badge-checked { background: #d9f99d; color: #3f6212; }
 .badge-received { background: #d1fae5; color: #065f46; }
 .badge-cancelled { background: #fee2e2; color: #991b1b; }
+.badge-pending { background: #fef3c7; color: #92400e; }
+.badge-checking { background: #dbeafe; color: #1d4ed8; }
+.badge-completed { background: #e9d5ff; color: #6b21a8; }
+.badge-rejected { background: #fee2e2; color: #991b1b; }
+.badge-paid { background: #d1fae5; color: #065f46; }
 .badge-hot { background: #fee2e2; color: #dc2626; }
 .badge-slow { background: #f3f4f6; color: #6b7280; }
 .badge-norm { background: #d1fae5; color: #16a34a; }
 
-.btn-primary, .btn-secondary, .btn-green, .btn-blue {
+.btn-primary, .btn-secondary, .btn-green, .btn-blue, .btn-red {
     padding: 9px 18px;
     border-radius: 4px;
     font-size: 13px;
@@ -281,7 +289,9 @@ body.supply-body {
 .btn-green:hover { background: #15803d; color: #fff; }
 .btn-blue { background: #2563eb; color: #fff; }
 .btn-blue:hover { background: #1d4ed8; color: #fff; }
-.btn-primary:disabled, .btn-green:disabled, .btn-blue:disabled { opacity: .4; cursor: not-allowed; }
+.btn-red { background: #dc2626; color: #fff; }
+.btn-red:hover { background: #b91c1c; color: #fff; }
+.btn-primary:disabled, .btn-green:disabled, .btn-blue:disabled, .btn-red:disabled { opacity: .4; cursor: not-allowed; }
 
 .stock-bar-wrap { display: flex; align-items: center; gap: 8px; min-width: 100px; }
 .stock-bar-bg { flex: 1; height: 7px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }

@@ -1,0 +1,130 @@
+{% extends 'supply/base_supply.html' %}
+{% load format_money supply_admin %}
+
+{% block title %}Thanh toán phiếu {{ voucher.code }}{% endblock %}
+
+{% block supply_content %}
+
+<nav class="supply-breadcrumb">
+    <a href="{% supply_url 'analytics' %}">Biên độ</a>
+    <i class="fas fa-chevron-right"></i>
+    <a href="{% supply_url 'payment_voucher_list' %}">Phiếu chi tiền</a>
+    <i class="fas fa-chevron-right"></i>
+    <a href="{% supply_url 'payment_voucher_detail' voucher.pk %}">{{ voucher.code }}</a>
+    <i class="fas fa-chevron-right"></i>
+    <span>Thanh toán</span>
+</nav>
+
+<div class="supply-header">
+    <div>
+        <h1 class="supply-title">💸 Thanh toán cho NCC</h1>
+        <div style="margin-top:6px;font-size:13px;color:#888;">
+            Phiếu: {{ voucher.code }} • NCC: <strong>{{ voucher.supplier.name }}</strong>
+        </div>
+    </div>
+</div>
+
+<div style="background:#bb9422;border:1px solid #16a34a;border-radius:6px;padding:16px;margin-bottom:20px;">
+    <h3 style="font-size:15px;font-weight:700;color:#166534;margin-bottom:8px;">
+        ℹ️ Sau khi thanh toán
+    </h3>
+    <ul style="font-size:13px;color:#166534;margin:0;padding-left:20px;">
+        <li>Phiếu chi sẽ chuyển sang trạng thái "Đã thanh toán"</li>
+        <li>Đợt đặt hàng sẽ chuyển sang trạng thái "Đã nhận hàng & thanh toán" (Hoàn thành)</li>
+        <li>Hệ thống ghi nhận người thanh toán và thời gian</li>
+    </ul>
+</div>
+
+<!-- Payment info card -->
+<div class="s-card" style="margin-bottom:20px;">
+    <div class="s-card-body">
+        <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;padding:16px;margin-bottom:20px;">
+            <div style="font-size:14px;color:#92400e;margin-bottom:12px;">
+                <strong>Thông tin thanh toán:</strong>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+                <div>
+                    <div style="font-size:12px;color:#78350f;margin-bottom:4px;">Nhà cung cấp</div>
+                    <div style="font-weight:700;color:#92400e;">{{ voucher.supplier.name }}</div>
+                    {% if voucher.supplier.phone %}
+                    <div style="font-size:12px;margin-top:2px;">📞 {{ voucher.supplier.phone }}</div>
+                    {% endif %}
+                    {% if voucher.supplier.email %}
+                    <div style="font-size:12px;margin-top:2px;">📧 {{ voucher.supplier.email }}</div>
+                    {% endif %}
+                </div>
+                <div>
+                    <div style="font-size:12px;color:#78350f;margin-bottom:4px;">Số tiền cần thanh toán</div>
+                    <div style="font-size:32px;font-weight:700;color:#8b0000;">{{ voucher.amount|vnd }}</div>
+                </div>
+            </div>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:6px;font-size:13px;">
+                    Phương thức thanh toán *
+                </label>
+                <select
+                    name="payment_method"
+                    required
+                    style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:4px;font-size:14px;"
+                >
+                    <option value="">-- Chọn phương thức --</option>
+                    <option value="Chuyển khoản ngân hàng">Chuyển khoản ngân hàng</option>
+                    <option value="Tiền mặt">Tiền mặt</option>
+                    <option value="Ví điện tử">Ví điện tử (MoMo, ZaloPay...)</option>
+                    <option value="Khác">Khác</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:6px;font-size:13px;">
+                    Mã tham chiếu / Transaction ID
+                </label>
+                <input
+                    type="text"
+                    name="payment_ref"
+                    placeholder="Ví dụ: TXN20231201123456 hoặc số hóa đơn"
+                    style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:4px;font-size:14px;"
+                />
+                <small style="color:#666;font-size:12px;">Mã giao dịch ngân hàng hoặc số hóa đơn (nếu có)</small>
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label style="display:block;font-weight:600;margin-bottom:6px;font-size:13px;">
+                    Ghi chú
+                </label>
+                <textarea
+                    name="note"
+                    rows="3"
+                    placeholder="Ghi chú thêm về giao dịch (tùy chọn)..."
+                    style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;"
+                ></textarea>
+            </div>
+
+            <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:12px;margin-bottom:20px;">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" required />
+                    <span style="font-size:13px;color:#991b1b;">
+                        <strong>Tôi xác nhận</strong> đã thanh toán <strong>{{ voucher.amount|vnd }}</strong>
+                        cho NCC <strong>{{ voucher.supplier.name }}</strong>
+                    </span>
+                </label>
+            </div>
+
+            <div style="display:flex;gap:12px;justify-content:flex-end;">
+                <a href="{% supply_url 'payment_voucher_detail' voucher.pk %}" class="btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Hủy
+                </a>
+                <button type="submit" class="btn-green">
+                    <i class="fas fa-check"></i> Xác nhận đã thanh toán
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

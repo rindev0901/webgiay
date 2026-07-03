@@ -12,7 +12,21 @@ urlpatterns = [
     path('requests/<int:pk>/send/', v.send_to_suppliers, name='send_to_suppliers'),
     path('requests/<int:pk>/approve/', v.approve_request, name='approve_request'),
     path('requests/<int:pk>/receive/', v.receive_goods, name='receive_goods'),
+
+    # Inventory Check URLs
+    path('inventory-checks/', v.inventory_check_list, name='inventory_check_list'),
+    path('inventory-checks/<int:pk>/', v.inventory_check_detail, name='inventory_check_detail'),
+    path('inventory-checks/<int:pk>/perform/', v.perform_inventory_check, name='perform_inventory_check'),
+    path('inventory-checks/<int:pk>/approve/', v.approve_inventory_check, name='approve_inventory_check'),
+
+    # Payment Voucher URLs
+    path('payment-vouchers/', v.payment_voucher_list, name='payment_voucher_list'),
+    path('payment-vouchers/<int:pk>/', v.payment_voucher_detail, name='payment_voucher_detail'),
+    path('payment-vouchers/<int:pk>/mark-paid/', v.mark_payment_paid, name='mark_payment_paid'),
+
+    # Supplier Portal URLs
     path('portal/', v.supplier_portal, name='supplier_portal'),
     path('portal/<int:pr_pk>/quote/', v.submit_quote, name='submit_quote'),
     path('portal/<int:pr_pk>/export/', v.supplier_export_csv, name='supplier_export_csv'),
 ]
+

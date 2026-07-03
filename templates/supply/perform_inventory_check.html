@@ -1,0 +1,257 @@
+{% extends 'supply/base_supply.html' %}
+{% load format_money supply_admin %}
+
+{% block title %}Thực hiện kiểm kê {{ check.code }}{% endblock %}
+
+{% block supply_content %}
+
+<nav class="supply-breadcrumb">
+    <a href="{% supply_url 'analytics' %}">Biên độ</a>
+    <i class="fas fa-chevron-right"></i>
+    <a href="{% supply_url 'inventory_check_list' %}">Phiếu kiểm kê</a>
+    <i class="fas fa-chevron-right"></i>
+    <a href="{% supply_url 'inventory_check_detail' check.pk %}">{{ check.code }}</a>
+    <i class="fas fa-chevron-right"></i>
+    <span>Thực hiện kiểm</span>
+</nav>
+
+<div class="supply-header">
+    <div>
+        <h1 class="supply-title">
+            {% if check.status == 'completed' %}
+            ✏️ Chỉnh sửa phiếu kiểm kê
+            {% else %}
+            📦 Thực hiện kiểm kê hàng
+            {% endif %}
+        </h1>
+        <div style="margin-top:6px;font-size:13px;color:#888;">
+            Phiếu: {{ check.code }} • Đợt: {{ check.purchase_request.code }} • NCC: {{ check.purchase_request.approved_supplier.name }}
+        </div>
+    </div>
+</div>
+
+{% if check.status == 'completed' %}
+<div style="background:#dbeafe;border:1px solid #60a5fa;border-radius:6px;padding:16px;margin-bottom:20px;">
+    <h3 style="font-size:15px;font-weight:700;color:#1e40af;margin-bottom:8px;">
+        ℹ️ Chế độ chỉnh sửa
+    </h3>
+    <p style="font-size:13px;color:#1e3a8a;margin:0;">
+        Phiếu này đã hoàn thành kiểm kê. Bạn có thể chỉnh sửa lại số lượng và đơn giá trước khi cửa hàng trưởng duyệt.
+        Sau khi lưu, phiếu sẽ được cập nhật và chuyển lại cho cửa hàng trưởng.
+    </p>
+</div>
+{% endif %}
+
+<div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;padding:16px;margin-bottom:20px;">
+    <h3 style="font-size:15px;font-weight:700;color:#92400e;margin-bottom:8px;">
+        📋 Hướng dẫn kiểm kê
+    </h3>
+    <ul style="font-size:13px;color:#78350f;margin:0;padding-left:20px;">
+        <li><strong>Số lượng đã được điền sẵn</strong> theo đơn đặt hàng để tiện kiểm tra</li>
+        <li><strong>Đơn giá được lấy tự động từ báo giá</strong> của NCC đã được duyệt (không thể sửa)</li>
+        <li>Kiểm đếm số lượng thực tế từng mặt hàng</li>
+        <li>Nếu số lượng đúng → Giữ nguyên và chuyển sang mục tiếp theo</li>
+        <li>Nếu số lượng khác → Sửa lại chính xác và ghi rõ lý do vào cột "Ghi chú"</li>
+        <li><strong style="color:#dc2626;">Nếu đơn giá = 0 (chưa có báo giá) → Bắt buộc nhập đơn giá thực tế</strong></li>
+        <li>Sau khi hoàn thành, phiếu sẽ được chuyển đến cửa hàng trưởng để duyệt</li>
+    </ul>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+
+    <div class="s-card" style="margin-bottom:20px;">
+        <div class="s-card-header">
+            <span class="s-card-title">📦 Danh sách hàng cần kiểm</span>
+            <span style="font-size:13px;color:#888;">{{ items_page.paginator.count }} mặt hàng</span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="s-table">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Sản phẩm</th>
+                        <th>Size</th>
+                        <th>Màu</th>
+                        <th>SL đặt hàng</th>
+                        <th style="background:#bb9422;">SL thực nhận *</th>
+                        <th style="background:#bb9422;">Đơn giá *</th>
+                        <th>Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td style="color:#888;">{{ forloop.counter }}</td>
+                        <td style="font-weight:600;">{{ item.variant.product.name }}</td>
+                        <td>
+                            <span style="background:#f3f4f6;padding:3px 8px;border-radius:4px;font-weight:600;font-size:12px;">
+                                {{ item.variant.size.name }}
+                            </span>
+                        </td>
+                        <td>{{ item.variant.color.name|default:"Mặc định" }}</td>
+                        <td style="font-weight:700;color:#8b0000;">{{ item.ordered_qty }}</td>
+                        <td>
+                            <input
+                                type="number"
+                                name="received_{{ item.pk }}"
+                                value="{{ item.received_qty }}"
+                                min="0"
+                                required
+                                class="qty-input"
+                                data-ordered="{{ item.ordered_qty }}"
+                                style="width:100px;padding:6px 10px;border:2px solid #10b981;border-radius:4px;font-weight:700;font-size:14px;background:#f0fdf4;"
+                                placeholder="{{ item.ordered_qty }}"
+                            />
+                        </td>
+                        <td>
+                            {% if item.unit_price > 0 %}
+                            <!-- Đã có giá từ báo giá → Chỉ hiển thị (read-only) -->
+                            <div style="padding:6px 10px;border:2px solid #10b981;border-radius:4px;font-weight:700;font-size:13px;background:#f0fdf4;width:120px;text-align:right;">
+                                {{ item.unit_price|floatformat:0 }}₫
+                            </div>
+                            <input type="hidden" name="price_{{ item.pk }}" value="{{ item.unit_price|floatformat:0 }}" />
+                            {% else %}
+                            <!-- Chưa có giá → Cho phép nhập -->
+                            <input
+                                type="number"
+                                name="price_{{ item.pk }}"
+                                value="{{ item.unit_price|floatformat:0 }}"
+                                min="0"
+                                required
+                                class="price-input"
+                                style="width:120px;padding:6px 10px;border:2px solid #dc2626;border-radius:4px;font-weight:700;font-size:13px;background:#fee2e2;"
+                                placeholder="Nhập đơn giá"
+                            />
+                            {% endif %}
+                        </td>
+                        <td>
+                            <input
+                                type="text"
+                                name="note_{{ item.pk }}"
+                                value="{{ item.note }}"
+                                placeholder="Ghi chú (nếu có)"
+                                style="width:200px;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;"
+                            />
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% with page_obj=items_page page_range=items_page_range querystring=items_querystring %}
+        {% include 'supply/_pagination.html' %}
+        {% endwith %}
+    </div>
+
+    <div class="s-card">
+        <div class="s-card-body">
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:6px;font-size:13px;">
+                    Ghi chú chung về đợt kiểm kê
+                </label>
+                <textarea
+                    name="note"
+                    rows="3"
+                    style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;"
+                    placeholder="Ghi chú tổng quan (tùy chọn)..."
+                >{{ check.note }}</textarea>
+            </div>
+
+            <div style="display:flex;gap:12px;justify-content:flex-end;">
+                <a href="{% supply_url 'inventory_check_detail' check.pk %}" class="btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Hủy
+                </a>
+                <button type="submit" class="btn-green">
+                    <i class="fas fa-{% if check.status == 'completed' %}save{% else %}check{% endif %}"></i>
+                    {% if check.status == 'completed' %}Lưu thay đổi{% else %}Hoàn thành kiểm kê{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+{% endblock %}
+
+{% block supply_js %}
+<script>
+// Auto highlight mismatches and auto-suggest note when input changes
+document.querySelectorAll('input[name^="received_"]').forEach(input => {
+    input.addEventListener('input', function() {
+        const ordered = parseInt(this.getAttribute('data-ordered'));
+        const received = parseInt(this.value) || 0;
+
+        // Highlight if mismatch
+        if (received !== ordered) {
+            this.style.borderColor = '#f59e0b';
+            this.style.backgroundColor = '#fef3c7';
+
+            // Auto focus on note field if this is first change
+            const noteField = this.closest('tr').querySelector('input[name^="note_"]');
+            if (noteField && !noteField.value) {
+                noteField.placeholder = '⚠️ Vui lòng ghi rõ lý do lệch số';
+                noteField.style.borderColor = '#f59e0b';
+                noteField.style.backgroundColor = '#fef9e7';
+            }
+        } else {
+            this.style.borderColor = '#10b981';
+            this.style.backgroundColor = '#f0fdf4';
+
+            // Reset note field style if matched
+            const noteField = this.closest('tr').querySelector('input[name^="note_"]');
+            if (noteField) {
+                noteField.placeholder = 'Ghi chú (nếu có)';
+                noteField.style.borderColor = '#d1d5db';
+                noteField.style.backgroundColor = 'white';
+            }
+        }
+    });
+
+    // Trigger on load to show any existing mismatches
+    input.dispatchEvent(new Event('input'));
+});
+
+// Show confirmation if there are mismatches before submit
+document.querySelector('form').addEventListener('submit', function(e) {
+    const mismatches = Array.from(document.querySelectorAll('input[name^="received_"]')).filter(input => {
+        const ordered = parseInt(input.getAttribute('data-ordered'));
+        const received = parseInt(input.value) || 0;
+        return received !== ordered;
+    });
+
+    if (mismatches.length > 0) {
+        const message = `⚠️ Phát hiện ${mismatches.length} mặt hàng có lệch số lượng!\n\nBạn có chắc chắn muốn hoàn thành kiểm kê không?`;
+        if (!confirm(message)) {
+            e.preventDefault();
+            return false;
+        }
+    }
+});
+
+// Count mismatches in real-time
+let mismatchCounter = document.createElement('div');
+mismatchCounter.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#fef3c7;border:2px solid #f59e0b;padding:12px 20px;border-radius:8px;font-weight:700;font-size:14px;color:#92400e;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:1000;display:none;';
+document.body.appendChild(mismatchCounter);
+
+function updateMismatchCount() {
+    const count = Array.from(document.querySelectorAll('input[name^="received_"]')).filter(input => {
+        const ordered = parseInt(input.getAttribute('data-ordered'));
+        const received = parseInt(input.value) || 0;
+        return received !== ordered;
+    }).length;
+
+    if (count > 0) {
+        mismatchCounter.textContent = `⚠️ ${count} mặt hàng lệch số`;
+        mismatchCounter.style.display = 'block';
+    } else {
+        mismatchCounter.style.display = 'none';
+    }
+}
+
+document.querySelectorAll('input[name^="received_"]').forEach(input => {
+    input.addEventListener('input', updateMismatchCount);
+});
+
+updateMismatchCount();
+</script>
+{% endblock %}

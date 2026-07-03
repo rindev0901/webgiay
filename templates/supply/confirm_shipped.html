@@ -1,0 +1,92 @@
+{% extends 'supply/base_supply.html' %}
+{% load format_money supply_admin %}
+
+{% block title %}Xác nhận NCC đã giao hàng — {{ pr.code }}{% endblock %}
+
+{% block supply_content %}
+
+<nav class="supply-breadcrumb">
+    <a href="{% supply_url 'analytics' %}">Biên độ</a>
+    <i class="fas fa-chevron-right"></i>
+    <a href="{% supply_url 'request_list' %}">Yêu cầu đặt hàng</a>
+    <i class="fas fa-chevron-right"></i>
+    <a href="{% supply_url 'request_detail' pr.pk %}">{{ pr.code }}</a>
+    <i class="fas fa-chevron-right"></i>
+    <span>Xác nhận giao hàng</span>
+</nav>
+
+<div class="supply-header">
+    <div>
+        <h1 class="supply-title">🚚 Xác nhận NCC đã giao hàng</h1>
+        <div style="margin-top:6px;font-size:13px;color:#888;">
+            Đợt: {{ pr.code }} • NCC: <strong>{{ pr.approved_supplier.name }}</strong>
+        </div>
+    </div>
+</div>
+
+<div class="s-card" style="margin-bottom:20px;">
+    <div class="s-card-body">
+        <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;padding:16px;margin-bottom:20px;">
+            <h3 style="font-size:15px;font-weight:700;color:#92400e;margin-bottom:8px;">
+                ⚠️ Lưu ý quan trọng
+            </h3>
+            <ul style="font-size:13px;color:#78350f;margin:0;padding-left:20px;">
+                <li>Sau khi xác nhận, hệ thống sẽ <strong>tự động tạo phiếu kiểm kê</strong></li>
+                <li>Nhân viên kiểm kê sẽ kiểm tra số lượng thực tế và nhập vào phiếu</li>
+                <li>Chỉ sau khi <strong>cửa hàng trưởng duyệt phiếu kiểm kê</strong> mới cộng tồn kho</li>
+                <li>Phiếu chi tiền cho NCC sẽ được tạo sau khi duyệt kiểm kê</li>
+            </ul>
+        </div>
+
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">📦 Danh sách hàng đã đặt</h3>
+        <table class="s-table" style="margin-bottom:20px;">
+            <thead>
+                <tr>
+                    <th>Sản phẩm</th>
+                    <th>Size</th>
+                    <th>Màu</th>
+                    <th>Số lượng đặt</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td style="font-weight:600;">{{ item.variant.product.name }}</td>
+                    <td>
+                        <span style="background:#f3f4f6;padding:3px 8px;border-radius:4px;font-weight:600;font-size:12px;">
+                            {{ item.variant.size.name }}
+                        </span>
+                    </td>
+                    <td>{{ item.variant.color.name|default:"Mặc định" }}</td>
+                    <td style="font-weight:700;color:#8b0000;">{{ item.requested_qty }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <form method="post">
+            {% csrf_token %}
+            <div style="background:#f0f9ff;border:1px solid #3b82f6;border-radius:6px;padding:16px;margin-bottom:20px;">
+                <p style="font-size:14px;color:#1e40af;margin:0;">
+                    <strong>Bạn xác nhận rằng:</strong> NCC <strong>{{ pr.approved_supplier.name }}</strong>
+                    đã giao hàng đến kho và đang chờ kiểm kê?
+                </p>
+            </div>
+
+            <div style="display:flex;gap:12px;justify-content:flex-end;">
+                <a href="{% supply_url 'request_detail' pr.pk %}" class="btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Quay lại
+                </a>
+                <button type="submit" class="btn-green">
+                    <i class="fas fa-check"></i> Xác nhận & Tạo phiếu kiểm kê
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% with page_obj=items_page page_range=items_page_range querystring=items_querystring %}
+{% include 'supply/_pagination.html' %}
+{% endwith %}
+
+{% endblock %}

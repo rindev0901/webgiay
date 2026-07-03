@@ -15,6 +15,9 @@ from .models import (
     ProductImage,
     StockMovement,
     Supplier,
+    InventoryCheck,
+    InventoryCheckItem,
+    PaymentVoucher,
 )
 from .resources import *
 from .inventory import adjust_stock
@@ -336,7 +339,193 @@ class SupplierAdmin(SupplySidebarHiddenMixin, ModelAdmin):
     paginator = InfinitePaginator
 
 
+# ====================== INVENTORY CHECK ======================
+class InventoryCheckItemInline(TabularInline):
+    model = InventoryCheckItem
+    extra = 0
+    fields = ('variant', 'ordered_qty', 'received_qty', 'unit_price', 'total_price', 'is_matched', 'note')
+    readonly_fields = ('total_price', 'is_matched')
+    can_delete = False
+
+
+@admin.register(InventoryCheck)
+class InventoryCheckAdmin(SupplySidebarHiddenMixin, ModelAdmin):
+    list_display = (
+        'code',
+        'purchase_request',
+        'supplier_name',
+        'status_badge',
+        'checker',
+        'approved_by',
+        'total_amount_display',
+        'created_at',
+    )
+    list_filter = ('status', 'created_at')
+    search_fields = ('code', 'purchase_request__code', 'purchase_request__approved_supplier__name')
+    readonly_fields = ('code', 'purchase_request', 'total_amount', 'created_at', 'updated_at')
+    inlines = [InventoryCheckItemInline]
+    list_per_page = 20
+    paginator = InfinitePaginator
+    list_select_related = ('purchase_request', 'purchase_request__approved_supplier', 'checker', 'approved_by')
+
+    fieldsets = (
+        ('Thông tin cơ bản', {
+            'fields': ('code', 'purchase_request', 'status', 'note')
+        }),
+        ('Kiểm kê', {
+            'fields': ('checker', 'checked_at')
+        }),
+        ('Duyệt', {
+            'fields': ('approved_by', 'approved_at', 'rejection_reason')
+        }),
+        ('Tài chính', {
+            'fields': ('total_amount',)
+        }),
+        ('Thời gian', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
+
+    def supplier_name(self, obj):
+        if obj.purchase_request and obj.purchase_request.approved_supplier:
+            return obj.purchase_request.approved_supplier.name
+        return '—'
+    supplier_name.short_description = 'Nhà cung cấp'
+
+    def status_badge(self, obj):
+        colors = {
+            'pending': '#f59e0b',
+            'checking': '#3b82f6',
+            'completed': '#8b5cf6',
+            'approved': '#16a34a',
+            'rejected': '#dc2626',
+        }
+        color = colors.get(obj.status, '#888')
+        return format_html(
+            '<span style="background:{};color:white;padding:2px 8px;'
+            'border-radius:2px;font-size:11px;font-weight:700;">{}</span>',
+            color,
+            obj.get_status_display(),
+        )
+    status_badge.short_description = 'Trạng thái'
+
+    def total_amount_display(self, obj):
+        return format_html(
+            '<span style="font-weight:600;">{:,}₫</span>',
+            int(obj.total_amount)
+        )
+    total_amount_display.short_description = 'Tổng tiền'
+    total_amount_display.admin_order_field = 'total_amount'
+
+    def has_add_permission(self, request):
+        # Chỉ tạo từ flow, không cho tạo thủ công
+        return False
+
+
+@admin.register(InventoryCheckItem)
+class InventoryCheckItemAdmin(SupplySidebarHiddenMixin, ModelAdmin):
+    list_display = (
+        'inventory_check',
+        'variant',
+        'ordered_qty',
+        'received_qty',
+        'matched_badge',
+        'unit_price',
+        'total_price_display',
+    )
+    list_filter = ('is_matched', 'inventory_check__status')
+    search_fields = ('inventory_check__code', 'variant__product__name', 'variant__sku')
+    readonly_fields = ('total_price', 'is_matched')
+    list_per_page = 30
+    paginator = InfinitePaginator
+    list_select_related = ('inventory_check', 'variant', 'variant__product')
+
+    def matched_badge(self, obj):
+        if obj.is_matched:
+            return format_html(
+                '<span style="color:#16a34a;font-weight:700;">✓ Khớp</span>'
+            )
+        return format_html(
+            '<span style="color:#dc2626;font-weight:700;">✗ Lệch</span>'
+        )
+    matched_badge.short_description = 'Khớp đơn'
+
+    def total_price_display(self, obj):
+        return format_html(
+            '<span style="font-weight:600;">{:,}₫</span>',
+            int(obj.total_price)
+        )
+    total_price_display.short_description = 'Thành tiền'
+
+    def has_add_permission(self, request):
+        return False
+
+
+# ====================== PAYMENT VOUCHER ======================
+@admin.register(PaymentVoucher)
+class PaymentVoucherAdmin(SupplySidebarHiddenMixin, ModelAdmin):
+    list_display = (
+        'code',
+        'supplier',
+        'amount_display',
+        'status_badge',
+        'payment_method',
+        'paid_by',
+        'paid_at',
+        'created_at',
+    )
+    list_filter = ('status', 'created_at', 'paid_at')
+    search_fields = ('code', 'supplier__name', 'payment_ref', 'inventory_check__code')
+    readonly_fields = ('code', 'inventory_check', 'supplier', 'amount', 'created_at', 'updated_at')
+    list_per_page = 20
+    paginator = InfinitePaginator
+    list_select_related = ('supplier', 'inventory_check', 'created_by', 'paid_by')
+
+    fieldsets = (
+        ('Thông tin cơ bản', {
+            'fields': ('code', 'inventory_check', 'supplier', 'amount', 'status')
+        }),
+        ('Thanh toán', {
+            'fields': ('payment_method', 'payment_ref', 'paid_by', 'paid_at')
+        }),
+        ('Ghi chú', {
+            'fields': ('note',)
+        }),
+        ('Thời gian', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
+
+    def status_badge(self, obj):
+        colors = {
+            'pending': '#f59e0b',
+            'paid': '#16a34a',
+            'cancelled': '#888',
+        }
+        color = colors.get(obj.status, '#888')
+        return format_html(
+            '<span style="background:{};color:white;padding:2px 8px;'
+            'border-radius:2px;font-size:11px;font-weight:700;">{}</span>',
+            color,
+            obj.get_status_display(),
+        )
+    status_badge.short_description = 'Trạng thái'
+
+    def amount_display(self, obj):
+        return format_html(
+            '<span style="font-weight:700;font-size:13px;">{:,}₫</span>',
+            int(obj.amount)
+        )
+    amount_display.short_description = 'Số tiền'
+    amount_display.admin_order_field = 'amount'
+
+    def has_add_permission(self, request):
+        # Chỉ tạo từ flow, không cho tạo thủ công
+        return False
+
+
 # ====================== Admin site config ======================
 admin.site.site_header = "QUẢN TRỊ CỬA HÀNG GIÀY"
 admin.site.site_title = "Admin Giày"
 admin.site.index_title = "Trang quản trị"
+

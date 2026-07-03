@@ -13,6 +13,7 @@ def is_store_manager(user):
         or user.is_staff
         or user.has_perm('products.can_approve_purchase')
         or user.has_perm('products.can_receive_goods')
+        or user.has_perm('products.can_approve_inventory')
     )
 
 
@@ -20,6 +21,14 @@ def is_supplier_user(user):
     return user.is_authenticated and Supplier.objects.filter(
         user=user, is_active=True
     ).exists()
+
+
+def is_inventory_checker(user):
+    """Kiểm tra xem user có quyền kiểm kê không."""
+    return user.is_authenticated and (
+        user.has_perm('products.can_check_inventory')
+        or is_store_manager(user)
+    )
 
 
 def can_view_bien_do(request):
@@ -30,3 +39,14 @@ def can_view_bien_do(request):
 def can_view_bao_gia(request):
     user = request.user
     return user.is_superuser or is_supplier_user(user) or user.is_staff
+
+
+def can_view_inventory_check(request):
+    user = request.user
+    return user.is_superuser or is_store_manager(user) or is_inventory_checker(user)
+
+
+def can_view_payment_voucher(request):
+    user = request.user
+    return user.is_superuser or is_store_manager(user)
+

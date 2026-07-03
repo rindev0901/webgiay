@@ -198,7 +198,7 @@ document.addEventListener('change', e => {
 btnExport.addEventListener('click', () => {
     const checked = [...checks()].filter(c => c.checked);
     if (!checked.length) return;
-    const rows = [['Ma SP','Ten san pham','SKU','Ton kho','So luong yeu cau','Don gia bao (NCC dien)','So luong NCC con','So ngay giao hang']];
+    const rows = [['Ma SP','Ten san pham','SKU','Ton kho','So luong yeu cau','Don gia bao','So luong NCC con','So ngay giao hang']];
     checked.forEach(cb => {
         rows.push([cb.value, cb.dataset.product, cb.dataset.sku, cb.dataset.stock, cb.dataset.suggest || Math.max(1, 10 - parseInt(cb.dataset.stock)), '', '', '']);
     });

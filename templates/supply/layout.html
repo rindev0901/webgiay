@@ -30,6 +30,12 @@
                 <a href="{{ supply_paths.request_list }}" class="supply-nav-link{% if '/supply/requests' in request.path %} active{% endif %}">
                     <i class="fas fa-clipboard-list"></i> Yêu cầu đặt hàng
                 </a>
+                <a href="{{ supply_paths.inventory_check_list }}" class="supply-nav-link{% if '/supply/inventory-checks' in request.path %} active{% endif %}">
+                    <i class="fas fa-clipboard-check"></i> Phiếu kiểm kê
+                </a>
+                <a href="{{ supply_paths.payment_voucher_list }}" class="supply-nav-link{% if '/supply/payment-vouchers' in request.path %} active{% endif %}">
+                    <i class="fas fa-money-bill-wave"></i> Phiếu chi tiền
+                </a>
             </div>
             {% endif %}
             {% if supply_is_supplier %}
