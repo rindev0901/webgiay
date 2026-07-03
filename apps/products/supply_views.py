@@ -1,12 +1,25 @@
 """
 supply_views.py — Supplier-facing portal + Store Manager views.
+
+Quy trình nhập hàng mới:
+  1. CHT duyệt báo giá → tự động tạo phiếu kiểm kê
+  2. Nhân viên kiểm kê → nhập số lượng thực nhận
+  3. CHT duyệt phiếu kiểm kê → tự động cộng tồn kho + tạo phiếu chi tiền
+  4. CHT thanh toán cho NCC
+
 URLs:
   /supply/                        — cửa hàng trưởng: analytics
   /supply/requests/               — danh sách đợt yêu cầu
   /supply/requests/<pk>/          — chi tiết đợt
   /supply/requests/create/        — tạo đợt mới
   /supply/requests/<pk>/export/   — tải CSV mẫu
-  /supply/requests/<pk>/receive/  — nhận hàng vào kho
+  /supply/requests/<pk>/approve/  — duyệt báo giá (tạo phiếu kiểm kê)
+  /supply/inventory-checks/       — danh sách phiếu kiểm kê
+  /supply/inventory-checks/<pk>/  — chi tiết phiếu kiểm kê
+  /supply/inventory-checks/<pk>/perform/ — thực hiện kiểm kê
+  /supply/inventory-checks/<pk>/approve/ — duyệt phiếu kiểm kê (cộng kho + tạo phiếu chi)
+  /supply/payment-vouchers/       — danh sách phiếu chi tiền
+  /supply/payment-vouchers/<pk>/  — chi tiết phiếu chi
   /supply/portal/                 — NCC: hộp thư nhận yêu cầu
   /supply/portal/<pr_pk>/quote/   — NCC nộp báo giá
 """
@@ -222,9 +235,40 @@ def request_detail(request, pk):
     if not is_store_manager(request.user):
         return redirect('admin:index')
 
-    pr    = get_object_or_404(
+    pr = get_object_or_404(
         PurchaseRequest.objects.prefetch_related('suppliers'), pk=pk
     )
+
+    # Xử lý cộng tồn kho từ modal
+    if request.method == 'POST' and hasattr(pr, 'inventory_check'):
+        check = pr.inventory_check
+        if check.status == InventoryCheck.Status.APPROVED:
+            # Kiểm tra đã cộng tồn kho chưa
+            if pr.items.filter(received_qty__gt=0).exists():
+                messages.warning(request, f'Phiếu kiểm kê {check.code} đã được cộng tồn kho rồi!')
+            else:
+                from django.db import transaction
+                with transaction.atomic():
+                    for item in check.items.all():
+                        if item.received_qty > 0:
+                            adjust_stock(
+                                variant=item.variant,
+                                quantity=item.received_qty,
+                                note=f'Nhập kho từ phiếu kiểm kê {check.code}',
+                                actor=str(request.user),
+                            )
+                            # Update received_qty in PurchaseRequestItem
+                            pr_item = pr.items.filter(variant=item.variant).first()
+                            if pr_item:
+                                pr_item.received_qty = item.received_qty
+                                pr_item.save(update_fields=['received_qty'])
+
+                    messages.success(
+                        request,
+                        f'✅ Đã cộng tồn kho thành công cho {check.items.count()} mặt hàng từ phiếu {check.code}!'
+                    )
+            return redirect(supply_admin_url('request_detail', pk))
+
     items_qs = pr.items.select_related('variant', 'variant__product', 'variant__size', 'variant__color')
     items_page, items_paginator = paginate_queryset(request, items_qs, per_page=20, page_param='items_page')
     quotes = pr.quotes.select_related('supplier').prefetch_related('items')
@@ -240,6 +284,18 @@ def request_detail(request, pk):
     quote_summaries = _quote_summary(quotes, items_qs)
     recommended = _cheapest_supplier(quotes, items_qs)
 
+    # Lấy thông tin phiếu kiểm kê nếu có
+    inventory_check = None
+    stock_added = False
+    check_items = []
+    if hasattr(pr, 'inventory_check'):
+        inventory_check = pr.inventory_check
+        stock_added = pr.items.filter(received_qty__gt=0).exists()
+        if inventory_check.status == InventoryCheck.Status.APPROVED and not stock_added:
+            check_items = inventory_check.items.select_related(
+                'variant', 'variant__product', 'variant__size', 'variant__color'
+            )
+
     context = {
         'pr':              pr,
         'items':           items_page.object_list,
@@ -251,6 +307,9 @@ def request_detail(request, pk):
         'quote_summaries': quote_summaries,
         'recommended':     recommended,
         'suppliers':       Supplier.objects.filter(is_active=True),
+        'inventory_check': inventory_check,
+        'stock_added':     stock_added,
+        'check_items':     check_items,
     }
     return render(request, 'supply/request_detail.html', context)
 
@@ -371,7 +430,7 @@ def send_to_suppliers(request, pk):
 
 @login_required
 def approve_request(request, pk):
-    """Cửa hàng trưởng duyệt NCC rẻ nhất."""
+    """Cửa hàng trưởng duyệt NCC rẻ nhất và tự động tạo phiếu kiểm kê."""
     if not is_store_manager(request.user):
         return redirect('admin:index')
 
@@ -387,29 +446,15 @@ def approve_request(request, pk):
                 return redirect(supply_admin_url('request_detail', pk))
         else:
             supplier = get_object_or_404(Supplier, pk=supplier_id)
+
+        # Cập nhật trạng thái Purchase Request
         pr.approved_supplier = supplier
         pr.approved_by = request.user
         pr.approved_at = timezone.now()
         pr.status = PurchaseRequest.Status.APPROVED
         pr.save(update_fields=['approved_supplier', 'approved_by', 'approved_at', 'status', 'updated_at'])
-        messages.success(request, f'Đã duyệt NCC "{supplier.name}" cho đợt {pr.code}.')
-    return redirect(supply_admin_url('request_detail', pk))
 
-
-@login_required
-def receive_goods(request, pk):
-    """NCC đã giao hàng → chuyển sang trạng thái SHIPPED → tạo phiếu kiểm kê."""
-    if not is_store_manager(request.user):
-        return redirect('admin:index')
-
-    pr = get_object_or_404(PurchaseRequest, pk=pk, status=PurchaseRequest.Status.APPROVED)
-
-    if request.method == 'POST':
-        # Chuyển trạng thái sang SHIPPED và tạo phiếu kiểm kê
-        pr.status = PurchaseRequest.Status.SHIPPED
-        pr.save(update_fields=['status', 'updated_at'])
-
-        # Tạo phiếu kiểm kê tự động
+        # Tự động tạo phiếu kiểm kê
         inventory_check = InventoryCheck.objects.create(
             purchase_request=pr,
             status=InventoryCheck.Status.PENDING,
@@ -418,13 +463,13 @@ def receive_goods(request, pk):
         # Lấy báo giá đã duyệt
         quote = SupplierQuote.objects.filter(
             request=pr,
-            supplier=pr.approved_supplier
+            supplier=supplier
         ).prefetch_related('items').first()
 
         if not quote:
             messages.warning(
                 request,
-                f'⚠️ Chưa có báo giá từ NCC {pr.approved_supplier.name}. '
+                f'⚠️ Chưa có báo giá từ NCC {supplier.name}. '
                 f'Đơn giá trong phiếu kiểm kê sẽ = 0. Vui lòng cập nhật thủ công nếu cần.'
             )
 
@@ -440,12 +485,12 @@ def receive_goods(request, pk):
                 else:
                     items_without_price.append(str(item.variant))
 
-            # Fill sẵn received_qty = ordered_qty (nhân viên sẽ điều chỉnh nếu lệch)
+            # Tạo item trong phiếu kiểm kê (chưa điền received_qty)
             InventoryCheckItem.objects.create(
                 inventory_check=inventory_check,
                 variant=item.variant,
                 ordered_qty=item.requested_qty,
-                received_qty=item.requested_qty,  # Điền sẵn = số lượng đặt
+                received_qty=0,  # Để trống, sẽ điền khi kiểm kê
                 unit_price=unit_price or 0,
             )
 
@@ -458,21 +503,41 @@ def receive_goods(request, pk):
 
         messages.success(
             request,
-            f'Đã xác nhận NCC giao hàng và tạo phiếu kiểm kê {inventory_check.code}!'
+            f'✅ Đã duyệt NCC "{supplier.name}" cho đợt {pr.code} và tạo phiếu kiểm kê {inventory_check.code}! '
+            f'Vui lòng thực hiện kiểm kê trước khi nhập hàng vào kho.'
         )
+
+        # Redirect đến trang chi tiết phiếu kiểm kê
         return redirect(supply_admin_url('inventory_check_detail', inventory_check.pk))
 
-    items_qs = pr.items.select_related('variant', 'variant__product', 'variant__size', 'variant__color')
-    items_page, items_paginator = paginate_queryset(request, items_qs, per_page=20)
+    return redirect(supply_admin_url('request_detail', pk))
 
-    context = {
-        'pr': pr,
-        'items': items_page.object_list,
-        'items_page': items_page,
-        'items_page_range': smart_page_range(items_page, items_paginator),
-        'items_querystring': _querystring(request),
-    }
-    return render(request, 'supply/confirm_shipped.html', context)
+
+@login_required
+def receive_goods(request, pk):
+    """Chuyển hướng đến phiếu kiểm kê (đã được tạo khi duyệt báo giá)."""
+    if not is_store_manager(request.user):
+        return redirect('admin:index')
+
+    pr = get_object_or_404(PurchaseRequest, pk=pk)
+
+    # Kiểm tra xem đã có phiếu kiểm kê chưa
+    if hasattr(pr, 'inventory_check'):
+        messages.info(
+            request,
+            f'Phiếu kiểm kê {pr.inventory_check.code} đã được tạo. '
+            f'Vui lòng thực hiện kiểm kê để tiếp tục.'
+        )
+        return redirect(supply_admin_url('inventory_check_detail', pr.inventory_check.pk))
+
+    # Nếu chưa có phiếu kiểm kê, có thể là đơn hàng cũ chưa được duyệt theo quy trình mới
+    # Hiển thị thông báo yêu cầu duyệt lại hoặc tạo phiếu kiểm kê thủ công
+    messages.warning(
+        request,
+        f'Đơn hàng {pr.code} chưa có phiếu kiểm kê. '
+        f'Vui lòng duyệt lại báo giá để tạo phiếu kiểm kê tự động.'
+    )
+    return redirect(supply_admin_url('request_detail', pk))
 
 
 # ═══════════════════════════════════════════════════════════
@@ -526,6 +591,36 @@ def inventory_check_detail(request, pk):
         pk=pk
     )
 
+    # Xử lý cộng tồn kho
+    if request.method == 'POST' and is_store_manager(request.user):
+        if check.status == InventoryCheck.Status.APPROVED:
+            # Kiểm tra đã cộng tồn kho chưa
+            pr = check.purchase_request
+            if pr.items.filter(received_qty__gt=0).exists():
+                messages.warning(request, f'Phiếu {check.code} đã được cộng tồn kho rồi!')
+            else:
+                from django.db import transaction
+                with transaction.atomic():
+                    for item in check.items.all():
+                        if item.received_qty > 0:
+                            adjust_stock(
+                                variant=item.variant,
+                                quantity=item.received_qty,
+                                note=f'Nhập kho từ phiếu kiểm kê {check.code}',
+                                actor=str(request.user),
+                            )
+                            # Update received_qty in PurchaseRequestItem
+                            pr_item = pr.items.filter(variant=item.variant).first()
+                            if pr_item:
+                                pr_item.received_qty = item.received_qty
+                                pr_item.save(update_fields=['received_qty'])
+
+                    messages.success(
+                        request,
+                        f'✅ Đã cộng tồn kho thành công cho {check.items.count()} mặt hàng từ phiếu {check.code}!'
+                    )
+            return redirect(supply_admin_url('inventory_check_detail', pk))
+
     items_qs = check.items.select_related(
         'variant',
         'variant__product',
@@ -533,11 +628,15 @@ def inventory_check_detail(request, pk):
         'variant__color'
     )
     items_page, items_paginator = paginate_queryset(request, items_qs, per_page=20, page_param='items_page')
+
     # Calculate statistics
     total_items = items_qs.count()
     matched_items = items_qs.filter(is_matched=True).count()
     mismatched_items = total_items - matched_items
     total_amount = sum(item.total_price for item in items_qs)
+
+    # Kiểm tra đã cộng tồn kho chưa
+    stock_added = check.purchase_request.items.filter(received_qty__gt=0).exists()
 
     context = {
         'check': check,
@@ -549,6 +648,7 @@ def inventory_check_detail(request, pk):
         'matched_items': matched_items,
         'mismatched_items': mismatched_items,
         'total_amount': total_amount,
+        'stock_added': stock_added,
     }
     return render(request, 'supply/inventory_check_detail.html', context)
 
@@ -634,7 +734,7 @@ def perform_inventory_check(request, pk):
 
 @login_required
 def approve_inventory_check(request, pk):
-    """Cửa hàng trưởng duyệt phiếu kiểm kê → cộng tồn kho + tạo phiếu chi."""
+    """Cửa hàng trưởng duyệt phiếu kiểm kê → tạo phiếu chi (CHT sẽ nhập kho thủ công)."""
     if not is_store_manager(request.user):
         messages.error(request, 'Bạn không có quyền duyệt phiếu kiểm kê.')
         return redirect('admin:index')
@@ -649,49 +749,32 @@ def approve_inventory_check(request, pk):
         action = request.POST.get('action')
 
         if action == 'approve':
-            # Cộng tồn kho cho từng item
-            from django.db import transaction
-            with transaction.atomic():
-                for item in check.items.all():
-                    if item.received_qty > 0:
-                        adjust_stock(
-                            variant=item.variant,
-                            quantity=item.received_qty,
-                            note=f'Nhập kho từ phiếu kiểm kê {check.code}',
-                            actor=str(request.user),
-                        )
+            # 1. Tạo phiếu chi tiền cho NCC
+            supplier = check.purchase_request.approved_supplier
+            payment_voucher = PaymentVoucher.objects.create(
+                inventory_check=check,
+                supplier=supplier,
+                amount=check.total_amount,
+                status=PaymentVoucher.Status.PENDING,
+                created_by=request.user,
+            )
 
-                        # Update received_qty in PurchaseRequestItem
-                        pr_item = check.purchase_request.items.filter(variant=item.variant).first()
-                        if pr_item:
-                            pr_item.received_qty = item.received_qty
-                            pr_item.save(update_fields=['received_qty'])
+            # 2. Cập nhật trạng thái phiếu kiểm kê
+            check.status = InventoryCheck.Status.APPROVED
+            check.approved_by = request.user
+            check.approved_at = timezone.now()
+            check.save(update_fields=['status', 'approved_by', 'approved_at', 'updated_at'])
 
-                # Update check status
-                check.status = InventoryCheck.Status.APPROVED
-                check.approved_by = request.user
-                check.approved_at = timezone.now()
-                check.save(update_fields=['status', 'approved_by', 'approved_at', 'updated_at'])
+            # 3. Cập nhật trạng thái purchase request
+            check.purchase_request.status = PurchaseRequest.Status.CHECKED
+            check.purchase_request.save(update_fields=['status', 'updated_at'])
 
-                # Update purchase request status
-                check.purchase_request.status = PurchaseRequest.Status.CHECKED
-                check.purchase_request.save(update_fields=['status', 'updated_at'])
-
-                # Create payment voucher
-                payment_voucher = PaymentVoucher.objects.create(
-                    inventory_check=check,
-                    supplier=check.purchase_request.approved_supplier,
-                    amount=check.total_amount,
-                    status=PaymentVoucher.Status.PENDING,
-                    created_by=request.user,
-                )
-
-                messages.success(
-                    request,
-                    f'Đã duyệt phiếu kiểm kê {check.code}! '
-                    f'Đã cộng tồn kho và tạo phiếu chi {payment_voucher.code}.'
-                )
-                return redirect(supply_admin_url('payment_voucher_detail', payment_voucher.pk))
+            messages.success(
+                request,
+                f'✅ Đã duyệt phiếu kiểm kê {check.code} và tạo phiếu chi tiền {payment_voucher.code}! '
+                f'Vui lòng cộng tồn kho thủ công từ phiếu kiểm kê.'
+            )
+            return redirect(supply_admin_url('payment_voucher_detail', payment_voucher.pk))
 
         elif action == 'reject':
             rejection_reason = request.POST.get('rejection_reason', '')
@@ -855,6 +938,103 @@ def mark_payment_paid(request, pk):
         'voucher': voucher,
     }
     return render(request, 'supply/mark_payment_paid.html', context)
+
+
+@login_required
+def add_stock_from_check(request, pk):
+    """Cộng tồn kho từ phiếu kiểm kê đã duyệt."""
+    if not is_store_manager(request.user):
+        messages.error(request, 'Bạn không có quyền cộng tồn kho.')
+        return redirect('admin:index')
+
+    check = get_object_or_404(
+        InventoryCheck,
+        pk=pk,
+        status=InventoryCheck.Status.APPROVED
+    )
+
+    # Check if already added stock
+    pr = check.purchase_request
+    if pr.items.filter(received_qty__gt=0).exists():
+        messages.warning(request, f'Phiếu {check.code} đã được cộng tồn kho rồi!')
+        return redirect(supply_admin_url('inventory_check_detail', pk))
+
+    if request.method == 'POST':
+        from django.db import transaction
+        with transaction.atomic():
+            for item in check.items.all():
+                if item.received_qty > 0:
+                    adjust_stock(
+                        variant=item.variant,
+                        quantity=item.received_qty,
+                        note=f'Nhập kho từ phiếu kiểm kê {check.code}',
+                        actor=str(request.user),
+                    )
+
+                    # Update received_qty in PurchaseRequestItem
+                    pr_item = pr.items.filter(variant=item.variant).first()
+                    if pr_item:
+                        pr_item.received_qty = item.received_qty
+                        pr_item.save(update_fields=['received_qty'])
+
+            messages.success(
+                request,
+                f'✅ Đã cộng tồn kho thành công cho {check.items.count()} mặt hàng từ phiếu {check.code}!'
+            )
+            return redirect(supply_admin_url('inventory_check_detail', pk))
+
+    items = check.items.select_related(
+        'variant',
+        'variant__product',
+        'variant__size',
+        'variant__color'
+    )
+
+    context = {
+        'check': check,
+        'items': items,
+    }
+    return render(request, 'supply/add_stock_from_check.html', context)
+
+
+@login_required
+def create_payment_from_check(request, pk):
+    """Tạo phiếu chi tiền từ phiếu kiểm kê đã duyệt."""
+    if not is_store_manager(request.user):
+        messages.error(request, 'Bạn không có quyền tạo phiếu chi.')
+        return redirect('admin:index')
+
+    check = get_object_or_404(
+        InventoryCheck,
+        pk=pk,
+        status=InventoryCheck.Status.APPROVED
+    )
+
+    # Check if payment voucher already exists
+    existing_voucher = PaymentVoucher.objects.filter(inventory_check=check).first()
+    if existing_voucher:
+        messages.warning(request, f'Phiếu chi {existing_voucher.code} đã được tạo cho phiếu kiểm kê này!')
+        return redirect(supply_admin_url('payment_voucher_detail', existing_voucher.pk))
+
+    if request.method == 'POST':
+        payment_voucher = PaymentVoucher.objects.create(
+            inventory_check=check,
+            supplier=check.purchase_request.approved_supplier,
+            amount=check.total_amount,
+            status=PaymentVoucher.Status.PENDING,
+            created_by=request.user,
+        )
+
+        messages.success(
+            request,
+            f'✅ Đã tạo phiếu chi tiền {payment_voucher.code} cho NCC {check.purchase_request.approved_supplier.name}!'
+        )
+        return redirect(supply_admin_url('payment_voucher_detail', payment_voucher.pk))
+
+    context = {
+        'check': check,
+    }
+    return render(request, 'supply/create_payment_from_check.html', context)
 
 
 # ═══════════════════════════════════════════════════════════

@@ -33,10 +33,10 @@ class PurchaseRequest(models.Model):
         DRAFT       = 'draft',       'Bản nháp'
         SENT        = 'sent',        'Đã gửi NCC'
         QUOTED      = 'quoted',      'NCC đã báo giá'
-        APPROVED    = 'approved',    'Đã duyệt NCC'
-        SHIPPED     = 'shipped',     'NCC đã giao hàng'
+        APPROVED    = 'approved',    'Đã duyệt NCC'           # Phiếu kiểm kê được tạo tự động
+        SHIPPED     = 'shipped',     'NCC đã giao hàng'       # (Deprecated - không dùng nữa)
         IN_CHECKING = 'in_checking', 'Đang kiểm kê'
-        CHECKED     = 'checked',     'Đã kiểm kê'
+        CHECKED     = 'checked',     'Đã kiểm kê'             # Đã duyệt phiếu kiểm kê, đã cộng kho
         RECEIVED    = 'received',    'Đã nhận hàng & thanh toán'
         CANCELLED   = 'cancelled',   'Đã hủy'
 

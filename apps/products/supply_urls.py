@@ -18,6 +18,8 @@ urlpatterns = [
     path('inventory-checks/<int:pk>/', v.inventory_check_detail, name='inventory_check_detail'),
     path('inventory-checks/<int:pk>/perform/', v.perform_inventory_check, name='perform_inventory_check'),
     path('inventory-checks/<int:pk>/approve/', v.approve_inventory_check, name='approve_inventory_check'),
+    path('inventory-checks/<int:pk>/add-stock/', v.add_stock_from_check, name='add_stock_from_check'),
+    path('inventory-checks/<int:pk>/create-payment/', v.create_payment_from_check, name='create_payment_from_check'),
 
     # Payment Voucher URLs
     path('payment-vouchers/', v.payment_voucher_list, name='payment_voucher_list'),

@@ -36,6 +36,18 @@
             <i class="fas fa-check"></i> Duyệt phiếu kiểm kê
         </a>
         {% endif %}
+        {% if check.status == 'approved' and supply_is_manager %}
+            {% if check.payment_voucher %}
+            <a href="{% supply_url 'payment_voucher_detail' check.payment_voucher.pk %}" class="btn-blue">
+                <i class="fas fa-money-bill-wave"></i> Xem phiếu chi tiền
+            </a>
+            {% endif %}
+            {% if stock_added %}
+            <span class="badge badge-approved" style="padding:8px 16px;font-size:14px;">
+                ✅ Đã cộng tồn kho
+            </span>
+            {% endif %}
+        {% endif %}
     </div>
 </div>
 
@@ -166,5 +178,67 @@
     {% include 'supply/_pagination.html' %}
     {% endwith %}
 </div>
+
+<!-- Modal cộng tồn kho -->
+{% if check.status == 'approved' and supply_is_manager and not stock_added %}
+<div id="addStockModal"
+    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:8px;padding:28px;max-width:900px;width:95%;max-height:90vh;overflow:auto;">
+        <h3 style="font-size:18px;font-weight:700;margin-bottom:16px;">📦 Xác nhận cộng tồn kho</h3>
+
+        <div style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:12px;margin-bottom:20px;">
+            <p style="font-size:13px;color:#166534;margin:0;">
+                ⚠️ Hành động này sẽ <strong>cộng số lượng thực nhận vào tồn kho</strong> cho từng mặt hàng bên dưới.
+                Sau khi cộng, bạn không thể hoàn tác. Vui lòng kiểm tra kỹ trước khi xác nhận.
+            </p>
+        </div>
+
+        <!-- Items table -->
+        <div style="overflow-x:auto;margin-bottom:20px;">
+            <table class="s-table" style="font-size:13px;">
+                <thead>
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th>Size</th>
+                        <th>Tồn hiện tại</th>
+                        <th>SL nhận</th>
+                        <th style="background:#dcfce7;">Tồn sau cộng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td style="font-weight:600;">{{ item.variant.product.name }}</td>
+                        <td>
+                            <span style="background:#f3f4f6;padding:2px 6px;border-radius:3px;font-weight:600;font-size:11px;">
+                                {{ item.variant.size.name }}
+                            </span>
+                        </td>
+                        <td style="font-weight:700;color:#888;">{{ item.variant.stock }}</td>
+                        <td style="font-weight:700;color:#16a34a;">+{{ item.received_qty }}</td>
+                        <td style="font-weight:700;color:#166534;background:#f0fdf4;">
+                            {{ item.variant.stock|add:item.received_qty }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Buttons -->
+        <form method="post">
+            {% csrf_token %}
+            <div style="display:flex;gap:12px;justify-content:flex-end;">
+                <button type="button" class="btn-secondary" onclick="document.getElementById('addStockModal').style.display='none'">
+                    <i class="fas fa-times"></i> Hủy
+                </button>
+                <button type="submit" class="btn-green" onclick="return confirm('Xác nhận cộng tồn kho cho {{ items|length }} mặt hàng?');">
+                    <i class="fas fa-plus-circle"></i> Xác nhận cộng tồn kho
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
 
 {% endblock %}
