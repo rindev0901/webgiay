@@ -1,6 +1,6 @@
 """Context processors for products app"""
 from .models import Category, Brand
-from .supply_permissions import is_store_manager, is_supplier_user, is_warehouse_manager
+from .supply_permissions import is_store_manager, is_supplier_user, is_warehouse_manager, is_director_or_general_director
 from .supply_admin_paths import SUPPLY_PATHS
 
 
@@ -22,6 +22,8 @@ def supply_nav(request):
         'supply_is_manager': is_store_manager(user),
         'supply_is_supplier': is_supplier_user(user),
         'supply_is_warehouse_manager': is_warehouse_manager(user),
+        'supply_is_director': is_director_or_general_director(user),
         'supply_paths': SUPPLY_PATHS,
         'supply_supplier': supplier,
     }
+

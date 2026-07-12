@@ -30,5 +30,9 @@ urlpatterns = [
     path('portal/', v.supplier_portal, name='supplier_portal'),
     path('portal/<int:pr_pk>/quote/', v.submit_quote, name='submit_quote'),
     path('portal/<int:pr_pk>/export/', v.supplier_export_csv, name='supplier_export_csv'),
+
+    # Director / General Director URLs
+    path('dashboard/', v.director_dashboard, name='director_dashboard'),
+    path('activity-log/', v.activity_log_view, name='activity_log'),
 ]
 

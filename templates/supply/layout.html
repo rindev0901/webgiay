@@ -43,6 +43,17 @@
                 </a>
             </div>
             {% endif %}
+            {% if supply_is_director %}
+            <div class="supply-nav-group">
+                <span class="supply-nav-label">Ban giám đốc</span>
+                <a href="{% url 'supply:director_dashboard' %}" class="supply-nav-link{% if '/supply/dashboard/' in request.path %} active{% endif %}">
+                    <i class="fas fa-chart-pie"></i> Dashboard tài chính
+                </a>
+                <a href="{% url 'supply:activity_log' %}" class="supply-nav-link{% if '/supply/activity-log/' in request.path %} active{% endif %}">
+                    <i class="fas fa-history"></i> Lịch sử hoạt động
+                </a>
+            </div>
+            {% endif %}
             {% if supply_is_supplier %}
             <div class="supply-nav-group">
                 <span class="supply-nav-label">Nhà cung cấp</span>

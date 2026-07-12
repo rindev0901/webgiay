@@ -36,6 +36,18 @@ SIDEBAR_NAVIGATION = [
                 "link": SUPPLY_PATHS["bao_gia"],
                 "permission": lambda request: __import__("apps.products.supply_permissions", fromlist=["is_supplier_user"]).is_supplier_user(request.user),
             },
+            {
+                "title": "Dashboard Giám Đốc",
+                "icon": "dashboard",
+                "link": "/supply/dashboard/",
+                "permission": lambda request: __import__("apps.products.supply_permissions", fromlist=["is_director_or_general_director"]).is_director_or_general_director(request.user),
+            },
+            {
+                "title": "Lịch sử hoạt động",
+                "icon": "history",
+                "link": "/supply/activity-log/",
+                "permission": lambda request: __import__("apps.products.supply_permissions", fromlist=["is_director_or_general_director"]).is_director_or_general_director(request.user),
+            },
         ],
     },
     {

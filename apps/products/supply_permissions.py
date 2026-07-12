@@ -72,3 +72,12 @@ def can_view_payment_voucher(request):
     """Quyền xem phiếu chi tiền - Cửa hàng trưởng và Admin."""
     user = request.user
     return user.is_superuser or is_store_manager(user)
+
+
+def is_director_or_general_director(user):
+    """Check if user is a director or general director or superuser."""
+    if not user.is_authenticated:
+        return False
+    return user.is_superuser or any(
+        is_in_group(user, g) for g in ["Giám đốc", "Giám Đốc", "Tổng giám đốc", "Tổng Giám Đốc"]
+    )

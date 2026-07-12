@@ -48,10 +48,12 @@ from .supply_models import (
     PaymentVoucher,
 )
 from .models import ProductVariant
-from .supply_permissions import is_store_manager, is_warehouse_manager
+from .supply_permissions import is_store_manager, is_warehouse_manager, is_director_or_general_director
 from .supply_urls_admin import supply_admin_url
 from .supply_pagination import paginate_list, paginate_queryset, smart_page_range
 from .inventory import adjust_stock
+from apps.accounts.models import ActivityLog
+from apps.cart.models import Order
 
 
 def _suggested_qty(stock, sold=0):
@@ -295,6 +297,14 @@ def request_detail(request, pk):
                     messages.success(
                         request,
                         f"✅ Đã cộng tồn kho thành công cho {check.items.count()} mặt hàng từ phiếu {check.code}!",
+                    )
+
+                    from apps.accounts.signals import create_log
+                    create_log(
+                        action="Nhập hàng vào kho",
+                        target=f"Phiếu kiểm kê: {check.code}",
+                        changes=f"Cộng kho thành công cho {check.items.count()} mặt hàng từ đợt {pr.code} (via Chi tiết đợt)",
+                        user=request.user
                     )
             return redirect(supply_admin_url("request_detail", pk))
 
@@ -556,6 +566,14 @@ def approve_request(request, pk):
             f"Vui lòng thực hiện kiểm kê trước khi nhập hàng vào kho.",
         )
 
+        from apps.accounts.signals import create_log
+        create_log(
+            action="Duyệt báo giá",
+            target=f"Đợt yêu cầu: {pr.code}",
+            changes=f"Duyệt NCC: {supplier.name} | Phiếu kiểm kê: {inventory_check.code}",
+            user=request.user
+        )
+
         # Redirect đến trang chi tiết phiếu kiểm kê
         return redirect(supply_admin_url("inventory_check_detail", inventory_check.pk))
 
@@ -780,6 +798,15 @@ def perform_inventory_check(request, pk):
         check.purchase_request.save(update_fields=["status", "updated_at"])
 
         messages.success(request, f"Đã hoàn thành kiểm kê phiếu {check.code}!")
+
+        from apps.accounts.signals import create_log
+        create_log(
+            action="Kiểm kê hàng hóa",
+            target=f"Phiếu kiểm kê: {check.code}",
+            changes=f"Hoàn thành kiểm kê đợt {check.purchase_request.code} | Số tiền: {int(check.total_amount):,}₫",
+            user=request.user
+        )
+
         return redirect(supply_admin_url("inventory_check_detail", pk))
 
     items_qs = check.items.select_related(
@@ -839,6 +866,15 @@ def approve_inventory_check(request, pk):
                 f"✅ Đã duyệt phiếu kiểm kê {check.code} và tạo phiếu chi tiền {payment_voucher.code}! "
                 f"Vui lòng cộng tồn kho thủ công từ phiếu kiểm kê.",
             )
+
+            from apps.accounts.signals import create_log
+            create_log(
+                action="Duyệt phiếu kiểm kê",
+                target=f"Phiếu kiểm kê: {check.code}",
+                changes=f"Đã duyệt và tự động tạo phiếu chi {payment_voucher.code} | Số tiền: {int(payment_voucher.amount):,}₫",
+                user=request.user
+            )
+
             return redirect(
                 supply_admin_url("payment_voucher_detail", payment_voucher.pk)
             )
@@ -866,6 +902,14 @@ def approve_inventory_check(request, pk):
             # Reset purchase request status
             check.purchase_request.status = PurchaseRequest.Status.APPROVED
             check.purchase_request.save(update_fields=["status", "updated_at"])
+
+            from apps.accounts.signals import create_log
+            create_log(
+                action="Từ chối phiếu kiểm kê",
+                target=f"Phiếu kiểm kê: {check.code}",
+                changes=f"Lý do từ chối: {rejection_reason}",
+                user=request.user
+            )
 
             messages.warning(request, f"Đã từ chối phiếu kiểm kê {check.code}.")
             return redirect(supply_admin_url("inventory_check_detail", pk))
@@ -1013,6 +1057,15 @@ def mark_payment_paid(request, pk):
             request,
             f"Đã thanh toán phiếu {voucher.code} cho NCC {voucher.supplier.name}!",
         )
+
+        from apps.accounts.signals import create_log
+        create_log(
+            action="Thanh toán cho NCC",
+            target=f"Phiếu chi: {voucher.code}",
+            changes=f"Thanh toán {int(voucher.amount):,}₫ cho {voucher.supplier.name} | Phương thức: {payment_method} | Tham chiếu: {payment_ref}",
+            user=request.user
+        )
+
         return redirect(supply_admin_url("payment_voucher_detail", pk))
 
     context = {
@@ -1062,6 +1115,15 @@ def add_stock_from_check(request, pk):
                 request,
                 f"✅ Đã cộng tồn kho thành công cho {check.items.count()} mặt hàng từ phiếu {check.code}!",
             )
+
+            from apps.accounts.signals import create_log
+            create_log(
+                action="Nhập hàng vào kho",
+                target=f"Phiếu kiểm kê: {check.code}",
+                changes=f"Cộng kho thành công cho {check.items.count()} mặt hàng từ đợt {pr.code}",
+                user=request.user
+            )
+
             return redirect(supply_admin_url("inventory_check_detail", pk))
 
     items = check.items.select_related(
@@ -1363,3 +1425,149 @@ def submit_quote(request, pr_pk):
         "items_json": items_json,
     }
     return render(request, "supply/submit_quote.html", context)
+
+
+@login_required
+def director_dashboard(request):
+    """Trang Dashboard tài chính dành cho Tổng Giám Đốc."""
+    if not is_director_or_general_director(request.user):
+        messages.error(request, "Bạn không có quyền truy cập Dashboard này.")
+        return redirect("admin:index")
+
+    from decimal import Decimal
+
+    now = timezone.now()
+    year = int(request.GET.get("year", now.year))
+    month = int(request.GET.get("month", now.month))
+
+    # 1. Chi phí nhập hàng (Spent): sum of PaymentVoucher created in the month
+    cost_qs = PaymentVoucher.objects.filter(
+        created_at__year=year,
+        created_at__month=month
+    ).exclude(status=PaymentVoucher.Status.CANCELLED)
+    total_cost = cost_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+    # 2. Doanh thu (Revenue): sum of Order completed in the month (status=paid)
+    rev_qs = Order.objects.filter(
+        status=Order.Status.PAID,
+        created_at__year=year,
+        created_at__month=month
+    )
+    total_revenue = rev_qs.aggregate(total=Sum("total_amount"))["total"] or Decimal("0")
+
+    # 3. Lợi nhuận (Profit) = Doanh thu - Chi phí
+    profit = total_revenue - total_cost
+
+    # 4. Tỷ lệ lợi nhuận = (Lợi nhuận / Chi phí) * 100%
+    if total_cost > 0:
+        margin = (profit / total_cost) * 100
+    else:
+        margin = 100.0 if profit > 0 else 0.0
+
+    # Retrieve data for the chart: last 6 months (revenue and cost)
+    labels_chart = []
+    revenue_chart = []
+    cost_chart = []
+    
+    from datetime import date
+    current_date = date(year, month, 1)
+    
+    months_list = []
+    temp_date = current_date
+    for _ in range(6):
+        months_list.append((temp_date.year, temp_date.month))
+        if temp_date.month == 1:
+            temp_date = date(temp_date.year - 1, 12, 1)
+        else:
+            temp_date = date(temp_date.year, temp_date.month - 1, 1)
+            
+    months_list.reverse()
+    
+    for y, m in months_list:
+        labels_chart.append(f"{m}/{y}")
+        r_sum = Order.objects.filter(
+            status=Order.Status.PAID,
+            created_at__year=y,
+            created_at__month=m
+        ).aggregate(total=Sum("total_amount"))["total"] or 0
+        revenue_chart.append(int(r_sum))
+        
+        c_sum = PaymentVoucher.objects.filter(
+            created_at__year=y,
+            created_at__month=m
+        ).exclude(status=PaymentVoucher.Status.CANCELLED).aggregate(total=Sum("amount"))["total"] or 0
+        cost_chart.append(int(c_sum))
+
+    years_choices = list(range(2025, now.year + 2))
+    months_choices = list(range(1, 13))
+
+    context = {
+        "year": year,
+        "month": month,
+        "total_cost": total_cost,
+        "total_revenue": total_revenue,
+        "profit": profit,
+        "margin": margin,
+        "years_choices": years_choices,
+        "months_choices": months_choices,
+        "chart_labels": json.dumps(labels_chart),
+        "chart_revenue": json.dumps(revenue_chart),
+        "chart_cost": json.dumps(cost_chart),
+    }
+    return render(request, "supply/director_dashboard.html", context)
+
+
+@login_required
+def activity_log_view(request):
+    """Trang Lịch sử hoạt động của nhân viên dành cho Giám Đốc/Tổng Giám Đốc."""
+    if not is_director_or_general_director(request.user):
+        messages.error(request, "Bạn không có quyền truy cập trang này.")
+        return redirect("admin:index")
+
+    qs = ActivityLog.objects.select_related("user").order_by("-created_at")
+
+    q = request.GET.get("q", "")
+    if q:
+        qs = qs.filter(
+            Q(username__icontains=q) |
+            Q(user__first_name__icontains=q) |
+            Q(user__last_name__icontains=q)
+        )
+
+    action_filter = request.GET.get("action", "")
+    if action_filter:
+        qs = qs.filter(action=action_filter)
+
+    user_filter = request.GET.get("user_id", "")
+    if user_filter:
+        qs = qs.filter(user_id=user_filter)
+
+    start_date = request.GET.get("start_date", "")
+    end_date = request.GET.get("end_date", "")
+    if start_date:
+        qs = qs.filter(created_at__date__gte=start_date)
+    if end_date:
+        qs = qs.filter(created_at__date__lte=end_date)
+
+    distinct_actions = ActivityLog.objects.values_list("action", flat=True).distinct()
+    
+    from django.contrib.auth.models import User
+    employees = User.objects.filter(
+        Q(is_staff=True) | 
+        Q(groups__name__in=["Cửa hàng trưởng", "Quản lý kho", "Giám Đốc", "Tổng Giám Đốc", "Giám đốc", "Tổng giám đốc"])
+    ).distinct()
+
+    page_obj, paginator = paginate_queryset(request, qs, per_page=20)
+
+    context = {
+        "logs": page_obj.object_list,
+        "distinct_actions": distinct_actions,
+        "employees": employees,
+        "q": q,
+        "action_filter": action_filter,
+        "user_filter": int(user_filter) if user_filter else "",
+        "start_date": start_date,
+        "end_date": end_date,
+    }
+    context.update(_pagination_context(request, page_obj, paginator))
+    return render(request, "supply/activity_log.html", context)
