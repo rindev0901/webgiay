@@ -48,7 +48,7 @@
                     <th>Màu</th>
                     <th>Tồn hiện tại</th>
                     <th>SL nhận</th>
-                    <th style="background:#dcfce7;">Tồn sau cộng</th>
+                    <th>Tồn sau cộng</th>
                 </tr>
             </thead>
             <tbody>
@@ -63,8 +63,8 @@
                     <td>{{ item.variant.color.name|default:"Mặc định" }}</td>
                     <td style="font-weight:700;color:#888;">{{ item.variant.stock }}</td>
                     <td style="font-weight:700;color:#16a34a;">+{{ item.received_qty }}</td>
-                    <td style="font-weight:700;color:#166534;background:#f0fdf4;">
-                        {{ item.variant.stock|add:item.received_qty }}
+                    <td style="font-weight:700;color:#888;">
+                         {{ item.variant.stock|add:item.received_qty }}
                     </td>
                 </tr>
                 {% endfor %}

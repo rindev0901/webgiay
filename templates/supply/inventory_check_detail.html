@@ -25,16 +25,18 @@
         </div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        {% if supply_is_warehouse_manager %}
         {% if check.status == 'pending' or check.status == 'checking' or check.status == 'completed' %}
         <a href="{% supply_url 'perform_inventory_check' check.pk %}" class="btn-blue">
             <i class="fas fa-{% if check.status == 'completed' %}edit{% else %}clipboard-check{% endif %}"></i>
             {% if check.status == 'completed' %}Chỉnh sửa kiểm kê{% else %}Thực hiện kiểm kê{% endif %}
         </a>
         {% endif %}
-        {% if check.status == 'completed' and supply_is_manager %}
+        {% if check.status == 'completed' and supply_is_warehouse_manager %}
         <a href="{% supply_url 'approve_inventory_check' check.pk %}" class="btn-green">
             <i class="fas fa-check"></i> Duyệt phiếu kiểm kê
         </a>
+        {% endif %}
         {% endif %}
         {% if check.status == 'approved' and supply_is_manager %}
             {% if check.payment_voucher %}

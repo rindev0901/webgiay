@@ -36,14 +36,10 @@
         {% endif %}
         {% if pr.inventory_check %}
             {% if inventory_check.status == 'approved' %}
-                {% if not stock_added %}
-                <button type="button" class="btn-green" onclick="document.getElementById('addStockModal').style.display='flex'">
-                    <i class="fas fa-plus-circle"></i> Cộng tồn kho
-                </button>
-                {% else %}
-                <span class="badge badge-approved" style="padding:8px 16px;font-size:14px;">
-                    ✅ Đã cộng tồn kho
-                </span>
+                {% if stock_added %}
+                    <span class="badge badge-approved" style="padding:8px 16px;font-size:14px;">
+                        ✅ Đã cộng tồn kho
+                    </span>
                 {% endif %}
                 {% if inventory_check.payment_voucher %}
                 <a href="{% supply_url 'payment_voucher_detail' inventory_check.payment_voucher.pk %}" class="btn-blue">
