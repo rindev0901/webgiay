@@ -406,8 +406,22 @@ def request_create(request):
                 request,
                 f"Đã tạo và gửi đợt yêu cầu {pr.code} cho {len(supplier_ids)} NCC!",
             )
+            from apps.accounts.signals import create_log
+            create_log(
+                action="Tạo yêu cầu đặt hàng",
+                target=f"Đợt yêu cầu: {pr.code}",
+                changes=f"Tiêu đề: {pr.title} | Gửi {len(supplier_ids)} NCC | {len(variant_ids)} sản phẩm",
+                user=request.user
+            )
         else:
             messages.success(request, f"Đã tạo đợt yêu cầu {pr.code} (bản nháp).")
+            from apps.accounts.signals import create_log
+            create_log(
+                action="Tạo yêu cầu đặt hàng",
+                target=f"Đợt yêu cầu: {pr.code}",
+                changes=f"Tiêu đề: {pr.title} | Trạng thái: Bản nháp | {len(variant_ids)} sản phẩm",
+                user=request.user
+            )
 
         return redirect(supply_admin_url("request_detail", pr.pk))
 

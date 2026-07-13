@@ -60,7 +60,7 @@
         display: flex;
         gap: 10px;
         align-items: flex-end;
-        grid-column: span 2;
+        grid-column: span 5;
     }
 
     @media (max-width: 768px) {
@@ -251,12 +251,12 @@
 
                 <!-- Submit / Clear -->
                 <div class="filter-item btn-group">
-                    <button type="submit" class="filter-btn" style="height: 38px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <button type="submit" class="btn-primary">
                         <i class="fas fa-search"></i> Tìm kiếm
                     </button>
                     {% if q or action_filter or user_filter or start_date or end_date %}
-                    <a href="?" class="btn-secondary" style="height: 38px; display: flex; align-items: center; justify-content: center; text-decoration: none; padding: 0 16px;">
-                        Xóa bộ lọc
+                    <a href="?" class="btn-secondary" style="text-decoration: none;">
+                        <i class="fas fa-times"></i> Xóa bộ lọc
                     </a>
                     {% endif %}
                 </div>
