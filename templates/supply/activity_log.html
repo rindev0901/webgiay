@@ -5,366 +5,285 @@
 
 {% block supply_head %}
 <style>
-    .log-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 16px;
-    }
-
-    .filter-card {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    }
-
-    .filter-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px;
-    }
-
-    .filter-item {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-    }
-
-    .filter-label {
-        font-size: 12px;
-        font-weight: 700;
-        color: #4b5563;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .filter-input {
-        padding: 8px 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        font-size: 14px;
-        outline: none;
-        background-color: #f9fafb;
-        color: #374151;
-        transition: border-color 0.2s;
-    }
-
-    .filter-input:focus {
-        border-color: #8b0000;
-        background-color: #ffffff;
-    }
-
-    .btn-group {
-        display: flex;
-        gap: 10px;
-        align-items: flex-end;
-        grid-column: span 5;
-    }
-
-    @media (max-width: 768px) {
-        .btn-group {
-            grid-column: span 1;
-        }
-    }
-
-    /* Log table style */
-    .log-table-card {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        overflow: hidden;
-    }
-
     .badge-action {
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-size: 12px;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 11px;
         font-weight: 700;
         display: inline-block;
+        white-space: nowrap;
     }
-
-    .badge-action-login { background: #dcfce7; color: #166534; }
+    .badge-action-login  { background: #dcfce7; color: #166534; }
     .badge-action-logout { background: #f3f4f6; color: #374151; }
     .badge-action-create { background: #dbeafe; color: #1e40af; }
     .badge-action-update { background: #fef3c7; color: #92400e; }
     .badge-action-delete { background: #fee2e2; color: #991b1b; }
-    .badge-action-other { background: #f3e8ff; color: #6b21a8; }
+    .badge-action-other  { background: #f3e8ff; color: #6b21a8; }
 
-    /* Modal styles */
+    /* Detail modal */
     .log-modal {
         display: none;
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0,0,0,.45);
         z-index: 9999;
         align-items: center;
         justify-content: center;
         padding: 16px;
     }
-
-    .modal-content {
-        background: #ffffff;
-        border-radius: 12px;
+    .log-modal-content {
+        background: #fff;
+        border-radius: 10px;
         max-width: 600px;
         width: 100%;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        box-shadow: 0 20px 40px rgba(0,0,0,.15);
         overflow: hidden;
-        animation: modalFadeIn 0.2s ease-out;
+        animation: modalIn .18s ease-out;
     }
-
-    @keyframes modalFadeIn {
-        from { transform: scale(0.95); opacity: 0; }
-        to { transform: scale(1); opacity: 1; }
+    @keyframes modalIn {
+        from { transform: scale(.96); opacity: 0; }
+        to   { transform: scale(1);   opacity: 1; }
     }
-
-    .modal-header {
-        background: #f9fafb;
-        padding: 16px 24px;
-        border-bottom: 1px solid #e5e7eb;
+    .log-modal-header {
+        background: var(--sc-red);
+        padding: 14px 20px;
         display: flex;
         align-items: center;
         justify-content: space-between;
     }
-
-    .modal-title {
-        font-size: 16px;
-        font-weight: 700;
-        color: #1f2937;
-        margin: 0;
+    .log-modal-header h3 { margin: 0; color: #fff; font-size: 15px; font-weight: 700; }
+    .log-modal-close {
+        background: none; border: none; color: rgba(255,255,255,.8);
+        font-size: 22px; cursor: pointer; line-height: 1; padding: 0;
     }
-
-    .modal-close {
-        background: none;
-        border: none;
-        font-size: 20px;
-        color: #9ca3af;
-        cursor: pointer;
-        outline: none;
-        padding: 0;
-    }
-
-    .modal-close:hover {
-        color: #374151;
-    }
-
-    .modal-body {
-        padding: 24px;
-        font-size: 14px;
-        line-height: 1.5;
-        color: #374151;
-    }
-
+    .log-modal-close:hover { color: #fff; }
+    .log-modal-body { padding: 20px 24px; }
     .detail-row {
         display: grid;
-        grid-template-columns: 140px 1fr;
-        padding: 10px 0;
+        grid-template-columns: 130px 1fr;
+        padding: 9px 0;
         border-bottom: 1px solid #f3f4f6;
+        font-size: 13px;
     }
-
-    .detail-row:last-child {
-        border-bottom: none;
-    }
-
-    .detail-label {
-        font-weight: 600;
-        color: #4b5563;
-    }
-
-    .detail-value {
-        word-break: break-all;
-    }
-
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { font-weight: 600; color: #4b5563; }
     .detail-changes-box {
         background: #f9fafb;
         border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 12px;
+        border-radius: 6px;
+        padding: 10px 12px;
         margin-top: 8px;
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-        font-size: 13px;
+        font-size: 12px;
         white-space: pre-wrap;
+        word-break: break-word;
+        grid-column: span 2;
+    }
+
+    /* Filter inputs */
+    .s-filter-input {
+        padding: 7px 10px;
+        border: 1.5px solid var(--sc-border);
+        border-radius: 6px;
+        font-size: 13px;
+        background: #fff;
+        color: var(--sc-text);
+        width: 100%;
+        outline: none;
+        transition: border-color .15s;
+    }
+    .s-filter-input:focus { border-color: var(--sc-red); }
+    .s-filter-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--sc-muted);
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        margin-bottom: 5px;
+        display: block;
     }
 </style>
 {% endblock %}
 
 {% block supply_content %}
-<div class="log-container">
-    <div class="supply-header" style="margin-bottom:20px;">
-        <div>
-            <h1 class="supply-title">
-                <i class="fas fa-history" style="color:#8b0000; margin-right:8px;"></i>
-                Lịch sử hoạt động nhân viên
-            </h1>
-            <div style="margin-top:6px;font-size:13px;color:#888;">
-                Tổng {{ page_obj.paginator.count }} bản ghi
-            </div>
+
+<nav class="supply-breadcrumb">
+    <a href="{% url 'supply:director_dashboard' %}">Dashboard</a>
+    <i class="fas fa-chevron-right"></i>
+    <span>Lịch sử hoạt động</span>
+</nav>
+
+<div class="supply-header">
+    <div>
+        <h1 class="supply-title">
+            <i class="fas fa-history" style="color:var(--sc-red);margin-right:8px;"></i>
+            Lịch sử hoạt động nhân viên
+        </h1>
+        <div style="margin-top:5px;font-size:13px;color:var(--sc-muted);">
+            Tổng {{ page_obj.paginator.count }} bản ghi
         </div>
     </div>
+</div>
 
-    <!-- Filter Form -->
-    <div class="filter-card">
+<!-- Filter -->
+<div class="s-card" style="margin-bottom:16px;">
+    <div class="s-card-body" style="padding:16px 20px;">
         <form method="get" action="">
-            <div class="filter-grid">
-                <!-- Search -->
-                <div class="filter-item">
-                    <label class="filter-label">Tìm kiếm nhân viên</label>
-                    <input type="text" name="q" value="{{ q }}" placeholder="Nhập tên hoặc tài khoản..." class="filter-input" />
+            <div style="display:grid;grid-template-columns:2fr 1.5fr 1.5fr 1fr 1fr auto;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+                <div>
+                    <label class="s-filter-label">Tìm kiếm nhân viên</label>
+                    <input type="text" name="q" value="{{ q }}" placeholder="Tên hoặc tài khoản..." class="s-filter-input" />
                 </div>
-
-                <!-- Action Filter -->
-                <div class="filter-item">
-                    <label class="filter-label">Loại hành động</label>
-                    <select name="action" class="filter-input">
+                <div>
+                    <label class="s-filter-label">Loại hành động</label>
+                    <select name="action" class="s-filter-input">
                         <option value="">Tất cả hành động</option>
                         {% for act in distinct_actions %}
                         <option value="{{ act }}" {% if act == action_filter %}selected{% endif %}>{{ act }}</option>
                         {% endfor %}
                     </select>
                 </div>
-
-                <!-- Employee Filter -->
-                <div class="filter-item">
-                    <label class="filter-label">Nhân viên</label>
-                    <select name="user_id" class="filter-input">
+                <div>
+                    <label class="s-filter-label">Nhân viên</label>
+                    <select name="user_id" class="s-filter-input">
                         <option value="">Tất cả nhân viên</option>
                         {% for emp in employees %}
                         <option value="{{ emp.pk }}" {% if emp.pk == user_filter %}selected{% endif %}>
-                            {{ emp.username }} ({{ emp.get_full_name|default:emp.username }})
+                            {{ emp.username }}{% if emp.get_full_name %} ({{ emp.get_full_name }}){% endif %}
                         </option>
                         {% endfor %}
                     </select>
                 </div>
-
-                <!-- Date range -->
-                <div class="filter-item">
-                    <label class="filter-label">Từ ngày</label>
-                    <input type="date" name="start_date" value="{{ start_date }}" class="filter-input" />
+                <div>
+                    <label class="s-filter-label">Từ ngày</label>
+                    <input type="date" name="start_date" value="{{ start_date }}" class="s-filter-input" />
                 </div>
-
-                <div class="filter-item">
-                    <label class="filter-label">Đến ngày</label>
-                    <input type="date" name="end_date" value="{{ end_date }}" class="filter-input" />
+                <div>
+                    <label class="s-filter-label">Đến ngày</label>
+                    <input type="date" name="end_date" value="{{ end_date }}" class="s-filter-input" />
                 </div>
-
-                <!-- Submit / Clear -->
-                <div class="filter-item btn-group">
+                <div style="display:flex;gap:8px;align-items:center;">
                     <button type="submit" class="btn-primary">
-                        <i class="fas fa-search"></i> Tìm kiếm
+                        <i class="fas fa-search"></i> Lọc
                     </button>
                     {% if q or action_filter or user_filter or start_date or end_date %}
-                    <a href="?" class="btn-secondary" style="text-decoration: none;">
-                        <i class="fas fa-times"></i> Xóa bộ lọc
+                    <a href="?" class="btn-secondary" style="text-decoration:none;">
+                        <i class="fas fa-times"></i> Xóa
                     </a>
                     {% endif %}
                 </div>
             </div>
         </form>
     </div>
-
-    <!-- Logs Table -->
-    <div class="log-table-card">
-        <div style="overflow-x:auto;">
-            <table class="s-table">
-                <thead>
-                    <tr>
-                        <th>Thời gian</th>
-                        <th>Nhân viên</th>
-                        <th>Chức vụ</th>
-                        <th>Hành động</th>
-                        <th>Đối tượng</th>
-                        <th>IP</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for log in logs %}
-                    <tr>
-                        <td style="font-size:13px; color:#555;">{{ log.created_at|date:"d/m/Y H:i:s" }}</td>
-                        <td style="font-weight:600;">
-                            {{ log.username }}
-                            {% if log.user and log.user.get_full_name %}
-                            <span style="font-weight:400; color:#888; font-size:12px; display:block;">
-                                {{ log.user.get_full_name }}
-                            </span>
-                            {% endif %}
-                        </td>
-                        <td style="font-size:13px; color:#4b5563;">{{ log.user_role|default:"—" }}</td>
-                        <td>
-                            <span class="badge-action 
-                                {% if 'nhập' in log.action|lower or 'login' in log.action|lower %}badge-action-login
-                                {% elif 'xuất' in log.action|lower or 'logout' in log.action|lower %}badge-action-logout
-                                {% elif 'tạo' in log.action|lower or 'thêm' in log.action|lower %}badge-action-create
-                                {% elif 'sửa' in log.action|lower or 'cập nhật' in log.action|lower %}badge-action-update
-                                {% elif 'xóa' in log.action|lower or 'hủy' in log.action|lower %}badge-action-delete
-                                {% else %}badge-action-other{% endif %}">
-                                {{ log.action }}
-                            </span>
-                        </td>
-                        <td style="font-weight:500; font-size:13px;">{{ log.target|default:"—" }}</td>
-                        <td style="font-size:12px; font-family:monospace; color:#6b7280;">{{ log.ip_address|default:"—" }}</td>
-                        <td>
-                            <button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;"
-                                    onclick="showLogDetails('{{ log.created_at|date:'d/m/Y H:i:s' }}', '{{ log.username }}', '{{ log.user_role }}', '{{ log.action }}', '{{ log.target|escapejs }}', '{{ log.changes|escapejs }}', '{{ log.ip_address|default:'—' }}')">
-                                Chi tiết
-                            </button>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="7" style="text-align:center; padding:32px; color:#999;">
-                            Không tìm thấy lịch sử hoạt động phù hợp.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% with page_range=page_range querystring=querystring %}
-        {% include 'supply/_pagination.html' %}
-        {% endwith %}
-    </div>
 </div>
 
-<!-- Modal for details -->
-<div id="detailsModal" class="log-modal" onclick="closeLogDetails(event)">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <div class="modal-header">
-            <h3 class="modal-title">Chi tiết lịch sử hoạt động</h3>
-            <button type="button" class="modal-close" onclick="document.getElementById('detailsModal').style.display='none'">&times;</button>
+<!-- Table -->
+<div class="s-card">
+    <div style="overflow-x:auto;">
+        <table class="s-table">
+            <thead>
+                <tr>
+                    <th>Thời gian</th>
+                    <th>Nhân viên</th>
+                    <th>Chức vụ</th>
+                    <th>Hành động</th>
+                    <th>Đối tượng</th>
+                    <th>IP</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td style="font-size:12px;color:var(--sc-muted);white-space:nowrap;">
+                        {{ log.created_at|date:"d/m/Y H:i:s" }}
+                    </td>
+                    <td>
+                        <span style="font-weight:600;font-size:13px;">{{ log.username }}</span>
+                        {% if log.user and log.user.get_full_name %}
+                        <span style="display:block;font-size:11px;color:var(--sc-muted);">{{ log.user.get_full_name }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:12px;color:#4b5563;">{{ log.user_role|default:"—" }}</td>
+                    <td>
+                        <span class="badge-action
+                            {% if 'nhập' in log.action|lower or 'login' in log.action|lower %}badge-action-login
+                            {% elif 'xuất' in log.action|lower or 'logout' in log.action|lower %}badge-action-logout
+                            {% elif 'tạo' in log.action|lower or 'thêm' in log.action|lower %}badge-action-create
+                            {% elif 'sửa' in log.action|lower or 'cập nhật' in log.action|lower %}badge-action-update
+                            {% elif 'xóa' in log.action|lower or 'hủy' in log.action|lower %}badge-action-delete
+                            {% else %}badge-action-other{% endif %}">
+                            {{ log.action }}
+                        </span>
+                    </td>
+                    <td style="font-size:13px;font-weight:500;">{{ log.target|default:"—" }}</td>
+                    <td style="font-size:11px;font-family:monospace;color:var(--sc-muted);">{{ log.ip_address|default:"—" }}</td>
+                    <td>
+                        <button type="button" class="btn-secondary" style="padding:4px 10px;font-size:12px;"
+                                onclick="showLogDetails(
+                                    '{{ log.created_at|date:"d/m/Y H:i:s" }}',
+                                    '{{ log.username }}',
+                                    '{{ log.user_role }}',
+                                    '{{ log.action }}',
+                                    '{{ log.target|escapejs }}',
+                                    '{{ log.changes|escapejs }}',
+                                    '{{ log.ip_address|default:"—" }}'
+                                )">
+                            <i class="fas fa-eye"></i> Chi tiết
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" style="text-align:center;padding:40px;color:var(--sc-muted);">
+                        <i class="fas fa-inbox" style="font-size:24px;margin-bottom:8px;display:block;opacity:.4;"></i>
+                        Không tìm thấy lịch sử hoạt động phù hợp.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% with page_range=page_range querystring=querystring %}
+    {% include 'supply/_pagination.html' %}
+    {% endwith %}
+</div>
+
+<!-- Detail Modal -->
+<div id="detailsModal" class="log-modal" onclick="closeLogDetails()">
+    <div class="log-modal-content" onclick="event.stopPropagation()">
+        <div class="log-modal-header">
+            <h3><i class="fas fa-history" style="margin-right:8px;"></i>Chi tiết hoạt động</h3>
+            <button type="button" class="log-modal-close" onclick="closeLogDetails()">&times;</button>
         </div>
-        <div class="modal-body">
+        <div class="log-modal-body">
             <div class="detail-row">
-                <div class="detail-label">Thời gian:</div>
-                <div class="detail-value" id="m-time"></div>
+                <div class="detail-label">Thời gian</div>
+                <div id="m-time"></div>
             </div>
             <div class="detail-row">
-                <div class="detail-label">Nhân viên:</div>
-                <div class="detail-value" id="m-user"></div>
+                <div class="detail-label">Nhân viên</div>
+                <div id="m-user"></div>
             </div>
             <div class="detail-row">
-                <div class="detail-label">Chức vụ:</div>
-                <div class="detail-value" id="m-role"></div>
+                <div class="detail-label">Chức vụ</div>
+                <div id="m-role"></div>
             </div>
             <div class="detail-row">
-                <div class="detail-label">Hành động:</div>
-                <div class="detail-value" id="m-action"></div>
+                <div class="detail-label">Hành động</div>
+                <div id="m-action"></div>
             </div>
             <div class="detail-row">
-                <div class="detail-label">Đối tượng:</div>
-                <div class="detail-value" id="m-target"></div>
+                <div class="detail-label">Đối tượng</div>
+                <div id="m-target"></div>
             </div>
             <div class="detail-row">
-                <div class="detail-label">Địa chỉ IP:</div>
-                <div class="detail-value" id="m-ip"></div>
+                <div class="detail-label">Địa chỉ IP</div>
+                <div id="m-ip"></div>
             </div>
-            <div class="detail-row" style="display:flex; flex-direction:column; align-items:stretch;">
-                <div class="detail-label" style="margin-bottom:4px;">Nội dung thay đổi:</div>
-                <div class="detail-value">
-                    <div id="m-changes" class="detail-changes-box"></div>
-                </div>
+            <div style="margin-top:12px;">
+                <div class="detail-label" style="margin-bottom:6px;font-size:11px;">Nội dung thay đổi</div>
+                <div id="m-changes" class="detail-changes-box"></div>
             </div>
         </div>
     </div>
@@ -378,20 +297,16 @@
         document.getElementById('m-action').textContent = action;
         document.getElementById('m-target').textContent = target || '—';
         document.getElementById('m-ip').textContent = ip || '—';
-        
-        const changesBox = document.getElementById('m-changes');
-        if (changes) {
-            changesBox.textContent = changes;
-            changesBox.style.display = 'block';
-        } else {
-            changesBox.textContent = 'Không có nội dung chi tiết.';
-        }
-        
+        const changesEl = document.getElementById('m-changes');
+        changesEl.textContent = changes || 'Không có nội dung chi tiết.';
         document.getElementById('detailsModal').style.display = 'flex';
     }
-
-    function closeLogDetails(event) {
+    function closeLogDetails() {
         document.getElementById('detailsModal').style.display = 'none';
     }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeLogDetails();
+    });
 </script>
+
 {% endblock %}
