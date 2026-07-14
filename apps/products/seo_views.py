@@ -20,7 +20,7 @@ def robots_txt(request):
         return FileResponse(open(path, 'rb'), content_type='text/plain')
     
     # Fallback hardcoded if file not found
-    content = "User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /cart/\nDisallow: /accounts/\nDisallow: /supply/\nSitemap: /sitemap.xml"
+    content = "User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /cart/\nDisallow: /accounts/\nDisallow: /supply/\nSitemap: https://webgiay-gsyh.onrender.com/sitemap.xml"
     return HttpResponse(content, content_type='text/plain')
 
 
