@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import RedirectView
 from apps.products import views as product_views
+from apps.products import seo_views
 from django.conf.urls.static import static
 from django.conf import settings
 import config.admin  # noqa: F401 — load User/Group unfold overrides
@@ -17,5 +18,11 @@ urlpatterns = [
     path('admin/products/supplier/bien-do/', RedirectView.as_view(url='/supply/', permanent=False)),
     path('admin/products/supplier/bien-do/requests/', RedirectView.as_view(url='/supply/requests/', permanent=False)),
     path('admin/products/supplier/bao-gia/', RedirectView.as_view(url='/supply/portal/', permanent=False)),
+
+    # SEO & PWA Root Paths
+    path('robots.txt', seo_views.robots_txt, name='robots_txt'),
+    path('manifest.json', seo_views.manifest_json, name='manifest_json'),
+    path('sw.js', seo_views.service_worker, name='service_worker'),
+    path('sitemap.xml', seo_views.sitemap_xml, name='sitemap_xml'),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
