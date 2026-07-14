@@ -5,4 +5,4 @@ Disallow: /cart/
 Disallow: /accounts/
 Disallow: /supply/
 
-Sitemap: /sitemap.xml
+Sitemap: https://webgiay-gsyh.onrender.com/sitemap.xml
