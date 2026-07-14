@@ -132,12 +132,18 @@ def dashboard_callback(request, context):
         'paid': '#22c55e',
         'failed': '#ef4444',
         'cancelled': '#6b7280',
+        'processing': '#3b82f6',
+        'shipped': '#a855f7',
+        'delivered': '#10b981',
     }
     status_display = {
         'pending': 'Chờ TT',
         'paid': 'Đã TT',
         'failed': 'Thất bại',
         'cancelled': 'Đã huỷ',
+        'processing': 'Đang xử lý',
+        'shipped': 'Đang giao',
+        'delivered': 'Đã giao',
     }
     for s in status_data:
         status_labels.append(status_display.get(s['status'], s['status']))
