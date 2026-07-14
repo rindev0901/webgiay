@@ -24,5 +24,6 @@ urlpatterns = [
     path('manifest.json', seo_views.manifest_json, name='manifest_json'),
     path('sw.js', seo_views.service_worker, name='service_worker'),
     path('sitemap.xml', seo_views.sitemap_xml, name='sitemap_xml'),
+    path('googlec20b1686479aacf6.html', seo_views.google_verification, name='google_verification'),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

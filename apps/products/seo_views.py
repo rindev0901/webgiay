@@ -5,6 +5,14 @@ from django.utils import timezone
 from apps.products.models import Category, Product
 
 
+def google_verification(request):
+    """Serve Google site verification file directly from static directory at root domain path."""
+    path = os.path.join(settings.BASE_DIR, 'static', 'googlec20b1686479aacf6.html')
+    if os.path.exists(path):
+        return FileResponse(open(path, 'rb'), content_type='text/html')
+    return HttpResponse("google-site-verification: googlec20b1686479aacf6.html", content_type='text/html')
+
+
 def robots_txt(request):
     """Serve robots.txt directly from static files with root domain path."""
     path = os.path.join(settings.BASE_DIR, 'static', 'robots.txt')
