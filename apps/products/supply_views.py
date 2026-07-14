@@ -1381,6 +1381,13 @@ def submit_quote(request, pr_pk):
                         request,
                         f"✅ Đã nộp báo giá! {success_count} mặt hàng có giá hợp lệ.",
                     )
+                    from apps.accounts.signals import create_log
+                    create_log(
+                        action="NCC báo giá",
+                        target=f"Đợt yêu cầu: {pr.code}",
+                        changes=f"NCC: {supplier.name} | {success_count} sản phẩm có giá | Ghi chú: {note or 'Không có'}",
+                        user=request.user,
+                    )
                 else:
                     # Show expected variant IDs if no items were saved
                     messages.error(
@@ -1461,12 +1468,13 @@ def director_dashboard(request):
     ).exclude(status=PaymentVoucher.Status.CANCELLED)
     total_cost = cost_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
-    # 2. Doanh thu (Revenue): sum of Order completed in the month (status=paid)
+    # 2. Doanh thu (Revenue): sum of Orders where payment is confirmed (payment_status=PAID)
+    #    Filtered by created_at to avoid shifting revenue on later updates (e.g. shipping updates)
     rev_qs = Order.objects.filter(
-        status=Order.Status.PAID,
+        payment_status=Order.PaymentStatus.PAID,
         created_at__year=year,
-        created_at__month=month
-    )
+        created_at__month=month,
+    ).exclude(order_status=Order.OrderStatus.CANCELLED)
     total_revenue = rev_qs.aggregate(total=Sum("total_amount"))["total"] or Decimal("0")
 
     # 3. Lợi nhuận (Profit) = Doanh thu - Chi phí
@@ -1500,10 +1508,10 @@ def director_dashboard(request):
     for y, m in months_list:
         labels_chart.append(f"{m}/{y}")
         r_sum = Order.objects.filter(
-            status=Order.Status.PAID,
+            payment_status=Order.PaymentStatus.PAID,
             created_at__year=y,
-            created_at__month=m
-        ).aggregate(total=Sum("total_amount"))["total"] or 0
+            created_at__month=m,
+        ).exclude(order_status=Order.OrderStatus.CANCELLED).aggregate(total=Sum("total_amount"))["total"] or 0
         revenue_chart.append(int(r_sum))
         
         c_sum = PaymentVoucher.objects.filter(
@@ -1563,19 +1571,52 @@ def activity_log_view(request):
     if end_date:
         qs = qs.filter(created_at__date__lte=end_date)
 
-    distinct_actions = ActivityLog.objects.values_list("action", flat=True).distinct()
-    
+    # Danh sách hành động cố định — nhóm theo nghiệp vụ, không bị trùng lặp
+    ACTION_CHOICES = [
+        # Xác thực
+        ("──── Xác thực ────", None),
+        ("Đăng nhập", "Đăng nhập"),
+        ("Đăng xuất", "Đăng xuất"),
+        # Đơn hàng
+        ("──── Đơn hàng ────", None),
+        ("Tạo đơn hàng", "Tạo đơn hàng"),
+        ("Cập nhật đơn hàng", "Cập nhật đơn hàng"),
+        ("Hủy đơn hàng", "Hủy đơn hàng"),
+        ("Xóa đơn hàng", "Xóa đơn hàng"),
+        # Sản phẩm
+        ("──── Sản phẩm ────", None),
+        ("Thêm sản phẩm", "Thêm sản phẩm"),
+        ("Sửa sản phẩm", "Sửa sản phẩm"),
+        ("Xóa sản phẩm", "Xóa sản phẩm"),
+        # Chuỗi cung ứng
+        ("──── Chuỗi cung ứng ────", None),
+        ("Tạo yêu cầu đặt hàng", "Tạo yêu cầu đặt hàng"),
+        ("NCC báo giá", "NCC báo giá"),
+        ("Duyệt báo giá", "Duyệt báo giá"),
+        ("Thực hiện kiểm kê", "Thực hiện kiểm kê"),
+        ("Duyệt phiếu kiểm kê", "Duyệt phiếu kiểm kê"),
+        ("Từ chối phiếu kiểm kê", "Từ chối phiếu kiểm kê"),
+        ("Nhập kho từ phiếu kiểm kê", "Nhập kho từ phiếu kiểm kê"),
+        ("Thanh toán cho NCC", "Thanh toán cho NCC"),
+        # Nhân sự / tài khoản
+        ("──── Nhân sự ────", None),
+        ("Thêm nhân viên", "Thêm nhân viên"),
+        ("Sửa thông tin nhân viên", "Sửa thông tin nhân viên"),
+        ("Sửa thông tin khách hàng", "Sửa thông tin khách hàng"),
+        ("Xóa tài khoản", "Xóa tài khoản"),
+    ]
+
     from django.contrib.auth.models import User
     employees = User.objects.filter(
-        Q(is_staff=True) | 
+        Q(is_staff=True) |
         Q(groups__name__in=["Cửa hàng trưởng", "Quản lý kho", "Giám Đốc", "Tổng Giám Đốc", "Giám đốc", "Tổng giám đốc"])
-    ).distinct()
+    ).distinct().order_by("username")
 
     page_obj, paginator = paginate_queryset(request, qs, per_page=20)
 
     context = {
         "logs": page_obj.object_list,
-        "distinct_actions": distinct_actions,
+        "action_choices": ACTION_CHOICES,
         "employees": employees,
         "q": q,
         "action_filter": action_filter,
@@ -1585,3 +1626,4 @@ def activity_log_view(request):
     }
     context.update(_pagination_context(request, page_obj, paginator))
     return render(request, "supply/activity_log.html", context)
+

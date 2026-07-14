@@ -269,7 +269,7 @@ body.supply-body {
 .badge-norm { background: #d1fae5; color: #16a34a; }
 
 .btn-primary, .btn-secondary, .btn-green, .btn-blue, .btn-red {
-    padding: 9px 18px;
+    padding: 8px 18px;
     border-radius: 4px;
     font-size: 13px;
     font-weight: 600;

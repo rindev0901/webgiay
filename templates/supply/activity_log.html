@@ -138,8 +138,12 @@
                     <label class="s-filter-label">Loại hành động</label>
                     <select name="action" class="s-filter-input">
                         <option value="">Tất cả hành động</option>
-                        {% for act in distinct_actions %}
-                        <option value="{{ act }}" {% if act == action_filter %}selected{% endif %}>{{ act }}</option>
+                        {% for label, value in action_choices %}
+                            {% if value is None %}
+                            <option disabled style="color:#9ca3af;font-size:11px;">{{ label }}</option>
+                            {% else %}
+                            <option value="{{ value }}" {% if value == action_filter %}selected{% endif %}>{{ label }}</option>
+                            {% endif %}
                         {% endfor %}
                     </select>
                 </div>

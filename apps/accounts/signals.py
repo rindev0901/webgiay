@@ -9,6 +9,7 @@ from apps.accounts.middleware import CurrentRequestMiddleware
 
 User = get_user_model()
 
+
 def _get_user_role(user):
     if not user:
         return "Hệ thống"
@@ -27,11 +28,12 @@ def _get_user_role(user):
         return "Nhân viên"
     return "Khách hàng"
 
+
 def create_log(action, target, changes="", user=None):
     if not user:
         user = CurrentRequestMiddleware.get_current_user()
-    
-    # Don't log anonymous public user actions on products/orders
+
+    # Không log hành động của khách hàng ẩn danh (trừ tạo đơn)
     if not user and action not in ["Tạo đơn hàng"]:
         return
 
@@ -46,64 +48,121 @@ def create_log(action, target, changes="", user=None):
         action=action,
         target=target,
         changes=changes,
-        ip_address=ip
+        ip_address=ip,
     )
+
+
+# ─── Authentication ────────────────────────────────────────────────────────────
 
 @receiver(user_logged_in)
 def log_login(sender, request, user, **kwargs):
     create_log(action="Đăng nhập", target=f"Tài khoản: {user.username}", user=user)
+
 
 @receiver(user_logged_out)
 def log_logout(sender, request, user, **kwargs):
     if user:
         create_log(action="Đăng xuất", target=f"Tài khoản: {user.username}", user=user)
 
+
+# ─── Sản phẩm ──────────────────────────────────────────────────────────────────
+
 @receiver(post_save, sender=Product)
 def log_product_save(sender, instance, created, **kwargs):
+    # Chỉ log khi có staff thao tác qua request
+    user = CurrentRequestMiddleware.get_current_user()
+    if not user or not user.is_staff:
+        return
     action = "Thêm sản phẩm" if created else "Sửa sản phẩm"
     target = f"Sản phẩm: {instance.name} (ID: {instance.pk})"
     changes = f"Slug: {instance.slug or 'N/A'}"
-    create_log(action=action, target=target, changes=changes)
+    create_log(action=action, target=target, changes=changes, user=user)
+
 
 @receiver(post_delete, sender=Product)
 def log_product_delete(sender, instance, **kwargs):
+    user = CurrentRequestMiddleware.get_current_user()
+    if not user or not user.is_staff:
+        return
     target = f"Sản phẩm: {instance.name} (ID: {instance.pk})"
-    create_log(action="Xóa sản phẩm", target=target)
+    create_log(action="Xóa sản phẩm", target=target, user=user)
+
+
+# ─── Đơn hàng ──────────────────────────────────────────────────────────────────
 
 @receiver(post_save, sender=Order)
 def log_order_save(sender, instance, created, **kwargs):
+    user = CurrentRequestMiddleware.get_current_user()
+
     if created:
-        action = "Tạo đơn hàng"
-        changes = f"Tổng tiền: {int(instance.total_amount):,}₫"
+        # Log tạo đơn cho cả khách lẫn staff
+        changes = f"Tổng tiền: {int(instance.total_amount):,}₫ | PT thanh toán: {instance.get_payment_method_display()}"
+        target = f"Đơn hàng: {instance.code}"
+        create_log(action="Tạo đơn hàng", target=target, changes=changes, user=user)
     else:
+        # Chỉ log update nếu staff đang thao tác
+        if not user or not user.is_staff:
+            return
         if instance.order_status == Order.OrderStatus.CANCELLED:
             action = "Hủy đơn hàng"
         else:
             action = "Cập nhật đơn hàng"
-        changes = f"Trạng thái đơn: {instance.get_order_status_display()} | Thanh toán: {instance.get_payment_status_display()}"
-    
-    target = f"Đơn hàng: {instance.code} (ID: {instance.pk})"
-    create_log(action=action, target=target, changes=changes)
+        changes = (
+            f"Trạng thái đơn: {instance.get_order_status_display()} | "
+            f"Thanh toán: {instance.get_payment_status_display()}"
+        )
+        target = f"Đơn hàng: {instance.code}"
+        create_log(action=action, target=target, changes=changes, user=user)
+
 
 @receiver(post_delete, sender=Order)
 def log_order_delete(sender, instance, **kwargs):
-    target = f"Đơn hàng: {instance.code} (ID: {instance.pk})"
-    create_log(action="Xóa dữ liệu (Đơn hàng)", target=target)
+    user = CurrentRequestMiddleware.get_current_user()
+    if not user or not user.is_staff:
+        return
+    target = f"Đơn hàng: {instance.code}"
+    create_log(action="Xóa đơn hàng", target=target, user=user)
+
+
+# ─── Người dùng / nhân viên ────────────────────────────────────────────────────
 
 @receiver(post_save, sender=User)
 def log_user_save(sender, instance, created, **kwargs):
+    actor = CurrentRequestMiddleware.get_current_user()
+
     if created:
-        action = "Đăng ký tài khoản" if not instance.is_staff else "Thêm nhân viên"
-        target = f"Tài khoản: {instance.username}"
-        changes = f"Tạo tài khoản mới cho {instance.get_full_name() or instance.username}"
-        create_log(action=action, target=target, changes=changes)
+        if instance.is_staff:
+            # Admin tạo nhân viên mới
+            if not actor or not actor.is_staff:
+                return
+            action = "Thêm nhân viên"
+            changes = f"Tài khoản mới: {instance.username} | Staff: True"
+            create_log(action=action, target=f"Tài khoản: {instance.username}", changes=changes, user=actor)
+        # Bỏ qua log tự đăng ký của khách hàng
+        return
+
+    # Chỉ log update nếu có staff đang thao tác
+    if not actor or not actor.is_staff:
+        return
+
+    # Không log khi admin tự update chính mình (trừ trường hợp muốn giữ lại thì bỏ dòng này)
+    target = f"Tài khoản: {instance.username}"
+    if instance.is_staff or instance.is_superuser:
+        action = "Sửa thông tin nhân viên"
+        changes = f"Email: {instance.email} | Active: {instance.is_active} | Staff: {instance.is_staff} | Superuser: {instance.is_superuser}"
     else:
-        target = f"Tài khoản: {instance.username}"
-        action = "Cập nhật thông tin khách hàng" if not instance.is_staff else "Thay đổi quyền người dùng / thông tin nhân viên"
-        changes = f"Email: {instance.email} | Hoạt động: {instance.is_active} | Staff: {instance.is_staff}"
-        create_log(action=action, target=target, changes=changes)
+        action = "Sửa thông tin khách hàng"
+        changes = f"Email: {instance.email} | Active: {instance.is_active}"
+    create_log(action=action, target=target, changes=changes, user=actor)
+
 
 @receiver(post_delete, sender=User)
 def log_user_delete(sender, instance, **kwargs):
-    target = f"Tài khoản: {instance.username}"
-    create_log(action="Xóa dữ liệu (Người dùng)", target=target)
+    actor = CurrentRequestMiddleware.get_current_user()
+    if not actor or not actor.is_staff:
+        return
+    create_log(
+        action="Xóa tài khoản",
+        target=f"Tài khoản: {instance.username}",
+        user=actor,
+    )

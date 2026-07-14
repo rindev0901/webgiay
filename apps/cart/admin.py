@@ -285,7 +285,7 @@ class OrderAdmin(ModelAdmin):
                 obj.status = Order.Status.SHIPPED
 
             elif obj.order_status == Order.OrderStatus.DELIVERED:
-                obj.status = Order.Status.DELIVERED
+                obj.status = Order.Status.PAID   # COD: giao hàng = đã thu tiền
                 obj.payment_status = Order.PaymentStatus.PAID
                 obj.delivery_confirmed = True
 
@@ -294,6 +294,10 @@ class OrderAdmin(ModelAdmin):
 
             elif obj.order_status == Order.OrderStatus.CANCELLED:
                 obj.status = Order.Status.CANCELLED
+
+        # Nếu admin cập nhật trạng thái thanh toán trực tiếp sang PAID
+        if "payment_status" in changed and obj.payment_status == Order.PaymentStatus.PAID:
+            obj.status = Order.Status.PAID
 
         # Lưu trước.
         super().save_model(request, obj, form, change)
@@ -350,6 +354,7 @@ class OrderAdmin(ModelAdmin):
                 if old_order_status in (
                     Order.OrderStatus.PROCESSING,
                     Order.OrderStatus.SHIPPED,
+                    Order.OrderStatus.DELIVERED,
                 ) and self._stock_was_deducted(obj):
                     restore_stock(obj, actor=actor)
 
@@ -360,7 +365,7 @@ class OrderAdmin(ModelAdmin):
                 )
 
         # Ghi log thanh toán nếu admin đổi payment_status.
-        # Không trừ kho ở đây.
+        # Không tự trừ kho ở đây (đã có ở trên theo trạng thái đơn hàng).
         if "payment_status" in changed:
             obj.log_status(
                 obj.payment_status,

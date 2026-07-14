@@ -2,3 +2,6 @@
 [2026-06-08 22:11:34,163] INFO apps.cart.email_service [email] Sent to nguyenduc09012003@gmail.com for order OD2C717022E1D4
 [2026-06-08 22:11:36,073] INFO apps.cart.email_service [email] Sent to nguyenduc09012003@gmail.com for order OD2C717022E1D4
 [2026-06-08 22:13:18,916] INFO apps.cart.email_service [email] Sent to nguyenduc0867706538@gmail.com for order OD2C717022E1D4
+[2026-07-13 22:00:02,956] INFO apps.cart.email_service [email] Sent to duc@gmail.com for order OD96A91F128626 (cod=True)
+[2026-07-14 21:18:07,549] INFO apps.cart.email_service [email] Sent to sasdsa@gmail.com for order OD84FE01195354 (cod=True)
+[2026-07-14 21:27:58,214] INFO apps.cart.email_service [email] Sent to SADSAD@gmail.com for order ODF8E15AA8B738 (cod=True)
