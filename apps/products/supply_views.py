@@ -301,7 +301,7 @@ def request_detail(request, pk):
 
                     from apps.accounts.signals import create_log
                     create_log(
-                        action="Nhập hàng vào kho",
+                        action="Cộng tồn kho",
                         target=f"Phiếu kiểm kê: {check.code}",
                         changes=f"Cộng kho thành công cho {check.items.count()} mặt hàng từ đợt {pr.code} (via Chi tiết đợt)",
                         user=request.user
@@ -1132,7 +1132,7 @@ def add_stock_from_check(request, pk):
 
             from apps.accounts.signals import create_log
             create_log(
-                action="Nhập hàng vào kho",
+                action="Cộng tồn kho",
                 target=f"Phiếu kiểm kê: {check.code}",
                 changes=f"Cộng kho thành công cho {check.items.count()} mặt hàng từ đợt {pr.code}",
                 user=request.user
@@ -1598,6 +1598,10 @@ def activity_log_view(request):
         ("Từ chối phiếu kiểm kê", "Từ chối phiếu kiểm kê"),
         ("Nhập kho từ phiếu kiểm kê", "Nhập kho từ phiếu kiểm kê"),
         ("Thanh toán cho NCC", "Thanh toán cho NCC"),
+        # Tồn kho
+        ("──── Tồn kho ────", None),
+        ("Cộng tồn kho", "Cộng tồn kho"),
+        ("Trừ tồn kho", "Trừ tồn kho"),
         # Nhân sự / tài khoản
         ("──── Nhân sự ────", None),
         ("Thêm nhân viên", "Thêm nhân viên"),

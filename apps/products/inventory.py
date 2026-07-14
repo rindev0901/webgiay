@@ -91,6 +91,25 @@ def deduct_stock(order: 'Order', actor: str = 'system') -> list[dict]:
                 if remaining > 0:
                     errors.append({'product': item.product_name, 'shortage': remaining})
 
+    # Ghi ActivityLog cho hành động Trừ tồn kho
+    try:
+        from apps.accounts.signals import create_log
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        user_obj = User.objects.filter(username=actor).first() if actor else None
+        
+        items_detail = [f"{item.product.name} (x{item.quantity})" for item in items if item.product]
+        changes_detail = f"Trừ kho thành công: {', '.join(items_detail)}"
+        
+        create_log(
+            action="Trừ tồn kho",
+            target=f"Đơn hàng: {order.code}",
+            changes=changes_detail,
+            user=user_obj
+        )
+    except Exception:
+        pass
+
     return errors
 
 
@@ -127,6 +146,25 @@ def restore_stock(order: 'Order', actor: str = 'system') -> None:
                     actor=actor,
                 )
                 remaining -= restore
+
+    # Ghi ActivityLog cho hành động Cộng tồn kho
+    try:
+        from apps.accounts.signals import create_log
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        user_obj = User.objects.filter(username=actor).first() if actor else None
+        
+        items_detail = [f"{item.product.name} (x{item.quantity})" for item in items if item.product]
+        changes_detail = f"Hoàn kho thành công: {', '.join(items_detail)}"
+        
+        create_log(
+            action="Cộng tồn kho",
+            target=f"Đơn hàng: {order.code}",
+            changes=changes_detail,
+            user=user_obj
+        )
+    except Exception:
+        pass
 
 
 # ────────────────────────────────────────────────

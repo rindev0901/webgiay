@@ -42,6 +42,13 @@ def stock_in_view(request):
                     continue
         
         if success_count > 0:
+            from apps.accounts.signals import create_log
+            create_log(
+                action="Cộng tồn kho",
+                target=f"Sản phẩm: {selected_product.name}" if selected_product else "Sản phẩm",
+                changes=f"Nhập kho thành công cho {success_count} biến thể | Ghi chú: {note}",
+                user=request.user
+            )
             messages.success(request, f'Đã nhập kho thành công {success_count} biến thể!')
             return redirect('admin:products_product_changelist')
         else:

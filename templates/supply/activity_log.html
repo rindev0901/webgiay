@@ -211,8 +211,8 @@
                     <td style="font-size:12px;color:#4b5563;">{{ log.user_role|default:"—" }}</td>
                     <td>
                         <span class="badge-action
-                            {% if 'nhập' in log.action|lower or 'login' in log.action|lower %}badge-action-login
-                            {% elif 'xuất' in log.action|lower or 'logout' in log.action|lower %}badge-action-logout
+                            {% if 'cộng' in log.action|lower or 'nhập' in log.action|lower or 'login' in log.action|lower %}badge-action-login
+                            {% elif 'trừ' in log.action|lower or 'xuất' in log.action|lower or 'logout' in log.action|lower %}badge-action-logout
                             {% elif 'tạo' in log.action|lower or 'thêm' in log.action|lower %}badge-action-create
                             {% elif 'sửa' in log.action|lower or 'cập nhật' in log.action|lower %}badge-action-update
                             {% elif 'xóa' in log.action|lower or 'hủy' in log.action|lower %}badge-action-delete
