@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.signals import user_logged_in, user_logged_out
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, post_delete, m2m_changed
 from django.dispatch import receiver
 from apps.products.models import Product
 from apps.cart.models import Order
@@ -166,3 +166,25 @@ def log_user_delete(sender, instance, **kwargs):
         target=f"Tài khoản: {instance.username}",
         user=actor,
     )
+
+
+# ─── Tự động gán/hủy is_staff dựa trên Nhóm (Group) ────────────────────────────
+
+@receiver(m2m_changed, sender=User.groups.through)
+def update_user_staff_status_on_group_change(sender, instance, action, **kwargs):
+    if action in ["post_add", "post_remove", "post_clear"]:
+        staff_groups = [
+            "Admin", "Shipper", "Quản lý kho", "Quan ly kho",
+            "Cửa hàng trưởng", "Cua hang truong", "Nhà cung cấp", "Nha cung cap",
+            "Giám Đốc", "Giám đốc", "Tổng Giám Đốc", "Tổng giám đốc"
+        ]
+        has_staff_group = instance.groups.filter(name__in=staff_groups).exists()
+        
+        # Nếu thuộc nhóm có quyền và chưa bật is_staff
+        if has_staff_group and not instance.is_staff:
+            instance.is_staff = True
+            instance.save(update_fields=["is_staff"])
+        # Nếu không còn thuộc nhóm có quyền, đang có is_staff và không phải superuser
+        elif not has_staff_group and instance.is_staff and not instance.is_superuser:
+            instance.is_staff = False
+            instance.save(update_fields=["is_staff"])

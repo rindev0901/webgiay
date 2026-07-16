@@ -23,7 +23,11 @@ class SupplyRedirectMiddleware:
     def __call__(self, request):
         if request.user.is_authenticated:
             # Dynamic import to prevent AppRegistryNotReady
-            from apps.products.supply_permissions import is_supplier_user, is_store_manager
+            from apps.products.supply_permissions import (
+                is_supplier_user,
+                is_store_manager,
+                is_director_or_general_director
+            )
             
             # 1. Nếu là Nhà Cung Cấp
             if is_supplier_user(request.user):
@@ -40,5 +44,13 @@ class SupplyRedirectMiddleware:
                     return redirect('/supply/')
                 if path == '/' or path == '/accounts/login/':
                     return redirect('/supply/')
+            
+            # 3. Nếu là Giám Đốc / Tổng Giám Đốc (không phải admin tối cao)
+            elif is_director_or_general_director(request.user) and not request.user.is_superuser:
+                path = request.path
+                if path.startswith('/admin/') and not path.startswith('/admin/logout'):
+                    return redirect('/supply/dashboard/')
+                if path == '/' or path == '/accounts/login/':
+                    return redirect('/supply/dashboard/')
                     
         return self.get_response(request)
