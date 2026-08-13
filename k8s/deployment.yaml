@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: shoes-web
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: shoes-web # Deployment quản lí các pod có label app=shoes-web
+
+  template: # Pod template
+    metadata:
+      labels:
+        app: shoes-web # Template dùng để tạo pod với label app=shoes-web
+
+    spec:
+      containers:
+        - name: shoes-web
+          image: shoes-web:latest
+          ports:
+            - containerPort: 80
+
+---
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: shoes-web-service
+
+spec:
+  # type: NodePort # base via ClusterIP
+  type: LoadBalancer # base via NodePort
+  selector:
+    app: shoes-web
+
+  ports:
+    - port: 80
+      targetPort: 80

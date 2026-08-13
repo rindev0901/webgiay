@@ -1,0 +1,29 @@
+# Version control systems
+.git
+.gitignore
+.hg
+.svn
+
+# Heavy local dependencies
+node_modules/
+vendor/
+.venv/
+env/
+
+# Build outputs and IDE configurations
+dist/
+build/
+out/
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+
+# Logs and databases
+*.log
+npm-debug.log*
+
+# Secrets and environment files
+*.pem
+*.key
